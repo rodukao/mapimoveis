@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GeoLotes Pro - Mapeamento e Venda de Terrenos</title>
 
+  <!-- Favicon em SVG embutido para evitar erro 404 no servidor local -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>">
+
   <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- Script do Cloudflare Turnstile -->
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,93 +17,38 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-  <!-- Leaflet Geoman CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.css" />
-
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Turf.js para cálculos geométricos e de área -->
-  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+  <!-- Leaflet Geoman Plugin (Desenho e edição de geometrias) -->
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
-  <!-- Leaflet Geoman JS -->
-  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.min.js"></script>
-
-  <!-- Google Fonts - Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-    #map {
-      height: calc(100vh - 65px);
-      width: 100%;
-      z-index: 1;
-    }
-    .custom-poi-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      color: white;
-      font-size: 13px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-      border: 2px solid white;
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
+  <!-- Turf.js (Cálculos geográficos de área e perímetro) -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col h-screen overflow-hidden">
+<body class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- Cabeçalho Principal -->
-  <header class="bg-slate-900 text-white h-[65px] px-3 md:px-6 flex items-center justify-between shadow-md z-20 gap-2">
-    <div class="flex items-center space-x-3">
-      <div class="bg-emerald-500 text-slate-900 p-2 rounded-xl font-bold flex items-center justify-center">
-        <i class="fa-solid fa-map-location-dot text-lg"></i>
+  <!-- Header / Barra Superior -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-[1000] shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-emerald-600/30">
+        <i class="fa-solid fa-map-location-dot"></i>
       </div>
-      <div class="hidden sm:block">
-        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          GeoLotes
-          <span class="text-xs font-normal bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">Pro</span>
+      <div>
+        <h1 class="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
+          GeoLotes <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">PRO</span>
         </h1>
-        <p class="text-xs text-slate-400">Plataforma Geográfica de Terrenos</p>
+        <p class="text-[11px] text-slate-400 font-medium">Mapeamento & Venda de Imóveis</p>
       </div>
     </div>
 
-    <!-- Barra de Busca por Localização (Geocoding) -->
-    <div class="flex-1 max-w-md mx-2">
-      <div class="relative flex items-center">
-        <input 
-          type="text" 
-          id="search-input" 
-          placeholder="Buscar cidade, endereço ou CEP..." 
-          onkeydown="if(event.key === 'Enter') searchLocation()"
-          class="w-full pl-9 pr-20 py-1.5 text-xs sm:text-sm bg-slate-800 text-white placeholder-slate-400 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500 transition"
-        >
-        <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs"></i>
-        <button 
-          onclick="searchLocation()" 
-          class="absolute right-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition"
-        >
-          Buscar
-        </button>
-      </div>
+    <!-- Barra de Pesquisa de Localização -->
+    <div class="hidden md:flex items-center bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 w-72 focus-within:border-emerald-500 transition">
+      <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs mr-2"></i>
+      <input id="search-input" type="text" placeholder="Buscar município, bairro ou região..." onkeypress="if(event.key==='Enter') searchLocation()" class="bg-transparent text-xs text-white placeholder-slate-400 outline-none w-full">
+      <button onclick="searchLocation()" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold ml-1">Ir</button>
     </div>
 
     <!-- Ações e Autenticação -->
@@ -173,6 +118,18 @@
     <!-- Área do Mapa -->
     <div id="map" class="flex-1"></div>
 
+    <!-- Botão Flutuante de Abrir Filtros (Modo Comprador) -->
+    <div id="buyer-filter-trigger" class="absolute top-4 left-4 z-[500]">
+      <button 
+        onclick="toggleFilterModal(true)" 
+        class="bg-slate-900/90 text-white hover:bg-slate-900 px-3.5 py-2 rounded-xl shadow-xl backdrop-blur-md border border-slate-700 flex items-center gap-2.5 text-xs font-semibold transition hover:scale-105 active:scale-95"
+      >
+        <i class="fa-solid fa-sliders text-emerald-400"></i>
+        <span>Filtros</span>
+        <span id="counter-terrenos" class="bg-emerald-500/20 text-emerald-400 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">0 lotes</span>
+      </button>
+    </div>
+
     <!-- Banner de Instruções do Modo Vendedor -->
     <div id="seller-instructions" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/90 text-white px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md border border-slate-700/80 max-w-md text-center transition-all">
       <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">Passo 1: Desenhar Perímetro ou Importar GeoJSON</p>
@@ -181,45 +138,58 @@
       </p>
     </div>
 
-    <!-- Painel Flutuante de Filtros (Modo Comprador) -->
-    <div id="buyer-filter-panel" class="absolute top-4 left-4 z-[500] bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-200 max-w-xs sm:max-w-sm w-full transition-all">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-slate-800 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-filter text-emerald-600"></i>
-          Filtrar Terrenos
-        </h3>
-        <span id="counter-terrenos" class="text-xs font-medium bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">0 disponíveis</span>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-600 font-medium flex justify-between">
-            <span>Preço Máximo:</span>
-            <span id="price-value" class="text-emerald-700 font-bold">Até R$ 2.000.000</span>
-          </label>
-          <input type="range" id="filter-price" min="50000" max="2000000" step="25000" value="2000000" oninput="updateFilters()" class="w-full accent-emerald-600 mt-1 cursor-pointer">
+    <!-- Modal de Filtros (Fechado por Padrão) -->
+    <div id="buyer-filter-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full transition-all relative">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-emerald-600"></i>
+            Filtrar Imóveis
+          </h3>
+          <button onclick="toggleFilterModal(false)" class="text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
         </div>
 
-        <div>
-          <label class="text-xs text-slate-600 font-medium flex justify-between">
-            <span>Área Mínima (Hectares):</span>
-            <span id="area-value" class="text-emerald-700 font-bold">Qualquer área</span>
-          </label>
-          <input type="range" id="filter-area" min="0" max="20" step="0.5" value="0" oninput="updateFilters()" class="w-full accent-emerald-600 mt-1 cursor-pointer">
-        </div>
-
-        <div class="pt-1">
-          <label class="text-xs text-slate-600 font-medium block mb-1">Recursos Indispensáveis:</label>
-          <div class="grid grid-cols-2 gap-1.5 text-xs">
-            <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 hover:text-slate-900">
-              <input type="checkbox" id="filter-nascente" onchange="updateFilters()" class="rounded text-emerald-600 focus:ring-emerald-500">
-              <span>Nascente D'água</span>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-slate-700 font-medium flex justify-between">
+              <span>Preço Máximo:</span>
+              <span id="price-value" class="text-emerald-700 font-bold">Até R$ 2.000.000</span>
             </label>
+            <input type="range" id="filter-price" min="50000" max="2000000" step="25000" value="2000000" oninput="updateFilters()" class="w-full accent-emerald-600 mt-1 cursor-pointer">
+          </div>
 
-            <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 hover:text-slate-900">
-              <input type="checkbox" id="filter-energia" onchange="updateFilters()" class="rounded text-emerald-600 focus:ring-emerald-500">
-              <span>Energia Elétrica</span>
+          <div>
+            <label class="text-xs text-slate-700 font-medium flex justify-between">
+              <span>Área Mínima (Hectares):</span>
+              <span id="area-value" class="text-emerald-700 font-bold">Qualquer área</span>
             </label>
+            <input type="range" id="filter-area" min="0" max="20" step="0.5" value="0" oninput="updateFilters()" class="w-full accent-emerald-600 mt-1 cursor-pointer">
+          </div>
+
+          <div class="pt-1">
+            <label class="text-xs text-slate-700 font-semibold block mb-2">Recursos Indispensáveis:</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <label class="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                <input type="checkbox" id="filter-nascente" onchange="updateFilters()" class="rounded text-emerald-600 focus:ring-emerald-500">
+                <span>Nascente D'água</span>
+              </label>
+
+              <label class="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                <input type="checkbox" id="filter-energia" onchange="updateFilters()" class="rounded text-emerald-600 focus:ring-emerald-500">
+                <span>Energia Elétrica</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 flex gap-2">
+            <button onclick="resetFilters()" class="w-1/3 py-2 text-xs border border-slate-300 text-slate-600 rounded-xl font-semibold hover:bg-slate-100 transition">
+              Limpar
+            </button>
+            <button onclick="toggleFilterModal(false)" class="w-2/3 py-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition">
+              Aplicar Filtros
+            </button>
           </div>
         </div>
       </div>
@@ -261,8 +231,41 @@
           </div>
         </div>
 
-        <!-- Seção de Pontos de Interesse (POIs) -->
+        <!-- Seção de Upload de Múltiplas Fotos (API Imgur Gratuita) -->
         <div class="space-y-2">
+          <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide block">
+            Fotos do Imóvel (Hospedagem Automática no Imgur)
+          </label>
+
+          <div class="bg-emerald-50/50 border border-dashed border-emerald-300 rounded-xl p-3 text-center">
+            <label class="cursor-pointer block">
+              <i class="fa-solid fa-cloud-arrow-up text-emerald-600 text-2xl mb-1 block"></i>
+              <span class="text-xs font-semibold text-slate-800 block">Adicionar Imagens (PC / Celular)</span>
+              <span class="text-[10px] text-slate-500 block">Upload grátis para Imgur • Selecione várias de uma vez</span>
+              <input type="file" id="input-files-upload" multiple accept="image/*" onchange="handleMultipleImageUpload(event)" class="hidden">
+            </label>
+          </div>
+
+          <!-- Adicionar por URL Manual -->
+          <div class="flex gap-2 mt-2">
+            <input type="url" id="input-url-foto" placeholder="Ou cole a URL direta da imagem..." class="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500">
+            <button type="button" onclick="addPhotoFromURL()" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition">
+              + URL
+            </button>
+          </div>
+
+          <!-- Status de Carregamento / Upload -->
+          <div id="upload-status" class="hidden text-xs font-medium text-emerald-600 flex items-center gap-1.5 pt-1">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Enviando imagem(ns) para o Imgur...</span>
+          </div>
+
+          <!-- Lista de Miniaturas das Fotos Carregadas -->
+          <div id="seller-photos-preview" class="grid grid-cols-3 gap-2 mt-2"></div>
+        </div>
+
+        <!-- Seção de Pontos de Interesse (POIs) -->
+        <div class="space-y-2 pt-2 border-t border-slate-200">
           <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide block">
             Adicionar Marcadores de Recursos (Clique no ícone e depois no mapa)
           </label>
@@ -297,12 +300,6 @@
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Preço de Venda (R$) *</label>
             <input type="number" id="input-preco" required min="1000" placeholder="Ex: 350000" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">URL da Foto Principal</label>
-            <input type="url" id="input-foto" placeholder="https://exemplo.com/foto.jpg" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-            <p class="text-[11px] text-slate-400 mt-1">Deixe em branco para usar imagem padrão.</p>
           </div>
 
           <div>
@@ -353,64 +350,6 @@
 
   </div>
 
-  <!-- Modal de Autenticação (Login / Cadastro) -->
-  <div id="auth-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative">
-      <button onclick="toggleAuthModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
-      <!-- Tabs Entrar vs Criar Conta -->
-      <div class="flex border-b border-slate-200 mb-5">
-        <button id="tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-xs font-bold border-b-2 border-emerald-600 text-emerald-600">
-          Entrar
-        </button>
-        <button id="tab-signup" onclick="setAuthMode('signup')" class="flex-1 py-2 text-xs font-semibold text-slate-400 hover:text-slate-600">
-          Criar Conta
-        </button>
-      </div>
-
-      <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
-        <div id="auth-error-msg" class="hidden p-2.5 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail</label>
-          <input type="email" id="auth-email" required placeholder="seu@email.com" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Senha</label>
-          <input type="password" id="auth-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-        </div>
-
-        <!-- Widget do Turnstile -->
-        <div class="cf-turnstile my-2 flex justify-center" data-sitekey="0x4AAAAAAEkAbBn_O2Di9Ng5"></div>
-        <button type="submit" id="btn-auth-submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition mt-2">
-          Entrar
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal "Meus Terrenos" -->
-  <div id="my-terrenos-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[85vh]">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-          <i class="fa-solid fa-layer-group text-emerald-600"></i>
-          Meus Terrenos Cadastrados
-        </h3>
-        <button onclick="closeMyTerrenosModal()" class="text-slate-400 hover:text-slate-600">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <div id="my-terrenos-list" class="flex-1 overflow-y-auto py-4 space-y-3">
-        <!-- Preenchido via JS -->
-      </div>
-    </div>
-  </div>
-
   <!-- Modal de Configuração do Supabase -->
   <div id="supabase-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
@@ -424,7 +363,7 @@
         </button>
       </div>
       <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-        Sua URL e chave do Supabase já estão vinculadas por padrão.
+        Conecte seu projeto Supabase para sincronizar a base de dados de terrenos diretamente na nuvem em tempo real. Se deixar em branco, o sistema utilizará o armazenamento local.
       </p>
       <form onsubmit="saveSupabaseConfig(event)" class="space-y-3">
         <div>
@@ -444,6 +383,61 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal de Autenticação (Login / Cadastro) -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-user-lock text-emerald-600"></i>
+          Acesso à Conta
+        </h3>
+        <button onclick="toggleAuthModal(false)" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="flex border-b border-slate-200 mb-4">
+        <button id="tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 text-xs font-bold border-b-2 border-emerald-600 text-emerald-600">Entrar</button>
+        <button id="tab-signup" onclick="setAuthMode('signup')" class="flex-1 py-2 text-xs font-semibold text-slate-400 hover:text-slate-600">Criar Conta</button>
+      </div>
+
+      <div id="auth-error-msg" class="hidden p-2.5 mb-3 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg"></div>
+
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail</label>
+          <input type="email" id="auth-email" required placeholder="seu@email.com" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Senha</label>
+          <input type="password" id="auth-password" required placeholder="••••••••" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <button type="submit" id="btn-auth-submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition">
+          Entrar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Meus Terrenos Cadastrados -->
+  <div id="my-terrenos-modal" class="hidden fixed inset-0 z-[1100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-emerald-600"></i>
+          Meus Imóveis Cadastrados
+        </h3>
+        <button onclick="closeMyTerrenosModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="my-terrenos-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
     </div>
   </div>
 
@@ -468,12 +462,17 @@
     let currentAreaHa = 0;
     let activePOIType = null;
     let currentPOIs = [];
+    let currentPhotos = [];
     let tempPolygonLayer = null;
     let poiMapMarkers = [];
     let publicMapLayers = [];
     let supabaseClient = null;
     let currentUser = null;
     let authMode = 'login';
+    let currentSelectedTerreno = null;
+
+    // Client-ID público do Imgur para uploads anônimos
+    const IMGUR_CLIENT_ID = '5447a6314122825';
 
     // Dados Iniciais Demonstrativos
     const initialTerrenos = [
@@ -483,7 +482,11 @@
         preco: 480000,
         areaM2: 32500,
         areaHa: 3.25,
-        foto: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+        fotos: [
+          'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80'
+        ],
         descricao: 'Lindo sítio em região montanhosa com nascente cristalina dentro da propriedade e área plana perfeita para construção de casa sede.',
         atributos: { nascente: true, energia: true, escritura: true, vista: true },
         pois: [
@@ -502,6 +505,106 @@
         }
       }
     ];
+
+
+    // Função para upload de fotos no Imgur com fallback local
+    async function uploadImageToImgur(file) {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${IMGUR_CLIENT_ID}`
+          },
+          body: formData
+        });
+
+        const result = await response.json();
+        if (result.success && result.data && result.data.link) {
+          return result.data.link;
+        }
+        throw new Error('Retorno inválido do Imgur');
+      } catch (err) {
+        console.warn('Upload Imgur falhou ou bloqueado, gerando data-URL local:', err);
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
+    async function handleMultipleImageUpload(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      const statusEl = document.getElementById('upload-status');
+      statusEl.classList.remove('hidden');
+
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadImageToImgur(files[i]);
+        if (url) {
+          currentPhotos.push(url);
+        }
+      }
+
+      statusEl.classList.add('hidden');
+      event.target.value = '';
+      renderSellerPhotosPreview();
+      showToast(`${files.length} foto(s) adicionada(s)!`);
+    }
+
+    function addPhotoFromURL() {
+      const input = document.getElementById('input-url-foto');
+      const url = input.value.trim();
+      if (!url) return;
+
+      currentPhotos.push(url);
+      input.value = '';
+      renderSellerPhotosPreview();
+      showToast('URL da foto adicionada!');
+    }
+
+    function removeSellerPhoto(index) {
+      currentPhotos.splice(index, 1);
+      renderSellerPhotosPreview();
+    }
+
+    function renderSellerPhotosPreview() {
+      const container = document.getElementById('seller-photos-preview');
+      container.innerHTML = '';
+
+      currentPhotos.forEach((url, index) => {
+        container.innerHTML += `
+          <div class="relative group rounded-lg overflow-hidden h-20 bg-slate-100 border border-slate-200">
+            <img src="${url}" class="w-full h-full object-cover">
+            <button type="button" onclick="removeSellerPhoto(${index})" class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    // Modal de Filtros
+    function toggleFilterModal(open) {
+      const modal = document.getElementById('buyer-filter-modal');
+      if (open) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-price').value = 2000000;
+      document.getElementById('filter-area').value = 0;
+      document.getElementById('filter-nascente').checked = false;
+      document.getElementById('filter-energia').checked = false;
+      updateFilters();
+    }
 
     function initSupabase() {
       const url = localStorage.getItem('geolotes_sb_url') || DEFAULT_SUPABASE_URL;
@@ -581,62 +684,58 @@
     }
 
     async function handleAuthSubmit(e) {
-        e.preventDefault();
-        if (!supabaseClient) {
-            showToast('Supabase não está conectado!', 'warning');
-            return;
-        }
+      e.preventDefault();
+      if (!supabaseClient) {
+        showToast('Supabase não está conectado!', 'warning');
+        return;
+      }
 
-        // 1. Captura o token gerado pelo widget do Turnstile
-        const captchaToken = typeof turnstile !== 'undefined' ? turnstile.getResponse() : null;
+      const captchaToken = typeof turnstile !== 'undefined' ? turnstile.getResponse() : null;
 
-        if (!captchaToken) {
-            const errorMsg = document.getElementById('auth-error-msg');
-            errorMsg.innerText = 'Por favor, complete a verificação anti-bot.';
-            errorMsg.classList.remove('hidden');
-            return;
-        }
-
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
+      if (!captchaToken) {
         const errorMsg = document.getElementById('auth-error-msg');
-        errorMsg.classList.add('hidden');
+        errorMsg.innerText = 'Por favor, complete a verificação anti-bot.';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
 
-        try {
-            if (authMode === 'login') {
-            // 2. Envia o captchaToken na opção de signIn
-            const { error } = await supabaseClient.auth.signInWithPassword({ 
-                email, 
-                password,
-                options: { captchaToken }
-            });
-            if (error) throw error;
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errorMsg = document.getElementById('auth-error-msg');
+      errorMsg.classList.add('hidden');
 
-            showToast('Login realizado com sucesso!');
-            toggleAuthModal(false);
-            } else {
-            // 3. Envia o captchaToken na opção de signUp
-            const { data, error } = await supabaseClient.auth.signUp({ 
-                email, 
-                password,
-                options: { captchaToken }
-            });
-            if (error) throw error;
+      try {
+        if (authMode === 'login') {
+          const { error } = await supabaseClient.auth.signInWithPassword({ 
+            email, 
+            password,
+            options: { captchaToken }
+          });
+          if (error) throw error;
 
-            if (data?.user && !data?.session) {
-                showToast('Conta criada! Verifique seu e-mail para confirmar.', 'warning');
-            } else {
-                showToast('Conta criada e autenticada com sucesso!');
-            }
-            toggleAuthModal(false);
-            }
-        } catch (err) {
-            // Reseta o widget em caso de erro para permitir nova tentativa
-            if (typeof turnstile !== 'undefined') turnstile.reset();
-            errorMsg.innerText = err.message || 'Erro de autenticação.';
-            errorMsg.classList.remove('hidden');
+          showToast('Login realizado com sucesso!');
+          toggleAuthModal(false);
+        } else {
+          const { data, error } = await supabaseClient.auth.signUp({ 
+            email, 
+            password,
+            options: { captchaToken }
+          });
+          if (error) throw error;
+
+          if (data?.user && !data?.session) {
+            showToast('Conta criada! Verifique seu e-mail para confirmar.', 'warning');
+          } else {
+            showToast('Conta criada e autenticada com sucesso!');
+          }
+          toggleAuthModal(false);
         }
-        }
+      } catch (err) {
+        if (typeof turnstile !== 'undefined') turnstile.reset();
+        errorMsg.innerText = err.message || 'Erro de autenticação.';
+        errorMsg.classList.remove('hidden');
+      }
+    }
 
     async function handleLogout() {
       if (supabaseClient) {
@@ -684,7 +783,7 @@
       if (supabaseClient) {
         try {
           const { data, error } = await supabaseClient.from('terrenos').select('*');
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
             return data;
           }
         } catch (err) {
@@ -710,7 +809,7 @@
             console.error('Erro no Supabase:', error);
             showToast('Erro ao salvar no banco. ' + error.message, 'warning');
           } else {
-            showToast('Terreno salvo e vinculado à sua conta!');
+            showToast('Terreno salvo no Supabase Nuvem!');
           }
         } catch (err) {
           console.error('Erro Supabase:', err);
@@ -733,7 +832,6 @@
         }
       }
 
-      // Fallback local
       let localList = JSON.parse(localStorage.getItem('geolotes_terrenos') || '[]');
       localList = localList.filter(t => t.id !== id);
       localStorage.setItem('geolotes_terrenos', JSON.stringify(localList));
@@ -744,7 +842,7 @@
       renderPublicTerrenos();
     }
 
-    // Inicialização
+
     window.onload = function() {
       initSupabase();
 
@@ -776,7 +874,14 @@
       L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
       setupGeomanControls();
-      renderPublicTerrenos();
+      renderPublicTerrenos().then(() => {
+        // Verifica se há ID de lote compartilhado na URL (ex: ?id=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedId = urlParams.get('id');
+        if (sharedId) {
+          openPropertyById(sharedId);
+        }
+      });
     };
 
     function setupGeomanControls() {
@@ -874,12 +979,12 @@
 
             map.fitBounds(tempPolygonLayer.getBounds());
             openSellerSidebar();
-            showToast('GeoJSON importado!');
+            showToast('Perímetro GeoJSON importado com sucesso!');
           } else {
-            showToast('Formato geométrico inválido.', 'warning');
+            showToast('Formato geométrico não suportado.', 'warning');
           }
         } catch (err) {
-          showToast('Erro ao ler GeoJSON.', 'warning');
+          showToast('Erro ao ler arquivo GeoJSON.', 'warning');
         }
       };
       reader.readAsText(file);
@@ -898,11 +1003,11 @@
 
     function activatePOITool(type) {
       if (!tempPolygonLayer) {
-        showToast('Primeiro desenhe ou importe os limites!', 'warning');
+        showToast('Primeiro desenhe ou importe os limites do terreno!', 'warning');
         return;
       }
       activePOIType = type;
-      showToast('Clique no ponto exato no mapa.');
+      showToast('Clique no ponto exato do terreno no mapa.');
     }
 
     function getPOIDetails(type) {
@@ -926,6 +1031,8 @@
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      marker.bindTooltip(details.label, { permanent: false, direction: 'top' });
+
       poiMapMarkers.push(marker);
       currentPOIs.push({ type: type, coords: [lat, lng], label: details.label });
 
@@ -947,24 +1054,18 @@
     }
 
     function switchMode(mode) {
-      if (mode === 'seller' && !currentUser) {
-        showToast('Faça login para cadastrar terrenos!', 'warning');
-        toggleAuthModal(true);
-        return;
-      }
-
       activeMode = mode;
 
       const btnBuyer = document.getElementById('btn-mode-buyer');
       const btnSeller = document.getElementById('btn-mode-seller');
-      const filterPanel = document.getElementById('buyer-filter-panel');
+      const filterTrigger = document.getElementById('buyer-filter-trigger');
       const sellerInstructions = document.getElementById('seller-instructions');
 
       if (mode === 'buyer') {
         btnBuyer.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-sm';
         btnSeller.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white';
         
-        filterPanel.classList.remove('hidden');
+        filterTrigger.classList.remove('hidden');
         sellerInstructions.classList.add('hidden');
         cancelRegistration();
         renderPublicTerrenos();
@@ -972,10 +1073,11 @@
         btnSeller.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 bg-emerald-600 text-white shadow-sm';
         btnBuyer.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white';
 
-        filterPanel.classList.add('hidden');
+        filterTrigger.classList.add('hidden');
+        toggleFilterModal(false);
         sellerInstructions.classList.remove('hidden');
         closeBuyerSidebar();
-        showToast('Modo de Cadastro. Desenhe ou importe o perímetro.');
+        showToast('Modo de Cadastro Ativo. Desenhe ou importe o perímetro.');
       }
     }
 
@@ -983,43 +1085,41 @@
       e.preventDefault();
 
       if (!currentGeoJSON) {
-        showToast('Desenhe ou importe a área do terreno!', 'warning');
-        return;
-      }
-
-      if (!currentUser) {
-        showToast('Sessão expirada. Faça login novamente.', 'warning');
-        toggleAuthModal(true);
+        showToast('Por favor, desenhe ou importe a área do terreno!', 'warning');
         return;
       }
 
       const titulo = document.getElementById('input-titulo').value;
       const preco = parseFloat(document.getElementById('input-preco').value);
-      const foto = document.getElementById('input-foto').value || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80';
       const descricao = document.getElementById('input-descricao').value;
+
       const diferenciais = [];
       if (document.getElementById('attr-nascente').checked) diferenciais.push('Nascente Própria');
       if (document.getElementById('attr-energia').checked) diferenciais.push('Energia Elétrica');
       if (document.getElementById('attr-escritura').checked) diferenciais.push('Escriturado');
       if (document.getElementById('attr-vista').checked) diferenciais.push('Vista Panorâmica');
 
+      const fotosSalvar = currentPhotos.length > 0 ? [...currentPhotos] : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'];
+
       const novoTerreno = {
+        id: Date.now().toString(),
         titulo: titulo,
         preco: preco,
         area_m2: currentAreaM2,
         area_hectares: currentAreaHa,
         descricao: descricao,
         diferenciais: diferenciais,
-        fotos: foto ? [foto] : [],
+        fotos: fotosSalvar,
         pontos_interesse: currentPOIs,
         limites_geojson: currentGeoJSON.geometry,
-        user_id: currentUser.id
+        user_id: currentUser ? currentUser.id : null
       };
 
       const terrenos = await getStoredTerrenos();
       terrenos.push(novoTerreno);
       await saveStoredTerrenos(terrenos, novoTerreno);
 
+      showToast('Terreno publicado com sucesso!');
       switchMode('buyer');
     }
 
@@ -1031,26 +1131,34 @@
       poiMapMarkers.forEach(m => map.removeLayer(m));
       poiMapMarkers = [];
       currentPOIs = [];
+      currentPhotos = [];
       currentGeoJSON = null;
 
       document.getElementById('form-terreno').reset();
       document.getElementById('poi-list').innerHTML = '';
+      document.getElementById('seller-photos-preview').innerHTML = '';
       closeSellerSidebar();
     }
 
     function normalizarTerreno(t) {
       const difer = Array.isArray(t.diferenciais) ? t.diferenciais : [];
-      
+
+      let fotosArr = [];
+      if (Array.isArray(t.fotos) && t.fotos.length > 0) {
+        fotosArr = t.fotos;
+      } else if (t.foto) {
+        fotosArr = [t.foto];
+      } else {
+        fotosArr = ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'];
+      }
+
       return {
-        id: t.id,
-        user_id: t.user_id || t.userId || null,
+        id: String(t.id || Date.now()),
         titulo: t.titulo || 'Sem título',
         preco: Number(t.preco || 0),
         areaM2: Number(t.area_m2 || t.areaM2 || 0),
         areaHa: Number(t.area_hectares || t.areaHa || 0),
-        foto: Array.isArray(t.fotos) && t.fotos.length > 0 
-          ? t.fotos[0] 
-          : (t.foto || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'),
+        fotos: fotosArr,
         descricao: t.descricao || '',
         atributos: t.atributos || {
           nascente: difer.includes('Nascente Própria'),
@@ -1059,7 +1167,8 @@
           vista: difer.includes('Vista Panorâmica')
         },
         pois: t.pontos_interesse || t.pois || [],
-        geometry: t.limites_geojson || t.geometry
+        geometry: t.limites_geojson || t.geometry,
+        userId: t.user_id || t.userId
       };
     }
 
@@ -1083,26 +1192,24 @@
         return true;
       });
 
-      document.getElementById('counter-terrenos').innerText = `${filtered.length} disponíveis`;
+      document.getElementById('counter-terrenos').innerText = `${filtered.length} lotes`;
 
       filtered.forEach(terreno => {
         if (!terreno.geometry) return;
 
-        const isOwner = currentUser && (terreno.user_id === currentUser.id);
-
         const geoLayer = L.geoJSON(terreno.geometry, {
           style: {
-            color: isOwner ? '#3b82f6' : '#10b981',
+            color: '#10b981',
             weight: 3,
             opacity: 0.8,
-            fillColor: isOwner ? '#2563eb' : '#059669',
+            fillColor: '#059669',
             fillOpacity: 0.35
           }
         }).addTo(map);
 
         geoLayer.bindTooltip(`
           <div class="font-sans">
-            <b class="text-slate-900">${terreno.titulo}</b> ${isOwner ? '<span class="text-xs text-blue-600 font-bold">(Seu)</span>' : ''}<br>
+            <b class="text-slate-900">${terreno.titulo}</b><br>
             <span class="text-emerald-700 font-bold">R$ ${terreno.preco.toLocaleString('pt-BR')}</span> | 
             <span class="text-slate-600">${terreno.areaHa.toFixed(2)} ha</span>
           </div>
@@ -1131,6 +1238,20 @@
       });
     }
 
+    async function openPropertyById(id) {
+      const rawTerrenos = await getStoredTerrenos();
+      const terrenos = rawTerrenos.map(normalizarTerreno);
+      const achado = terrenos.find(t => String(t.id) === String(id));
+
+      if (achado) {
+        if (achado.geometry) {
+          const tempLayer = L.geoJSON(achado.geometry);
+          map.fitBounds(tempLayer.getBounds(), { padding: [50, 50] });
+        }
+        openBuyerDetailSidebar(achado);
+      }
+    }
+
     function updateFilters() {
       const priceVal = parseFloat(document.getElementById('filter-price').value);
       const areaVal = parseFloat(document.getElementById('filter-area').value);
@@ -1141,18 +1262,60 @@
       renderPublicTerrenos();
     }
 
+
+    function sharePropertyLink(terreno) {
+      const link = `${window.location.origin}${window.location.pathname}?id=${terreno.id}`;
+      
+      // Tenta copiar para a área de transferência
+      const tempInput = document.createElement('input');
+      tempInput.value = link;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast('Link do imóvel copiado para a área de transferência!');
+    }
+
+    function sharePropertyWebShare(terreno) {
+      const link = `${window.location.origin}${window.location.pathname}?id=${terreno.id}`;
+      if (navigator.share) {
+        navigator.share({
+          title: terreno.titulo,
+          text: `Confira este terreno incrível (${terreno.areaHa.toFixed(2)} ha) no GeoLotes Pro por R$ ${terreno.preco.toLocaleString('pt-BR')}!`,
+          url: link
+        }).catch(() => {});
+      } else {
+        sharePropertyLink(terreno);
+      }
+    }
+
+    function selectGalleryImage(imgUrl) {
+      const mainImg = document.getElementById('gallery-main-img');
+      if (mainImg) mainImg.src = imgUrl;
+    }
+
     function openBuyerDetailSidebar(terreno) {
+      currentSelectedTerreno = terreno;
       const content = document.getElementById('property-detail-content');
       const precoPorHa = (terreno.preco / terreno.areaHa).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-      const isOwner = currentUser && (terreno.user_id === currentUser.id);
 
-      const whatsappText = encodeURIComponent(`Olá! Gostaria de obter mais informações sobre o imóvel "${terreno.titulo}" (R$ ${terreno.preco.toLocaleString('pt-BR')}, ${terreno.areaHa.toFixed(2)} ha) visualizado no GeoLotes Pro.`);
-      const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+      // Link direto compartilhável do lote
+      const shareUrl = `${window.location.origin}${window.location.pathname}?id=${terreno.id}`;
+
+      // Texto e link formatado para o WhatsApp
+      const whatsappMessage = `Olá! Tenho interesse no imóvel "${terreno.titulo}" (R$ ${terreno.preco.toLocaleString('pt-BR')}, ${terreno.areaHa.toFixed(2)} ha).\nVeja no mapa: ${shareUrl}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
+      const fotos = terreno.fotos && terreno.fotos.length > 0 ? terreno.fotos : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'];
 
       content.innerHTML = `
-        <div class="relative h-56 bg-slate-200">
-          <img src="${terreno.foto}" alt="${terreno.titulo}" class="w-full h-full object-cover">
-          <button onclick="closeBuyerSidebar()" class="absolute top-3 right-3 bg-slate-900/70 text-white w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md hover:bg-slate-900 transition">
+        <!-- Galeria / Imagem Principal -->
+        <div class="relative bg-slate-900">
+          <div class="h-60 bg-slate-900">
+            <img id="gallery-main-img" src="${fotos[0]}" alt="${terreno.titulo}" class="w-full h-full object-cover">
+          </div>
+          <button onclick="closeBuyerSidebar()" class="absolute top-3 right-3 bg-slate-900/80 text-white w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md hover:bg-slate-900 transition">
             <i class="fa-solid fa-xmark"></i>
           </button>
           <div class="absolute bottom-3 left-3 bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md">
@@ -1160,23 +1323,43 @@
           </div>
         </div>
 
-        <div class="p-5 space-y-4">
-          ${isOwner ? `
-            <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
-              <span class="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                <i class="fa-solid fa-user-check text-blue-600"></i> Seu Anúncio
-              </span>
-              <button onclick="deleteTerreno('${terreno.id}')" class="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 transition">
-                <i class="fa-solid fa-trash"></i> Excluir Terreno
+        <!-- Carrossel / Miniaturas de Fotos -->
+        ${fotos.length > 1 ? `
+          <div class="p-2 bg-slate-900 flex gap-2 overflow-x-auto border-t border-slate-800">
+            ${fotos.map((fUrl, idx) => `
+              <button onclick="selectGalleryImage('${fUrl}')" class="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 border-slate-700 hover:border-emerald-500 focus:border-emerald-500 transition">
+                <img src="${fUrl}" class="w-full h-full object-cover">
               </button>
-            </div>
-          ` : ''}
+            `).join('')}
+          </div>
+        ` : ''}
 
+        <div class="p-5 space-y-5">
           <div>
-            <h2 class="text-xl font-bold text-slate-900 tracking-tight mb-1">${terreno.titulo}</h2>
-            <div class="flex items-baseline gap-2">
+            <div class="flex items-start justify-between gap-2">
+              <h2 class="text-xl font-bold text-slate-900 tracking-tight">${terreno.titulo}</h2>
+            </div>
+            <div class="flex items-baseline gap-2 mt-1">
               <span class="text-2xl font-extrabold text-emerald-600">R$ ${terreno.preco.toLocaleString('pt-BR')}</span>
               <span class="text-xs text-slate-500 font-medium">(~R$ ${precoPorHa} / ha)</span>
+            </div>
+          </div>
+
+          <!-- Botões de Compartilhamento -->
+          <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+            <span class="text-xs font-semibold text-slate-700 block mb-2">Compartilhar Imóvel:</span>
+            <div class="flex gap-2">
+              <a href="${whatsappUrl}" target="_blank" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-sm">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>WhatsApp</span>
+              </a>
+              <button onclick="sharePropertyLink(currentSelectedTerreno)" class="py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                <i class="fa-solid fa-link text-slate-500"></i>
+                <span>Copiar Link</span>
+              </button>
+              <button onclick="sharePropertyWebShare(currentSelectedTerreno)" class="p-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition" title="Mais Opções de Compartilhamento">
+                <i class="fa-solid fa-share-nodes"></i>
+              </button>
             </div>
           </div>
 
@@ -1220,6 +1403,7 @@
             <p class="text-sm text-slate-600 leading-relaxed">${terreno.descricao || 'Sem descrição cadastrada.'}</p>
           </div>
 
+          <!-- Ações Geográficas -->
           <div class="pt-2">
             <button onclick='downloadGeoJSON(${JSON.stringify(terreno)})' class="w-full py-2 px-3 border border-slate-300 hover:border-slate-400 rounded-xl text-slate-700 font-semibold text-xs flex items-center justify-center gap-2 transition">
               <i class="fa-solid fa-download text-emerald-600"></i>
@@ -1230,7 +1414,7 @@
           <div class="pt-2 border-t border-slate-200">
             <a href="${whatsappUrl}" target="_blank" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition">
               <i class="fa-brands fa-whatsapp text-lg"></i>
-              <span>Tenho Interesse / Falar no WhatsApp</span>
+              <span>Falar no WhatsApp com o Vendedor</span>
             </a>
           </div>
         </div>
@@ -1239,70 +1423,6 @@
       const sidebar = document.getElementById('buyer-detail-sidebar');
       sidebar.classList.remove('hidden');
       setTimeout(() => sidebar.classList.remove('translate-x-full'), 10);
-    }
-
-    async function openMyTerrenosModal() {
-      if (!currentUser) {
-        showToast('Faça login primeiro!', 'warning');
-        toggleAuthModal(true);
-        return;
-      }
-
-      const listContainer = document.getElementById('my-terrenos-list');
-      listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Carregando seus terrenos...</p>';
-
-      const modal = document.getElementById('my-terrenos-modal');
-      modal.classList.remove('hidden');
-
-      const rawTerrenos = await getStoredTerrenos();
-      const todos = rawTerrenos.map(normalizarTerreno);
-      const meus = todos.filter(t => t.user_id === currentUser.id);
-
-      if (meus.length === 0) {
-        listContainer.innerHTML = `
-          <div class="text-center py-8">
-            <i class="fa-solid fa-folder-open text-slate-300 text-3xl mb-2"></i>
-            <p class="text-sm text-slate-600 font-medium">Você ainda não tem terrenos cadastrados.</p>
-            <p class="text-xs text-slate-400 mt-1">Clique em "Cadastrar" no menu superior para adicionar seu primeiro imóvel.</p>
-          </div>
-        `;
-        return;
-      }
-
-      listContainer.innerHTML = meus.map(t => `
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 overflow-hidden">
-            <img src="${t.foto}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
-            <div class="truncate">
-              <h4 class="font-bold text-xs text-slate-800 truncate">${t.titulo}</h4>
-              <p class="text-[11px] text-emerald-700 font-semibold">R$ ${t.preco.toLocaleString('pt-BR')} • ${t.areaHa.toFixed(2)} ha</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <button onclick="zoomToTerreno('${t.id}')" title="Ver no Mapa" class="p-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition text-xs">
-              <i class="fa-solid fa-eye"></i>
-            </button>
-            <button onclick="deleteTerreno('${t.id}')" title="Excluir" class="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition text-xs">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    async function zoomToTerreno(id) {
-      const rawTerrenos = await getStoredTerrenos();
-      const terreno = rawTerrenos.map(normalizarTerreno).find(t => t.id === id);
-      if (terreno && terreno.geometry) {
-        closeMyTerrenosModal();
-        const tempLayer = L.geoJSON(terreno.geometry);
-        map.fitBounds(tempLayer.getBounds());
-        openBuyerDetailSidebar(terreno);
-      }
-    }
-
-    function closeMyTerrenosModal() {
-      document.getElementById('my-terrenos-modal').classList.add('hidden');
     }
 
     function openSellerSidebar() {
@@ -1321,6 +1441,42 @@
       const sidebar = document.getElementById('buyer-detail-sidebar');
       sidebar.classList.add('translate-x-full');
       setTimeout(() => sidebar.classList.add('hidden'), 300);
+    }
+
+    function openMyTerrenosModal() {
+      const modal = document.getElementById('my-terrenos-modal');
+      const listEl = document.getElementById('my-terrenos-list');
+      
+      getStoredTerrenos().then(raw => {
+        const terrenos = raw.map(normalizarTerreno);
+        const meus = currentUser 
+          ? terrenos.filter(t => t.userId === currentUser.id)
+          : terrenos;
+
+        if (meus.length === 0) {
+          listEl.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">Você ainda não possui terrenos cadastrados.</p>';
+        } else {
+          listEl.innerHTML = meus.map(t => `
+            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div class="flex items-center gap-3">
+                <img src="${t.fotos[0]}" class="w-12 h-12 rounded-lg object-cover">
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900">${t.titulo}</h4>
+                  <p class="text-[11px] text-emerald-600 font-semibold">R$ ${t.preco.toLocaleString('pt-BR')} • ${t.areaHa.toFixed(2)} ha</p>
+                </div>
+              </div>
+              <button onclick="deleteTerreno('${t.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg text-xs transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          `).join('');
+        }
+        modal.classList.remove('hidden');
+      });
+    }
+
+    function closeMyTerrenosModal() {
+      document.getElementById('my-terrenos-modal').classList.add('hidden');
     }
 
     function showToast(message, type = 'success') {
