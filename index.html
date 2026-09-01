@@ -373,64 +373,18 @@
     let publicMapLayers = [];
     let supabaseClient = null;
 
-    // Dados Iniciais Demonstrativos
-    const initialTerrenos = [
-      {
-        id: '1',
-        titulo: 'Sítio Recanto das Águas',
-        preco: 480000,
-        areaM2: 32500,
-        areaHa: 3.25,
-        foto: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
-        descricao: 'Lindo sítio em região montanhosa com nascente cristalina dentro da propriedade e área plana perfeita para construção de casa sede.',
-        atributos: { nascente: true, energia: true, escritura: true, vista: true },
-        pois: [
-          { type: 'nascente', coords: [-22.421, -45.582], label: 'Nascente Preservada' },
-          { type: 'ponto_alto', coords: [-22.419, -45.580], label: 'Ponto Mais Alto (Vista 360°)' }
-        ],
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[
-            [-45.584, -22.420],
-            [-45.581, -22.418],
-            [-45.579, -22.421],
-            [-45.582, -22.423],
-            [-45.584, -22.420]
-          ]]
-        }
-      },
-      {
-        id: '2',
-        titulo: 'Fazenda Terra Forte',
-        preco: 1250000,
-        areaM2: 120000,
-        areaHa: 12.0,
-        foto: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?auto=format&fit=crop&w=800&q=80',
-        descricao: 'Excelente fazenda produtiva com solo fértil, fácil acesso para tratores e caminhões e infraestrutura elétrica instalada.',
-        atributos: { nascente: false, energia: true, escritura: true, vista: false },
-        pois: [
-          { type: 'acesso', coords: [-22.427, -45.588], label: 'Portão Principal de Acesso' }
-        ],
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[
-            [-45.590, -22.425],
-            [-45.585, -22.424],
-            [-45.586, -22.429],
-            [-45.591, -22.428],
-            [-45.590, -22.425]
-          ]]
-        }
-      }
-    ];
+    // Credenciais Padrão do Projeto Supabase
+    const DEFAULT_SUPABASE_URL = 'https://pkofzhlcbqupanzydyyf.supabase.co';
+    const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrb2Z6aGxjYnF1cGFuenlkeXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNDYxOTIsImV4cCI6MjEwMzgyMjE5Mn0.osamhKgCtdZa6DXeQG5kFw1PPTppeqBbTbRs2_3YUdI';
 
     function initSupabase() {
-      const url = localStorage.getItem('geolotes_sb_url');
-      const key = localStorage.getItem('geolotes_sb_key');
+      const disabled = localStorage.getItem('geolotes_sb_disabled') === 'true';
+      const url = localStorage.getItem('geolotes_sb_url') || DEFAULT_SUPABASE_URL;
+      const key = localStorage.getItem('geolotes_sb_key') || DEFAULT_SUPABASE_KEY;
 
       const label = document.getElementById('supabase-status-label');
 
-      if (url && key && window.supabase) {
+      if (!disabled && url && key && window.supabase) {
         try {
           supabaseClient = window.supabase.createClient(url, key);
           if (label) label.innerText = 'Supabase Conectado';
@@ -448,8 +402,8 @@
     function toggleSupabaseModal(open) {
       const modal = document.getElementById('supabase-modal');
       if (open) {
-        document.getElementById('supabase-url-input').value = localStorage.getItem('geolotes_sb_url') || '';
-        document.getElementById('supabase-key-input').value = localStorage.getItem('geolotes_sb_key') || '';
+        document.getElementById('supabase-url-input').value = localStorage.getItem('geolotes_sb_url') || DEFAULT_SUPABASE_URL;
+        document.getElementById('supabase-key-input').value = localStorage.getItem('geolotes_sb_key') || DEFAULT_SUPABASE_KEY;
         modal.classList.remove('hidden');
       } else {
         modal.classList.add('hidden');
@@ -464,10 +418,12 @@
       if (url && key) {
         localStorage.setItem('geolotes_sb_url', url);
         localStorage.setItem('geolotes_sb_key', key);
+        localStorage.removeItem('geolotes_sb_disabled');
         showToast('Credenciais do Supabase salvas com sucesso!');
       } else {
         localStorage.removeItem('geolotes_sb_url');
         localStorage.removeItem('geolotes_sb_key');
+        localStorage.setItem('geolotes_sb_disabled', 'true');
         showToast('Mudado para armazenamento local.');
       }
       toggleSupabaseModal(false);
@@ -478,6 +434,7 @@
     function clearSupabaseConfig() {
       localStorage.removeItem('geolotes_sb_url');
       localStorage.removeItem('geolotes_sb_key');
+      localStorage.setItem('geolotes_sb_disabled', 'true');
       document.getElementById('supabase-url-input').value = '';
       document.getElementById('supabase-key-input').value = '';
       toggleSupabaseModal(false);
@@ -783,24 +740,24 @@
       const preco = parseFloat(document.getElementById('input-preco').value);
       const foto = document.getElementById('input-foto').value || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80';
       const descricao = document.getElementById('input-descricao').value;
+
       const diferenciais = [];
       if (document.getElementById('attr-nascente').checked) diferenciais.push('Nascente Própria');
       if (document.getElementById('attr-energia').checked) diferenciais.push('Energia Elétrica');
       if (document.getElementById('attr-escritura').checked) diferenciais.push('Escriturado');
       if (document.getElementById('attr-vista').checked) diferenciais.push('Vista Panorâmica');
 
-    const novoTerreno = {
-        // Omitimos o "id" para o Supabase gerar o UUID automaticamente
+      const novoTerreno = {
         titulo: titulo,
         preco: preco,
         area_m2: currentAreaM2,
         area_hectares: currentAreaHa,
         descricao: descricao,
-        diferenciais: diferenciais, // Envia Array: ["Nascente Própria", "Energia Elétrica"]
-        fotos: foto ? [foto] : [],   // Envia Array: ["https://link-da-foto.com/1.jpg"]
+        diferenciais: diferenciais,
+        fotos: foto ? [foto] : [],
         pontos_interesse: currentPOIs,
         limites_geojson: currentGeoJSON.geometry
-    };
+      };
 
       const terrenos = await getStoredTerrenos();
       terrenos.push(novoTerreno);
@@ -826,94 +783,93 @@
     }
 
     function normalizarTerreno(t) {
-        const difer = Array.isArray(t.diferenciais) ? t.diferenciais : [];
-        
-        return {
-            id: t.id,
-            titulo: t.titulo || 'Sem título',
-            preco: Number(t.preco || 0),
-            areaM2: Number(t.area_m2 || t.areaM2 || 0),
-            areaHa: Number(t.area_hectares || t.areaHa || 0),
-            foto: Array.isArray(t.fotos) && t.fotos.length > 0 
-            ? t.fotos[0] 
-            : (t.foto || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'),
-            descricao: t.descricao || '',
-            atributos: t.atributos || {
-            nascente: difer.includes('Nascente Própria'),
-            energia: difer.includes('Energia Elétrica'),
-            escritura: difer.includes('Escriturado'),
-            vista: difer.includes('Vista Panorâmica')
-            },
-            pois: t.pontos_interesse || t.pois || [],
-            geometry: t.limites_geojson || t.geometry
-        };
+      const difer = Array.isArray(t.diferenciais) ? t.diferenciais : [];
+
+      return {
+        id: t.id || Date.now().toString(),
+        titulo: t.titulo || 'Sem título',
+        preco: Number(t.preco || 0),
+        areaM2: Number(t.area_m2 || t.areaM2 || 0),
+        areaHa: Number(t.area_hectares || t.areaHa || 0),
+        foto: Array.isArray(t.fotos) && t.fotos.length > 0 
+          ? t.fotos[0] 
+          : (t.foto || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'),
+        descricao: t.descricao || '',
+        atributos: t.atributos || {
+          nascente: difer.includes('Nascente Própria'),
+          energia: difer.includes('Energia Elétrica'),
+          escritura: difer.includes('Escriturado'),
+          vista: difer.includes('Vista Panorâmica')
+        },
+        pois: t.pontos_interesse || t.pois || [],
+        geometry: t.limites_geojson || t.geometry
+      };
     }
 
     async function renderPublicTerrenos() {
-        publicMapLayers.forEach(l => map.removeLayer(l));
-        publicMapLayers = [];
+      publicMapLayers.forEach(l => map.removeLayer(l));
+      publicMapLayers = [];
 
-        const rawTerrenos = await getStoredTerrenos();
-        // Normaliza os nomes das chaves vindas do Supabase/LocalStorage
-        const terrenos = rawTerrenos.map(normalizarTerreno);
-        
-        const maxPrice = parseFloat(document.getElementById('filter-price').value);
-        const minAreaHa = parseFloat(document.getElementById('filter-area').value);
-        const requireNascente = document.getElementById('filter-nascente').checked;
-        const requireEnergia = document.getElementById('filter-energia').checked;
+      const rawTerrenos = await getStoredTerrenos();
+      const terrenos = rawTerrenos.map(normalizarTerreno);
+      
+      const maxPrice = parseFloat(document.getElementById('filter-price').value);
+      const minAreaHa = parseFloat(document.getElementById('filter-area').value);
+      const requireNascente = document.getElementById('filter-nascente').checked;
+      const requireEnergia = document.getElementById('filter-energia').checked;
 
-        const filtered = terrenos.filter(t => {
-            if (t.preco > maxPrice) return false;
-            if (t.areaHa < minAreaHa) return false;
-            if (requireNascente && !t.atributos.nascente) return false;
-            if (requireEnergia && !t.atributos.energia) return false;
-            return true;
+      const filtered = terrenos.filter(t => {
+        if (t.preco > maxPrice) return false;
+        if (t.areaHa < minAreaHa) return false;
+        if (requireNascente && !t.atributos.nascente) return false;
+        if (requireEnergia && !t.atributos.energia) return false;
+        return true;
+      });
+
+      document.getElementById('counter-terrenos').innerText = `${filtered.length} disponíveis`;
+
+      filtered.forEach(terreno => {
+        if (!terreno.geometry) return;
+
+        const geoLayer = L.geoJSON(terreno.geometry, {
+          style: {
+            color: '#10b981',
+            weight: 3,
+            opacity: 0.8,
+            fillColor: '#059669',
+            fillOpacity: 0.35
+          }
+        }).addTo(map);
+
+        geoLayer.bindTooltip(`
+          <div class="font-sans">
+            <b class="text-slate-900">${terreno.titulo}</b><br>
+            <span class="text-emerald-700 font-bold">R$ ${terreno.preco.toLocaleString('pt-BR')}</span> | 
+            <span class="text-slate-600">${terreno.areaHa.toFixed(2)} ha</span>
+          </div>
+        `, { sticky: true });
+
+        geoLayer.on('click', () => {
+          openBuyerDetailSidebar(terreno);
         });
 
-        document.getElementById('counter-terrenos').innerText = `${filtered.length} disponíveis`;
+        publicMapLayers.push(geoLayer);
 
-        filtered.forEach(terreno => {
-            if (!terreno.geometry) return;
-
-            const geoLayer = L.geoJSON(terreno.geometry, {
-            style: {
-                color: '#10b981',
-                weight: 3,
-                opacity: 0.8,
-                fillColor: '#059669',
-                fillOpacity: 0.35
-            }
-            }).addTo(map);
-
-            geoLayer.bindTooltip(`
-            <div class="font-sans">
-                <b class="text-slate-900">${terreno.titulo}</b><br>
-                <span class="text-emerald-700 font-bold">R$ ${terreno.preco.toLocaleString('pt-BR')}</span> | 
-                <span class="text-slate-600">${terreno.areaHa.toFixed(2)} ha</span>
-            </div>
-            `, { sticky: true });
-
-            geoLayer.on('click', () => {
-            openBuyerDetailSidebar(terreno);
+        if (terreno.pois && Array.isArray(terreno.pois)) {
+          terreno.pois.forEach(poi => {
+            const details = getPOIDetails(poi.type);
+            const customIcon = L.divIcon({
+              className: 'custom-poi-wrapper',
+              html: `<div class="custom-poi-icon ${details.color} w-6 h-6 text-xs"><i class="fa-solid ${details.icon}"></i></div>`,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
             });
-
-            publicMapLayers.push(geoLayer);
-
-            if (terreno.pois && Array.isArray(terreno.pois)) {
-            terreno.pois.forEach(poi => {
-                const details = getPOIDetails(poi.type);
-                const customIcon = L.divIcon({
-                className: 'custom-poi-wrapper',
-                html: `<div class="custom-poi-icon ${details.color} w-6 h-6 text-xs"><i class="fa-solid ${details.icon}"></i></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-                });
-                const marker = L.marker(poi.coords, { icon: customIcon }).addTo(map);
-                marker.bindTooltip(`${terreno.titulo}: ${poi.label}`, { direction: 'top' });
-                publicMapLayers.push(marker);
-            });
-            }
-        });
+            const marker = L.marker(poi.coords, { icon: customIcon }).addTo(map);
+            marker.bindTooltip(`${terreno.titulo}: ${poi.label}`, { direction: 'top' });
+            publicMapLayers.push(marker);
+          });
+        }
+      });
     }
 
     function updateFilters() {
