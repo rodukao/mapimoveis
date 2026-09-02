@@ -44,6 +44,11 @@
       width: 100%;
       z-index: 1;
     }
+    @media (max-width: 640px) {
+      #map {
+        height: calc(100vh - 110px);
+      }
+    }
     .custom-poi-icon {
       display: flex;
       align-items: center;
@@ -51,7 +56,7 @@
       border-radius: 50%;
       color: white;
       font-size: 13px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
       border: 2px solid white;
     }
     ::-webkit-scrollbar {
@@ -69,62 +74,130 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col h-screen overflow-hidden">
+<body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden">
 
-  <!-- Cabeçalho Principal -->
-  <header class="bg-slate-900 text-white h-[65px] px-3 md:px-6 flex items-center justify-between shadow-md z-20 gap-2">
-    <div class="flex items-center space-x-3">
-      <div class="bg-emerald-500 text-slate-900 p-2 rounded-xl font-bold flex items-center justify-center">
-        <i class="fa-solid fa-map-location-dot text-lg"></i>
+  <!-- Cabeçalho Principal (Tema Claro & Mobile Otimizado) -->
+  <header class="bg-white border-b border-slate-200 text-slate-800 z-20 shadow-sm flex flex-col sm:flex-row justify-between px-3 md:px-6 py-2 sm:py-2.5 gap-2 transition-all">
+    <div class="flex items-center justify-between w-full sm:w-auto">
+      <!-- Logo e Titulo -->
+      <div class="flex items-center space-x-2.5">
+        <div class="bg-emerald-600 text-white p-2 rounded-xl font-bold flex items-center justify-center shadow-sm">
+          <i class="fa-solid fa-map-location-dot text-base"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            GeoLotes
+            <span class="text-[10px] sm:text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">Pro</span>
+          </h1>
+          <p class="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Plataforma Geográfica de Terrenos</p>
+        </div>
       </div>
-      <div class="hidden sm:block">
-        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          GeoLotes
-          <span class="text-xs font-normal bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">Pro</span>
-        </h1>
-        <p class="text-xs text-slate-400">Plataforma Geográfica de Terrenos</p>
+
+      <!-- Botões de Ação Mobile (Busca, Cadastrar, Auth) -->
+      <div class="flex items-center gap-1.5 sm:hidden">
+        <button 
+          onclick="toggleMobileSearch()" 
+          title="Buscar no mapa"
+          class="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium transition"
+        >
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+
+        <button 
+          id="btn-mode-toggle-mobile" 
+          onclick="toggleMode()" 
+          class="px-2.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1 transition"
+        >
+          <i id="mode-icon-mobile" class="fa-solid fa-draw-polygon text-xs"></i>
+          <span id="mode-text-mobile">Cadastrar</span>
+        </button>
+
+        <div id="auth-btn-container-mobile">
+          <button 
+            onclick="toggleAuthModal(true)" 
+            class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1"
+          >
+            <i class="fa-solid fa-user text-xs text-emerald-600"></i>
+            <span>Entrar</span>
+          </button>
+        </div>
+
+        <div id="user-profile-container-mobile" class="hidden flex items-center gap-1">
+          <button 
+            onclick="openMyTerrenosModal()" 
+            title="Meus Terrenos"
+            class="p-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-semibold"
+          >
+            <i class="fa-solid fa-layer-group"></i>
+          </button>
+          <button 
+            onclick="handleLogout()" 
+            title="Sair"
+            class="p-2 bg-slate-100 text-slate-500 hover:text-red-600 border border-slate-200 rounded-xl text-xs"
+          >
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Barra de Busca por Localização (Geocoding) -->
-    <div class="flex-1 max-w-md mx-2">
-      <div class="relative flex items-center">
+    <!-- Barra de Busca Desktop -->
+    <div class="hidden sm:flex flex-1 max-w-md mx-3">
+      <div class="relative flex items-center w-full">
         <input 
           type="text" 
           id="search-input" 
           placeholder="Buscar cidade, endereço ou CEP..." 
-          onkeydown="if(event.key === 'Enter') searchLocation()"
-          class="w-full pl-9 pr-20 py-1.5 text-xs sm:text-sm bg-slate-800 text-white placeholder-slate-400 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500 transition"
+          onkeydown="if(event.key === 'Enter') searchLocation('desktop')"
+          class="w-full pl-9 pr-20 py-2 text-xs sm:text-sm bg-slate-50 text-slate-800 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
         >
         <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs"></i>
         <button 
-          onclick="searchLocation()" 
-          class="absolute right-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition"
+          onclick="searchLocation('desktop')" 
+          class="absolute right-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition"
         >
           Buscar
         </button>
       </div>
     </div>
 
-    <!-- Ações e Autenticação (Botões de logar/sair posicionados à direita do toggle Explorar/Cadastrar) -->
-    <div class="flex items-center gap-2">
-      <!-- Botão Toggle Único: Explorar <-> Cadastrar -->
+    <!-- Barra de Busca Expansível Mobile -->
+    <div id="mobile-search-bar" class="hidden sm:hidden w-full pt-1 pb-1">
+      <div class="relative flex items-center w-full">
+        <input 
+          type="text" 
+          id="search-input-mobile" 
+          placeholder="Buscar cidade, endereço ou CEP..." 
+          onkeydown="if(event.key === 'Enter') searchLocation('mobile')"
+          class="w-full pl-8 pr-16 py-1.5 text-xs bg-slate-100 text-slate-800 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500"
+        >
+        <i class="fa-solid fa-magnifying-glass absolute left-2.5 text-slate-400 text-xs"></i>
+        <button 
+          onclick="searchLocation('mobile')" 
+          class="absolute right-1 px-2.5 py-1 bg-emerald-600 text-white text-xs font-semibold rounded-lg"
+        >
+          Buscar
+        </button>
+      </div>
+    </div>
+
+    <!-- Ações e Autenticação Desktop -->
+    <div class="hidden sm:flex items-center gap-2">
       <button 
         id="btn-mode-toggle" 
         onclick="toggleMode()" 
-        class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition"
+        class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition"
       >
         <i id="mode-icon" class="fa-solid fa-draw-polygon text-xs"></i>
         <span id="mode-text">Cadastrar</span>
       </button>
 
-      <!-- Área de Autenticação / Perfil (Logar e Sair à direita) -->
       <div id="auth-btn-container">
         <button 
           onclick="toggleAuthModal(true)" 
-          class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition"
+          class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition"
         >
-          <i class="fa-solid fa-user text-xs"></i>
+          <i class="fa-solid fa-user text-xs text-emerald-600"></i>
           <span>Entrar / Cadastrar</span>
         </button>
       </div>
@@ -133,21 +206,21 @@
         <button 
           onclick="openMyTerrenosModal()" 
           title="Ver meus lotes cadastrados"
-          class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+          class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
         >
           <i class="fa-solid fa-layer-group"></i>
           <span class="hidden lg:inline">Meus Terrenos</span>
         </button>
 
-        <div class="hidden xl:flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl text-xs text-slate-300">
-          <i class="fa-solid fa-circle-user text-emerald-400"></i>
+        <div class="hidden xl:flex items-center gap-1 bg-slate-100 border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-700 font-medium">
+          <i class="fa-solid fa-circle-user text-emerald-600"></i>
           <span id="user-email-label" class="max-w-[120px] truncate"></span>
         </div>
 
         <button 
           onclick="handleLogout()" 
           title="Sair da conta"
-          class="p-1.5 bg-slate-800 hover:bg-red-600/20 text-slate-400 hover:text-red-400 border border-slate-700 rounded-xl text-xs transition"
+          class="p-2 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 rounded-xl text-xs transition"
         >
           <i class="fa-solid fa-right-from-bracket"></i>
         </button>
@@ -172,23 +245,23 @@
       <span id="counter-terrenos-badge" class="ml-1 bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">0</span>
     </button>
 
-    <!-- Banner de Instruções do Modo Vendedor -->
-    <div id="seller-instructions" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/90 text-white px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md border border-slate-700/80 max-w-md text-center transition-all">
-      <p id="seller-step-title" class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">Passo 1: Desenhar Perímetro ou Importar GeoJSON</p>
-      <p id="seller-step-desc" class="text-xs text-slate-200">
-        Use a ferramenta de <b>Polígono</b> <i class="fa-solid fa-draw-polygon text-emerald-400 mx-1"></i> no mapa ou importe um arquivo de limites.
+    <!-- Banner de Instruções do Modo Vendedor (Tema Claro) -->
+    <div id="seller-instructions" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-white/95 text-slate-800 px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md border border-slate-200 max-w-md text-center transition-all">
+      <p id="seller-step-title" class="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Passo 1: Desenhar Perímetro ou Importar GeoJSON</p>
+      <p id="seller-step-desc" class="text-xs text-slate-600 leading-snug">
+        Use a ferramenta de <b>Polígono</b> <i class="fa-solid fa-draw-polygon text-emerald-600 mx-1"></i> no mapa ou importe um arquivo de limites.
       </p>
     </div>
 
     <!-- Painel Flutuante de Filtros (Modo Comprador - FECHADO POR PADRÃO) -->
     <div id="buyer-filter-panel" class="hidden absolute top-4 left-4 z-[505] bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-200 max-w-xs sm:max-w-sm w-full transition-all">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-slate-800 text-sm flex items-center gap-2">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
           <i class="fa-solid fa-filter text-emerald-600"></i>
           Filtrar Terrenos
         </h3>
         <div class="flex items-center gap-2">
-          <span id="counter-terrenos" class="text-xs font-medium bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">0 disponíveis</span>
+          <span id="counter-terrenos" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">0 disponíveis</span>
           <button onclick="toggleFilterPanel(false)" class="text-slate-400 hover:text-slate-600 p-1">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
@@ -254,12 +327,12 @@
 
     <!-- Painel Lateral - Formulário de Cadastro / Edição do Terreno (Modo Vendedor) -->
     <div id="seller-sidebar" class="hidden absolute top-0 right-0 h-full w-full sm:w-[420px] bg-white z-[600] shadow-2xl flex flex-col border-l border-slate-200 transition-transform duration-300 transform translate-x-full">
-      <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
-        <h2 id="seller-sidebar-title" class="font-bold text-base flex items-center gap-2">
-          <i class="fa-solid fa-file-pen text-emerald-400"></i>
+      <div class="p-4 bg-slate-50 border-b border-slate-200 text-slate-900 flex items-center justify-between">
+        <h2 id="seller-sidebar-title" class="font-bold text-base flex items-center gap-2 text-slate-800">
+          <i class="fa-solid fa-file-pen text-emerald-600"></i>
           Detalhes do Terreno
         </h2>
-        <button onclick="cancelRegistration()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+        <button onclick="cancelRegistration()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -520,12 +593,12 @@
     <div id="lightbox-caption" class="text-slate-300 text-xs sm:text-sm font-medium text-center max-w-2xl truncate bg-slate-900/60 px-4 py-1.5 rounded-full border border-slate-800"></div>
   </div>
 
-  <!-- Componente Toast de Notificação -->
-  <div id="toast" class="fixed bottom-6 right-6 z-[1200] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
-    <div id="toast-icon" class="text-emerald-400">
+  <!-- Componente Toast de Notificação (Tema Claro) -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[1200] bg-white text-slate-800 px-4 py-3 rounded-2xl shadow-2xl border border-slate-200 flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <div id="toast-icon" class="text-emerald-600 text-lg">
       <i class="fa-solid fa-circle-check"></i>
     </div>
-    <span id="toast-message" class="text-sm font-medium">Ação realizada com sucesso</span>
+    <span id="toast-message" class="text-sm font-semibold text-slate-800">Ação realizada com sucesso</span>
   </div>
 
   <script>
@@ -616,13 +689,22 @@
       const userProfile = document.getElementById('user-profile-container');
       const userEmailLabel = document.getElementById('user-email-label');
 
+      const authBtnMobile = document.getElementById('auth-btn-container-mobile');
+      const userProfileMobile = document.getElementById('user-profile-container-mobile');
+
       if (user) {
         if (authBtn) authBtn.classList.add('hidden');
         if (userProfile) userProfile.classList.remove('hidden');
         if (userEmailLabel) userEmailLabel.innerText = user.email;
+
+        if (authBtnMobile) authBtnMobile.classList.add('hidden');
+        if (userProfileMobile) userProfileMobile.classList.remove('hidden');
       } else {
         if (authBtn) authBtn.classList.remove('hidden');
         if (userProfile) userProfile.classList.add('hidden');
+
+        if (authBtnMobile) authBtnMobile.classList.remove('hidden');
+        if (userProfileMobile) userProfileMobile.classList.add('hidden');
       }
     }
 
@@ -864,6 +946,18 @@
       }
     }
 
+    function updatePolygonMetrics(layer) {
+      if (!layer) return;
+      currentGeoJSON = layer.toGeoJSON();
+      currentAreaM2 = turf.area(currentGeoJSON);
+      currentAreaHa = currentAreaM2 / 10000;
+
+      const m2El = document.getElementById('calculated-m2');
+      const haEl = document.getElementById('calculated-ha');
+      if (m2El) m2El.innerText = `${Math.round(currentAreaM2).toLocaleString('pt-BR')} m²`;
+      if (haEl) haEl.innerText = `${currentAreaHa.toFixed(2)} ha`;
+    }
+
     function bindPolygonEditListeners(layer) {
       if (!layer) return;
 
@@ -875,18 +969,20 @@
       });
     }
 
-    function updatePolygonMetrics(layer) {
-      if (!layer) return;
-      currentGeoJSON = layer.toGeoJSON();
-      currentAreaM2 = turf.area(currentGeoJSON);
-      currentAreaHa = currentAreaM2 / 10000;
-
-      document.getElementById('calculated-m2').innerText = `${currentAreaM2.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} m²`;
-      document.getElementById('calculated-ha').innerText = `${currentAreaHa.toFixed(2)} ha`;
+    function toggleMobileSearch() {
+      const searchBar = document.getElementById('mobile-search-bar');
+      if (searchBar) {
+        searchBar.classList.toggle('hidden');
+        if (!searchBar.classList.contains('hidden')) {
+          const input = document.getElementById('search-input-mobile');
+          if (input) input.focus();
+        }
+      }
     }
 
-    async function searchLocation() {
-      const query = document.getElementById('search-input').value.trim();
+    async function searchLocation(source = 'desktop') {
+      const inputId = source === 'mobile' ? 'search-input-mobile' : 'search-input';
+      const query = document.getElementById(inputId).value.trim();
       if (!query) return;
 
       try {
@@ -898,6 +994,9 @@
           const { lat, lon, display_name } = results[0];
           map.setView([parseFloat(lat), parseFloat(lon)], 14);
           showToast(`Navegado para: ${display_name.split(',')[0]}`);
+          if (source === 'mobile') {
+            document.getElementById('mobile-search-bar').classList.add('hidden');
+          }
         } else {
           showToast('Localização não encontrada.', 'warning');
         }
@@ -1106,6 +1205,11 @@
       const btnToggle = document.getElementById('btn-mode-toggle');
       const modeIcon = document.getElementById('mode-icon');
       const modeText = document.getElementById('mode-text');
+
+      const btnToggleMobile = document.getElementById('btn-mode-toggle-mobile');
+      const modeIconMobile = document.getElementById('mode-icon-mobile');
+      const modeTextMobile = document.getElementById('mode-text-mobile');
+
       const sellerInstructions = document.getElementById('seller-instructions');
 
       // Atualiza a visibilidade das ferramentas Geoman no mapa
@@ -1113,18 +1217,26 @@
 
       if (mode === 'buyer') {
         // Estiver no modo Explorar
-        modeIcon.className = 'fa-solid fa-compass text-xs';
-        modeText.innerText = 'Explorar';
-        btnToggle.className = 'px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
+        if (modeIcon) modeIcon.className = 'fa-solid fa-compass text-xs';
+        if (modeText) modeText.innerText = 'Explorar';
+        if (btnToggle) btnToggle.className = 'px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-emerald-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition';
+
+        if (modeIconMobile) modeIconMobile.className = 'fa-solid fa-compass text-xs';
+        if (modeTextMobile) modeTextMobile.innerText = 'Explorar';
+        if (btnToggleMobile) btnToggleMobile.className = 'px-2.5 py-1.5 bg-slate-100 border border-slate-300 text-emerald-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition';
 
         sellerInstructions.classList.add('hidden');
         cancelRegistration();
         renderPublicTerrenos();
       } else {
         // Estiver no modo Cadastrar
-        modeIcon.className = 'fa-solid fa-draw-polygon text-xs';
-        modeText.innerText = 'Cadastrar';
-        btnToggle.className = 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
+        if (modeIcon) modeIcon.className = 'fa-solid fa-draw-polygon text-xs';
+        if (modeText) modeText.innerText = 'Cadastrar';
+        if (btnToggle) btnToggle.className = 'px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
+
+        if (modeIconMobile) modeIconMobile.className = 'fa-solid fa-draw-polygon text-xs';
+        if (modeTextMobile) modeTextMobile.innerText = 'Cadastrar';
+        if (btnToggleMobile) btnToggleMobile.className = 'px-2.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1 transition';
 
         sellerInstructions.classList.remove('hidden');
         closeBuyerSidebar();
