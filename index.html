@@ -838,28 +838,76 @@
       return JSON.parse(localData);
     }
 
-    async function saveStoredTerrenos(list, terrenoPayload, isEdit = false) {
-      localStorage.setItem('geolotes_terrenos', JSON.stringify(list));
+    // Supabase usa UUID na coluna `id`. IDs antigos/demonstrativos como
+    // "1" ou "terreno_xxxxx" continuam válidos apenas no armazenamento local.
+    function isValidUUID(value) {
+      return typeof value === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    }
 
-      if (supabaseClient && terrenoPayload) {
-        try {
-          if (isEdit && terrenoPayload.id) {
-            const { error } = await supabaseClient.from('terrenos').update(terrenoPayload).eq('id', terrenoPayload.id);
-            if (error) console.error('Erro ao atualizar no Supabase:', error);
-          } else {
-            const { error } = await supabaseClient.from('terrenos').insert([terrenoPayload]);
-            if (error) console.error('Erro ao inserir no Supabase:', error);
-          }
-        } catch (err) {
-          console.error('Erro Supabase:', err);
+    function createUUID() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+
+      // Fallback para navegadores antigos, mantendo formato UUID v4 válido.
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    async function saveStoredTerrenos(list, terrenoPayload, isEdit = false) {
+      // Sem Supabase, mantém o funcionamento local da aplicação.
+      if (!supabaseClient || !terrenoPayload) {
+        localStorage.setItem('geolotes_terrenos', JSON.stringify(list));
+        return { ok: true, source: 'local' };
+      }
+
+      try {
+        if (!isValidUUID(terrenoPayload.id)) {
+          throw new Error(`ID inválido para o Supabase: ${terrenoPayload.id}`);
         }
+
+        if (isEdit) {
+          const { data, error } = await supabaseClient
+            .from('terrenos')
+            .update(terrenoPayload)
+            .eq('id', terrenoPayload.id)
+            .select('id');
+
+          if (error) throw error;
+
+          // Se o UUID não existia no banco, publica como novo registro.
+          if (!data || data.length === 0) {
+            const { error: insertError } = await supabaseClient
+              .from('terrenos')
+              .insert([terrenoPayload]);
+            if (insertError) throw insertError;
+          }
+        } else {
+          const { error } = await supabaseClient
+            .from('terrenos')
+            .insert([terrenoPayload]);
+          if (error) throw error;
+        }
+
+        // Só atualiza a cópia local depois que o banco confirmou a operação.
+        localStorage.setItem('geolotes_terrenos', JSON.stringify(list));
+        return { ok: true, source: 'supabase' };
+      } catch (err) {
+        console.error('Erro ao salvar no Supabase:', err);
+        return { ok: false, source: 'supabase', error: err };
       }
     }
 
     async function deleteTerreno(id) {
       if (!confirm('Tem certeza que deseja excluir este terreno? Esta ação não pode ser desfeita.')) return;
 
-      if (supabaseClient) {
+      // Só tenta excluir no Supabase quando o identificador realmente é UUID.
+      // Isso evita o erro 22P02 nos terrenos demonstrativos/legados.
+      if (supabaseClient && isValidUUID(id)) {
         try {
           const { error } = await supabaseClient.from('terrenos').delete().eq('id', id);
           if (error) {
@@ -868,6 +916,8 @@
           }
         } catch (err) {
           console.error('Erro de exclusão:', err);
+          showToast('Não foi possível excluir no Supabase.', 'warning');
+          return;
         }
       }
 
@@ -1409,8 +1459,12 @@
 
       const fotosFinal = currentFotos.length > 0 ? currentFotos : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'];
 
+      // Todo terreno que será persistido no Supabase recebe um UUID válido.
+      // Ao editar um registro antigo com ID textual, ele é migrado para um UUID.
+      const persistedId = isValidUUID(editingTerrenoId) ? editingTerrenoId : createUUID();
+
       const terrenoPayload = {
-        id: editingTerrenoId || ('terreno_' + Math.random().toString(36).substr(2, 9)),
+        id: persistedId,
         titulo: titulo,
         tipo: tipo,
         topografia: topografia,
@@ -1428,21 +1482,41 @@
 
       const terrenos = await getStoredTerrenos();
 
+      let saveResult;
+
       if (editingTerrenoId) {
         const index = terrenos.findIndex(t => t.id === editingTerrenoId);
         if (index !== -1) {
           terrenos[index] = terrenoPayload;
+        } else {
+          terrenos.push(terrenoPayload);
         }
-        await saveStoredTerrenos(terrenos, terrenoPayload, true);
-        showToast('Anúncio e vértices atualizados com sucesso!');
+
+        // IDs legados não existem como UUID no Supabase: nesse caso fazemos insert.
+        const shouldUpdateSupabase = isValidUUID(editingTerrenoId);
+        saveResult = await saveStoredTerrenos(terrenos, terrenoPayload, shouldUpdateSupabase);
+
+        if (saveResult.ok) {
+          showToast('Anúncio e vértices atualizados com sucesso!');
+        }
       } else {
         terrenos.push(terrenoPayload);
-        await saveStoredTerrenos(terrenos, terrenoPayload, false);
-        showToast('Terreno publicado com sucesso!');
+        saveResult = await saveStoredTerrenos(terrenos, terrenoPayload, false);
+
+        if (saveResult.ok) {
+          showToast('Terreno publicado com sucesso!');
+        }
+      }
+
+      if (!saveResult || !saveResult.ok) {
+        const message = saveResult?.error?.message || 'Erro desconhecido ao salvar no Supabase.';
+        showToast('Erro ao publicar no Supabase: ' + message, 'warning');
+        return;
       }
 
       cancelRegistration();
       switchMode('buyer');
+      await renderPublicTerrenos();
     }
 
     function cancelRegistration() {
@@ -1479,7 +1553,9 @@
         : [t.foto || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'];
 
       return {
-        id: t.id || 'terreno_' + Math.random().toString(36).substr(2, 9),
+        // Preserve IDs existentes. Se vier um registro sem ID, use UUID válido
+        // para que futuras operações também sejam compatíveis com o Supabase.
+        id: t.id || createUUID(),
         user_id: t.user_id || t.userId || null,
         titulo: t.titulo || 'Sem título',
         tipo: t.tipo || 'Sítio',
