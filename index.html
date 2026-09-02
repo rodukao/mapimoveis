@@ -1274,20 +1274,6 @@
       updateGeomanToolbarVisibility();
 
       if (mode === 'buyer') {
-        // No modo Explorar, o botão oferece a ação de entrar no modo de cadastro.
-        if (modeIcon) modeIcon.className = 'fa-solid fa-draw-polygon text-xs';
-        if (modeText) modeText.innerText = 'Cadastrar';
-        if (btnToggle) btnToggle.className = 'px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
-
-        if (modeIconMobile) modeIconMobile.className = 'fa-solid fa-draw-polygon text-xs';
-        if (modeTextMobile) modeTextMobile.innerText = 'Cadastrar';
-        if (btnToggleMobile) btnToggleMobile.className = 'px-2.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1 transition';
-
-        sellerInstructions.classList.add('hidden');
-        cancelRegistration();
-        renderPublicTerrenos();
-      } else {
-        // No modo Cadastrar, o botão oferece a ação de voltar a explorar.
         if (modeIcon) modeIcon.className = 'fa-solid fa-compass text-xs';
         if (modeText) modeText.innerText = 'Explorar';
         if (btnToggle) btnToggle.className = 'px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-emerald-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition';
@@ -1295,6 +1281,18 @@
         if (modeIconMobile) modeIconMobile.className = 'fa-solid fa-compass text-xs';
         if (modeTextMobile) modeTextMobile.innerText = 'Explorar';
         if (btnToggleMobile) btnToggleMobile.className = 'px-2.5 py-1.5 bg-slate-100 border border-slate-300 text-emerald-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1 transition';
+
+        sellerInstructions.classList.add('hidden');
+        cancelRegistration();
+        renderPublicTerrenos();
+      } else {
+        if (modeIcon) modeIcon.className = 'fa-solid fa-draw-polygon text-xs';
+        if (modeText) modeText.innerText = 'Cadastrar';
+        if (btnToggle) btnToggle.className = 'px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
+
+        if (modeIconMobile) modeIconMobile.className = 'fa-solid fa-draw-polygon text-xs';
+        if (modeTextMobile) modeTextMobile.innerText = 'Cadastrar';
+        if (btnToggleMobile) btnToggleMobile.className = 'px-2.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1 transition';
 
         sellerInstructions.classList.remove('hidden');
         closeBuyerSidebar();
