@@ -165,7 +165,7 @@
     <button 
       id="btn-toggle-filter" 
       onclick="toggleFilterPanel()" 
-      class="absolute top-4 left-14 z-[500] bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs px-3 py-2 rounded-xl shadow-xl border border-slate-200 flex items-center gap-2 transition"
+      class="absolute top-4 left-4 z-[500] bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs px-3 py-2 rounded-xl shadow-xl border border-slate-200 flex items-center gap-2 transition"
     >
       <i class="fa-solid fa-filter text-emerald-600"></i>
       <span>Filtrar Terrenos</span>
@@ -490,6 +490,36 @@
     </div>
   </div>
 
+  <!-- Modal Lightbox de Fotos em Tela Cheia -->
+  <div id="lightbox-modal" class="hidden fixed inset-0 z-[2000] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-6 transition-all duration-300">
+    <!-- Cabeçalho Lightbox -->
+    <div class="w-full flex items-center justify-between text-white max-w-6xl z-10">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-image text-emerald-400"></i>
+        <span id="lightbox-counter" class="text-xs font-semibold bg-white/10 border border-white/20 px-3 py-1 rounded-full backdrop-blur-sm">1 / 1</span>
+      </div>
+      <button onclick="closeLightbox()" class="text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center text-xl transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Área da Imagem e Navegação -->
+    <div class="relative flex-1 w-full flex items-center justify-center max-w-6xl my-2 overflow-hidden">
+      <button id="lightbox-prev-btn" onclick="prevLightboxImage()" class="absolute left-2 sm:left-4 z-10 text-white bg-slate-900/70 hover:bg-emerald-600 border border-white/20 w-11 h-11 rounded-full flex items-center justify-center text-lg backdrop-blur-sm transition shadow-xl">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+
+      <img id="lightbox-img" src="" class="max-h-[82vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all duration-200">
+
+      <button id="lightbox-next-btn" onclick="nextLightboxImage()" class="absolute right-2 sm:right-4 z-10 text-white bg-slate-900/70 hover:bg-emerald-600 border border-white/20 w-11 h-11 rounded-full flex items-center justify-center text-lg backdrop-blur-sm transition shadow-xl">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- Legenda do Terreno -->
+    <div id="lightbox-caption" class="text-slate-300 text-xs sm:text-sm font-medium text-center max-w-2xl truncate bg-slate-900/60 px-4 py-1.5 rounded-full border border-slate-800"></div>
+  </div>
+
   <!-- Componente Toast de Notificação -->
   <div id="toast" class="fixed bottom-6 right-6 z-[1200] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
     <div id="toast-icon" class="text-emerald-400">
@@ -518,9 +548,12 @@
     let currentUser = null;
     let authMode = 'login';
 
-    // Estado de Edição & Fotos
+    // Estado de Edição, Fotos e Lightbox
     let editingTerrenoId = null;
     let currentFotos = [];
+    let currentDetailProperty = null;
+    let lightboxImages = [];
+    let currentLightboxIndex = 0;
 
     // Dados Iniciais Demonstrativos
     const initialTerrenos = [
@@ -780,21 +813,6 @@
     };
 
     function setupGeomanControls() {
-      map.pm.addControls({
-        position: 'topleft',
-        drawMarker: false,
-        drawCircleMarker: false,
-        drawPolyline: false,
-        drawRectangle: true,
-        drawPolygon: true,
-        drawCircle: false,
-        drawText: false,
-        editMode: true,
-        dragMode: false,
-        cutPolygon: false,
-        removalMode: true
-      });
-
       map.on('pm:create', function(e) {
         if (activeMode !== 'seller') return;
 
@@ -816,6 +834,34 @@
           activePOIType = null;
         }
       });
+
+      // Atualiza a barra de ferramentas de acordo com o modo atual
+      updateGeomanToolbarVisibility();
+    }
+
+    function updateGeomanToolbarVisibility() {
+      const filterBtn = document.getElementById('btn-toggle-filter');
+
+      if (activeMode === 'seller') {
+        map.pm.addControls({
+          position: 'topleft',
+          drawMarker: false,
+          drawCircleMarker: false,
+          drawPolyline: false,
+          drawRectangle: true,
+          drawPolygon: true,
+          drawCircle: false,
+          drawText: false,
+          editMode: true,
+          dragMode: false,
+          cutPolygon: false,
+          removalMode: true
+        });
+        if (filterBtn) filterBtn.style.left = '56px';
+      } else {
+        map.pm.removeControls();
+        if (filterBtn) filterBtn.style.left = '16px';
+      }
     }
 
     function bindPolygonEditListeners(layer) {
@@ -868,7 +914,7 @@
       if (uploadStatus) uploadStatus.classList.remove('hidden');
 
       // Chave da API gratuita do ImgBB
-      const apiKey = '6c4605f84edc19966e7e4d25312aeca6';
+      const apiKey = '6d25785f4fe1150772d9670a003a832e';
 
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
@@ -1062,8 +1108,11 @@
       const modeText = document.getElementById('mode-text');
       const sellerInstructions = document.getElementById('seller-instructions');
 
+      // Atualiza a visibilidade das ferramentas Geoman no mapa
+      updateGeomanToolbarVisibility();
+
       if (mode === 'buyer') {
-        // Estiver na cadastrar -> O botão deve ser Explorar
+        // Estiver no modo Explorar
         modeIcon.className = 'fa-solid fa-compass text-xs';
         modeText.innerText = 'Explorar';
         btnToggle.className = 'px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
@@ -1072,7 +1121,7 @@
         cancelRegistration();
         renderPublicTerrenos();
       } else {
-        // Estiver na página de explorar -> O botão deve ser Cadastrar
+        // Estiver no modo Cadastrar
         modeIcon.className = 'fa-solid fa-draw-polygon text-xs';
         modeText.innerText = 'Cadastrar';
         btnToggle.className = 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition';
@@ -1080,7 +1129,7 @@
         sellerInstructions.classList.remove('hidden');
         closeBuyerSidebar();
         toggleFilterPanel(false);
-        showToast('Modo Cadastrar / Editar. Desenhe ou edite os vértices no mapa.');
+        showToast('Modo Cadastrar / Editar ativado! Use as ferramentas no mapa.');
       }
     }
 
@@ -1104,8 +1153,10 @@
       closeBuyerSidebar();
       closeMyTerrenosModal();
 
-      // Ativa modo seller
+      // Ativa modo seller e exibe ferramentas Geoman
       activeMode = 'seller';
+      updateGeomanToolbarVisibility();
+
       const btnToggle = document.getElementById('btn-mode-toggle');
       document.getElementById('mode-icon').className = 'fa-solid fa-compass text-xs';
       document.getElementById('mode-text').innerText = 'Explorar';
@@ -1372,6 +1423,7 @@
     }
 
     function openBuyerDetailSidebar(terreno) {
+      currentDetailProperty = terreno;
       const content = document.getElementById('property-detail-content');
       const precoPorHa = (terreno.preco / terreno.areaHa).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
       const precoPorM2 = (terreno.preco / terreno.areaM2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1394,12 +1446,17 @@
       const whatsappShareUrl = `https://wa.me/?text=${whatsappShareMessage}`;
 
       content.innerHTML = `
-        <div class="relative h-60 bg-slate-900">
-          <img id="detail-main-img" src="${terreno.foto}" alt="${terreno.titulo}" class="w-full h-full object-cover transition-all">
-          <button onclick="closeBuyerSidebar()" class="absolute top-3 right-3 bg-slate-900/70 text-white w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md hover:bg-slate-900 transition">
+        <div class="relative h-60 bg-slate-900 group cursor-pointer overflow-hidden" onclick="openLightboxFromProperty(0)">
+          <img id="detail-main-img" src="${terreno.foto}" alt="${terreno.titulo}" class="w-full h-full object-cover transition-all duration-300 group-hover:scale-105">
+          <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
+            <span class="bg-slate-900/80 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg">
+              <i class="fa-solid fa-expand text-emerald-400"></i> Ampliar Fotos
+            </span>
+          </div>
+          <button onclick="event.stopPropagation(); closeBuyerSidebar();" class="absolute top-3 right-3 bg-slate-900/70 text-white w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md hover:bg-slate-900 transition z-10">
             <i class="fa-solid fa-xmark"></i>
           </button>
-          <div class="absolute bottom-3 left-3 bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1.5">
+          <div class="absolute bottom-3 left-3 bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1.5 z-10">
             <i class="fa-solid fa-layer-group"></i>
             <span>${terreno.areaHa.toFixed(2)} Hectares (${terreno.areaM2.toLocaleString('pt-BR')} m²)</span>
           </div>
@@ -1408,12 +1465,16 @@
         <!-- Galeria Carrossel de Fotos -->
         ${terreno.fotos && terreno.fotos.length > 1 ? `
           <div class="flex gap-2 p-2.5 bg-slate-100 overflow-x-auto border-b border-slate-200">
-            ${terreno.fotos.map(imgUrl => `
-              <img 
-                src="${imgUrl}" 
-                onclick="document.getElementById('detail-main-img').src='${imgUrl}'" 
-                class="w-14 h-11 object-cover rounded-md border-2 border-white hover:border-emerald-500 cursor-pointer transition flex-shrink-0"
-              >
+            ${terreno.fotos.map((imgUrl, idx) => `
+              <div class="relative group cursor-pointer flex-shrink-0" onclick="openLightboxFromProperty(${idx})">
+                <img 
+                  src="${imgUrl}" 
+                  class="w-14 h-11 object-cover rounded-md border-2 border-white group-hover:border-emerald-500 transition"
+                >
+                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition rounded-md flex items-center justify-center">
+                  <i class="fa-solid fa-magnifying-glass-plus text-white text-[10px]"></i>
+                </div>
+              </div>
             `).join('')}
           </div>
         ` : ''}
@@ -1516,6 +1577,67 @@
       const sidebar = document.getElementById('buyer-detail-sidebar');
       sidebar.classList.remove('hidden');
       setTimeout(() => sidebar.classList.remove('translate-x-full'), 10);
+    }
+
+    function openLightboxFromProperty(idx = 0) {
+      if (!currentDetailProperty || !currentDetailProperty.fotos) return;
+      openLightbox(currentDetailProperty.fotos, idx, currentDetailProperty.titulo);
+    }
+
+    function openLightbox(images, index = 0, caption = '') {
+      if (!images || images.length === 0) return;
+      lightboxImages = Array.isArray(images) ? images : [images];
+      currentLightboxIndex = index;
+
+      const modal = document.getElementById('lightbox-modal');
+      const captionEl = document.getElementById('lightbox-caption');
+      if (captionEl) captionEl.innerText = caption || '';
+
+      updateLightboxContent();
+      modal.classList.remove('hidden');
+      document.addEventListener('keydown', handleLightboxKeyPress);
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('lightbox-modal');
+      modal.classList.add('hidden');
+      document.removeEventListener('keydown', handleLightboxKeyPress);
+    }
+
+    function updateLightboxContent() {
+      const imgEl = document.getElementById('lightbox-img');
+      const counterEl = document.getElementById('lightbox-counter');
+      const prevBtn = document.getElementById('lightbox-prev-btn');
+      const nextBtn = document.getElementById('lightbox-next-btn');
+
+      if (imgEl) imgEl.src = lightboxImages[currentLightboxIndex];
+      if (counterEl) counterEl.innerText = `${currentLightboxIndex + 1} / ${lightboxImages.length}`;
+
+      if (lightboxImages.length <= 1) {
+        if (prevBtn) prevBtn.classList.add('hidden');
+        if (nextBtn) nextBtn.classList.add('hidden');
+      } else {
+        if (prevBtn) prevBtn.classList.remove('hidden');
+        if (nextBtn) nextBtn.classList.remove('hidden');
+      }
+    }
+
+    function nextLightboxImage() {
+      if (lightboxImages.length <= 1) return;
+      currentLightboxIndex = (currentLightboxIndex + 1) % lightboxImages.length;
+      updateLightboxContent();
+    }
+
+    function prevLightboxImage() {
+      if (lightboxImages.length <= 1) return;
+      currentLightboxIndex = (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+      updateLightboxContent();
+    }
+
+    function handleLightboxKeyPress(e) {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') nextLightboxImage();
+      if (e.key === 'ArrowLeft') prevLightboxImage();
     }
 
     function copyTerrenoLink(id) {
