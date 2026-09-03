@@ -59,6 +59,28 @@
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
       border: 2px solid white;
     }
+    .segment-distance-tooltip,
+    .drawing-distance-tooltip {
+      border: 0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+    .segment-distance-tooltip {
+      background: rgba(255, 255, 255, 0.94);
+      color: #0f172a;
+    }
+    .drawing-distance-tooltip {
+      background: rgba(5, 150, 105, 0.96);
+      color: white;
+    }
+    .segment-distance-tooltip::before,
+    .drawing-distance-tooltip::before {
+      display: none;
+    }
     ::-webkit-scrollbar {
       width: 6px;
     }
@@ -513,6 +535,17 @@
       </div>
     </div>
 
+    <!-- Botão mobile para voltar ao formulário após liberar o mapa -->
+    <button
+      id="btn-return-seller-form-mobile"
+      type="button"
+      onclick="toggleSellerSidebarMinimize()"
+      class="hidden sm:hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-[750] bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-sm font-bold items-center gap-2"
+    >
+      <i class="fa-solid fa-list-check"></i>
+      Voltar aos dados / Salvar
+    </button>
+
     <!-- Painel Detalhado de Imóvel Selecionado -->
     <div id="buyer-detail-sidebar" class="hidden absolute top-0 right-0 h-full w-full sm:w-[420px] bg-white z-[600] shadow-2xl flex flex-col border-l border-slate-200 transition-transform duration-300 transform translate-x-full">
       <div id="property-detail-content" class="flex-1 overflow-y-auto">
@@ -640,6 +673,10 @@
     let currentDetailProperty = null;
     let lightboxImages = [];
     let currentLightboxIndex = 0;
+    let segmentDistanceLabels = [];
+    let drawingDistanceTooltip = null;
+    let lastDrawVertex = null;
+    let isDrawingPolygon = false;
 
     // Terrenos Demonstrativos Iniciais
     const SEED_TERRENOS = [
@@ -946,16 +983,39 @@
         maxZoom: 19
       });
 
+      // Rótulos e vias sobre a imagem de satélite para formar a visualização híbrida.
+      const hybridTransportationLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Reference &copy; Esri',
+        maxZoom: 19,
+        pane: 'overlayPane'
+      });
+
+      const hybridLabelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Reference &copy; Esri',
+        maxZoom: 19,
+        pane: 'overlayPane'
+      });
+
+      const hybridLayer = L.layerGroup([
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri',
+          maxZoom: 19
+        }),
+        hybridTransportationLayer,
+        hybridLabelsLayer
+      ]);
+
       // Camada Topográfica
       const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         attribution: 'Map data &copy; OpenStreetMap',
         maxZoom: 17
       });
 
-      map = L.map('map', { zoomControl: false, layers: [satelliteLayer] }).setView([-22.422, -45.583], 14);
+      map = L.map('map', { zoomControl: false, layers: [hybridLayer] }).setView([-22.422, -45.583], 14);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       const baseMaps = {
+        "<span class='text-xs font-semibold text-slate-800'><i class='fa-solid fa-layer-group text-emerald-600 mr-1'></i> Satélite + Ruas</span>": hybridLayer,
         "<span class='text-xs font-semibold text-slate-800'><i class='fa-solid fa-satellite text-emerald-600 mr-1'></i> Visão Satélite</span>": satelliteLayer,
         "<span class='text-xs font-semibold text-slate-800'><i class='fa-solid fa-mountain-sun text-emerald-600 mr-1'></i> Mapa Topográfico</span>": topoLayer,
         "<span class='text-xs font-semibold text-slate-800'><i class='fa-solid fa-map text-emerald-600 mr-1'></i> Mapa de Ruas</span>": streetLayer
@@ -998,6 +1058,40 @@
     }
 
     function setupGeomanControls() {
+      // Acompanha o desenho para mostrar, em tempo real, a distância
+      // entre o último vértice CONFIRMADO e a posição atual do cursor.
+      map.on('pm:drawstart', function(e) {
+        if (activeMode !== 'seller') return;
+        if (e.shape === 'Polygon' || e.shape === 'Rectangle') {
+          isDrawingPolygon = true;
+          lastDrawVertex = null;
+          clearDrawingDistanceTooltip();
+          clearSegmentDistanceLabels();
+        }
+      });
+
+      // Fallback: algumas versões do Geoman fornecem o vértice neste evento.
+      // Só aceitamos coordenadas numéricas válidas.
+      map.on('pm:vertexadded', function(e) {
+        if (activeMode !== 'seller' || !isDrawingPolygon) return;
+        const safeVertex = normalizeLatLng(e && e.latlng);
+        if (safeVertex) lastDrawVertex = safeVertex;
+      });
+
+      // O cursor é lido diretamente do evento do mapa. A distância é calculada
+      // sem usar a projeção interna do Leaflet, evitando o erro SphericalMercator.
+      map.on('mousemove', function(e) {
+        if (activeMode !== 'seller' || !isDrawingPolygon || !lastDrawVertex) return;
+        const cursor = normalizeLatLng(e && e.latlng);
+        if (cursor) updateDrawingDistanceTooltip(cursor);
+      });
+
+      map.on('pm:drawend', function() {
+        isDrawingPolygon = false;
+        lastDrawVertex = null;
+        clearDrawingDistanceTooltip();
+      });
+
       map.on('pm:create', function(e) {
         if (activeMode !== 'seller') return;
 
@@ -1010,17 +1104,151 @@
         updatePolygonMetrics(tempPolygonLayer);
 
         openSellerSidebar();
-        showToast('Área delimitada! Preencha os dados do imóvel.');
+        showToast('Área delimitada! As distâncias entre vértices aparecem no mapa.');
       });
 
       map.on('click', function(e) {
-        if (activeMode === 'seller' && activePOIType) {
-          addPOIMarker(e.latlng.lat, e.latlng.lng, activePOIType);
+        const clickedPoint = normalizeLatLng(e && e.latlng);
+
+        // Durante o desenho, cada clique confirma um novo vértice. Guardamos
+        // imediatamente esse ponto para que o movimento seguinte do mouse já
+        // mostre a distância antes do próximo clique.
+        if (activeMode === 'seller' && isDrawingPolygon && clickedPoint && !activePOIType) {
+          lastDrawVertex = clickedPoint;
+        }
+
+        if (activeMode === 'seller' && activePOIType && clickedPoint) {
+          addPOIMarker(clickedPoint.lat, clickedPoint.lng, activePOIType);
           activePOIType = null;
         }
       });
 
       updateGeomanToolbarVisibility();
+    }
+
+    function formatSegmentDistance(meters) {
+      if (!Number.isFinite(meters)) return '';
+      if (meters >= 1000) {
+        const km = meters / 1000;
+        return `${km.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
+      }
+      const digits = meters < 100 ? 1 : 0;
+      return `${meters.toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits })} m`;
+    }
+
+    function getPolygonVertexLatLngs(layer) {
+      if (!layer || typeof layer.getLatLngs !== 'function') return [];
+      let latlngs = layer.getLatLngs();
+      while (Array.isArray(latlngs) && latlngs.length > 0 && Array.isArray(latlngs[0])) {
+        latlngs = latlngs[0];
+      }
+      return Array.isArray(latlngs) ? latlngs : [];
+    }
+
+    function clearSegmentDistanceLabels() {
+      if (!map) return;
+      segmentDistanceLabels.forEach(label => {
+        if (map.hasLayer(label)) map.removeLayer(label);
+      });
+      segmentDistanceLabels = [];
+    }
+
+    function updateSegmentDistanceLabels(layer) {
+      if (!map || !layer) return;
+      clearSegmentDistanceLabels();
+
+      const vertices = getPolygonVertexLatLngs(layer);
+      if (vertices.length < 2) return;
+
+      for (let i = 0; i < vertices.length; i++) {
+        const a = vertices[i];
+        const b = vertices[(i + 1) % vertices.length];
+        if (!a || !b || typeof a.lat !== 'number' || typeof b.lat !== 'number') continue;
+
+        const distance = map.distance(a, b);
+        const midpoint = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+        const label = L.tooltip({
+          permanent: true,
+          direction: 'center',
+          className: 'segment-distance-tooltip',
+          interactive: false,
+          opacity: 0.95
+        })
+          .setLatLng(midpoint)
+          .setContent(formatSegmentDistance(distance))
+          .addTo(map);
+
+        segmentDistanceLabels.push(label);
+      }
+    }
+
+    function normalizeLatLng(value) {
+      if (!value) return null;
+      const lat = Number(value.lat);
+      const lng = Number(value.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+      return { lat, lng };
+    }
+
+    function calculateDistanceMeters(pointA, pointB) {
+      const a = normalizeLatLng(pointA);
+      const b = normalizeLatLng(pointB);
+      if (!a || !b) return NaN;
+
+      const toRad = degrees => degrees * Math.PI / 180;
+      const earthRadius = 6371008.8;
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const deltaLat = toRad(b.lat - a.lat);
+      const deltaLng = toRad(b.lng - a.lng);
+
+      const hav = Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+      const centralAngle = 2 * Math.atan2(Math.sqrt(hav), Math.sqrt(1 - hav));
+      return earthRadius * centralAngle;
+    }
+
+    function updateDrawingDistanceTooltip(cursorLatLng) {
+      if (!map) return;
+      const start = normalizeLatLng(lastDrawVertex);
+      const cursor = normalizeLatLng(cursorLatLng);
+      if (!start || !cursor) return;
+
+      const distance = calculateDistanceMeters(start, cursor);
+      if (!Number.isFinite(distance)) return;
+
+      if (!drawingDistanceTooltip) {
+        // IMPORTANTE: não adicionar o tooltip ao mapa antes de ele possuir
+        // uma posição válida. Fazer .addTo(map) antes de .setLatLng(...)
+        // faz o Leaflet tentar projetar `undefined` e gera o erro em
+        // Projection.SphericalMercator.js.
+        drawingDistanceTooltip = L.tooltip({
+          permanent: true,
+          direction: 'top',
+          offset: [0, -10],
+          className: 'drawing-distance-tooltip',
+          interactive: false,
+          opacity: 0.98
+        });
+
+        drawingDistanceTooltip
+          .setLatLng(L.latLng(cursor.lat, cursor.lng))
+          .setContent(`Próximo lado: ${formatSegmentDistance(distance)}`)
+          .addTo(map);
+        return;
+      }
+
+      drawingDistanceTooltip
+        .setLatLng(L.latLng(cursor.lat, cursor.lng))
+        .setContent(`Próximo lado: ${formatSegmentDistance(distance)}`);
+    }
+
+    function clearDrawingDistanceTooltip() {
+      if (drawingDistanceTooltip && map && map.hasLayer(drawingDistanceTooltip)) {
+        map.removeLayer(drawingDistanceTooltip);
+      }
+      drawingDistanceTooltip = null;
     }
 
     function updateGeomanToolbarVisibility() {
@@ -1052,7 +1280,7 @@
     function bindPolygonEditListeners(layer) {
       if (!layer) return;
 
-      const updateEvents = ['pm:edit', 'pm:markerdragend', 'pm:vertexadded', 'pm:vertexremoved'];
+      const updateEvents = ['pm:edit', 'pm:markerdrag', 'pm:markerdragend', 'pm:vertexadded', 'pm:vertexremoved', 'pm:change'];
       updateEvents.forEach(evt => {
         layer.on(evt, function() {
           updatePolygonMetrics(layer);
@@ -1068,6 +1296,7 @@
 
       document.getElementById('calculated-m2').innerText = `${currentAreaM2.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} m²`;
       document.getElementById('calculated-ha').innerText = `${currentAreaHa.toFixed(2)} ha`;
+      updateSegmentDistanceLabels(layer);
     }
 
     function toggleMobileSearch() {
@@ -1083,26 +1312,68 @@
 
     async function searchLocation(source = 'desktop') {
       const inputId = source === 'mobile' ? 'search-input-mobile' : 'search-input';
-      const query = document.getElementById(inputId).value.trim();
+      const input = document.getElementById(inputId);
+      const query = input.value.trim();
       if (!query) return;
 
-      try {
-        showToast('Buscando localização...');
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Brasil')}`);
-        const results = await response.json();
+      const cepDigits = query.replace(/\D/g, '');
+      const looksLikeCep = /^\d{5}-?\d{3}$/.test(query) || /^\d{8}$/.test(cepDigits);
 
-        if (results && results.length > 0) {
+      try {
+        showToast(looksLikeCep ? 'Buscando CEP...' : 'Buscando localização...');
+        let results = [];
+
+        if (looksLikeCep) {
+          // Primeiro resolve o CEP para um endereço brasileiro. O ViaCEP trabalha
+          // com CEPs de exatamente 8 dígitos; depois geocodificamos o endereço.
+          const cepResponse = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
+          if (!cepResponse.ok) throw new Error('Falha ao consultar o CEP.');
+          const cepData = await cepResponse.json();
+
+          if (cepData && !cepData.erro) {
+            const addressParts = [cepData.logradouro, cepData.bairro, cepData.localidade, cepData.uf, 'Brasil'].filter(Boolean);
+            const addressQuery = addressParts.join(', ');
+            const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=br&q=${encodeURIComponent(addressQuery)}`;
+            const response = await fetch(nominatimUrl, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
+            results = await response.json();
+
+            // Se o endereço textual não retornar coordenadas, tenta a busca estruturada pelo próprio CEP.
+            if (!Array.isArray(results) || results.length === 0) {
+              const postalUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=br&postalcode=${encodeURIComponent(cepDigits)}`;
+              const postalResponse = await fetch(postalUrl, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
+              results = await postalResponse.json();
+            }
+          }
+        } else {
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=br&q=${encodeURIComponent(query)}`, {
+            headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' }
+          });
+          if (!response.ok) throw new Error('Falha na busca de endereço.');
+          results = await response.json();
+        }
+
+        if (Array.isArray(results) && results.length > 0) {
           const { lat, lon, display_name } = results[0];
-          map.setView([parseFloat(lat), parseFloat(lon)], 14);
-          showToast(`Navegado para: ${display_name.split(',')[0]}`);
+          map.setView([parseFloat(lat), parseFloat(lon)], looksLikeCep ? 17 : 15);
+
+          L.circleMarker([parseFloat(lat), parseFloat(lon)], {
+            radius: 6,
+            color: '#ffffff',
+            weight: 2,
+            fillColor: '#059669',
+            fillOpacity: 0.95
+          }).addTo(map).bindTooltip(looksLikeCep ? `CEP ${query}` : 'Local encontrado', { direction: 'top' }).openTooltip();
+
+          showToast(`Local encontrado: ${(display_name || query).split(',').slice(0, 2).join(',')}`);
           if (source === 'mobile') {
             document.getElementById('mobile-search-bar').classList.add('hidden');
           }
         } else {
-          showToast('Localização não encontrada.', 'warning');
+          showToast(looksLikeCep ? 'CEP encontrado, mas sem coordenadas no mapa.' : 'Localização não encontrada.', 'warning');
         }
       } catch (err) {
-        showToast('Erro ao buscar localização.', 'warning');
+        console.error('Erro na busca de localização:', err);
+        showToast('Não foi possível buscar esse endereço/CEP.', 'warning');
       }
     }
 
@@ -1577,6 +1848,10 @@
       currentGeoJSON = null;
       editingTerrenoId = null;
       currentFotos = [];
+      clearSegmentDistanceLabels();
+      clearDrawingDistanceTooltip();
+      isDrawingPolygon = false;
+      lastDrawVertex = null;
 
       const form = document.getElementById('form-terreno');
       if (form) form.reset();
@@ -1995,16 +2270,27 @@
       const sidebar = document.getElementById('seller-sidebar');
       const textEl = document.getElementById('text-minimize-seller');
       const iconEl = document.getElementById('icon-minimize-seller');
+      const returnBtn = document.getElementById('btn-return-seller-form-mobile');
 
       sellerSidebarMinimized = !sellerSidebarMinimized;
 
       if (sellerSidebarMinimized) {
-        sidebar.classList.add('translate-y-[calc(100%-60px)]');
+        // No mobile escondemos o painel inteiro para que o mapa e os vértices
+        // fiquem realmente acessíveis. Um botão flutuante fica disponível para voltar.
+        sidebar.classList.add('translate-x-full');
+        if (returnBtn) {
+          returnBtn.classList.remove('hidden');
+          returnBtn.classList.add('flex');
+        }
         if (textEl) textEl.innerText = 'Ver Dados';
         if (iconEl) iconEl.className = 'fa-solid fa-list-check';
-        showToast('Mapa liberado para ajuste dos vértices!');
+        showToast('Mapa liberado. Ajuste os vértices e toque em “Voltar aos dados / Salvar”.');
       } else {
-        sidebar.classList.remove('translate-y-[calc(100%-60px)]');
+        sidebar.classList.remove('translate-x-full');
+        if (returnBtn) {
+          returnBtn.classList.add('hidden');
+          returnBtn.classList.remove('flex');
+        }
         if (textEl) textEl.innerText = 'Ver Mapa';
         if (iconEl) iconEl.className = 'fa-solid fa-map';
       }
@@ -2016,8 +2302,13 @@
       sidebar.classList.remove('translate-y-[calc(100%-60px)]');
       const textEl = document.getElementById('text-minimize-seller');
       const iconEl = document.getElementById('icon-minimize-seller');
+      const returnBtn = document.getElementById('btn-return-seller-form-mobile');
       if (textEl) textEl.innerText = 'Ver Mapa';
       if (iconEl) iconEl.className = 'fa-solid fa-map';
+      if (returnBtn) {
+        returnBtn.classList.add('hidden');
+        returnBtn.classList.remove('flex');
+      }
 
       sidebar.classList.remove('hidden');
       setTimeout(() => sidebar.classList.remove('translate-x-full'), 10);
@@ -2026,6 +2317,11 @@
     function closeSellerSidebar() {
       const sidebar = document.getElementById('seller-sidebar');
       sellerSidebarMinimized = false;
+      const returnBtn = document.getElementById('btn-return-seller-form-mobile');
+      if (returnBtn) {
+        returnBtn.classList.add('hidden');
+        returnBtn.classList.remove('flex');
+      }
       sidebar.classList.remove('translate-y-[calc(100%-60px)]');
       sidebar.classList.add('translate-x-full');
       setTimeout(() => sidebar.classList.add('hidden'), 300);
