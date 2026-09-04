@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>GeoLotes Pro - Mapeamento e Venda de Terrenos</title>
 
   <!-- Supabase JS SDK -->
@@ -36,17 +36,62 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
+      /* 100dvh acompanha a área realmente visível quando a barra do navegador móvel aparece/desaparece. */
+      height: 100dvh !important;
+      min-height: 100dvh;
     }
+
+    /* O mapa passa a ocupar o espaço restante do layout flex, em vez de recalcular com 100vh. */
     #map {
-      height: calc(100vh - 65px);
+      height: 100%;
+      min-height: 0;
       width: 100%;
       z-index: 1;
     }
+
+    /* Compatibilidade com navegadores antigos que ainda não entendem dvh. */
+    @supports not (height: 100dvh) {
+      body {
+        height: 100vh !important;
+        min-height: 100vh;
+      }
+    }
+
+    /* Painéis mobile: garantem rolagem até o último botão e respeitam a área segura inferior. */
+    #seller-sidebar,
+    #buyer-detail-sidebar {
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    #seller-sidebar-body,
+    #property-detail-content {
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
     @media (max-width: 640px) {
-      #map {
-        height: calc(100vh - 110px);
+      #seller-sidebar-body {
+        padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px)) !important;
+        scroll-padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      #property-detail-content {
+        padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+        scroll-padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      #btn-return-seller-form-mobile {
+        bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
       }
     }
     .custom-poi-icon {
