@@ -10,6 +10,7 @@ const demoPlots = [
 ];
 const DATA = window.TerraData;
 const plots = DATA.configured ? [] : demoPlots;
+let searchLocation = null, searchMarker = null, locationSearchSequence = 0;
 let currentSession = null, mine = false, loading = false, loadFailed = false, totalListings = 0, loadSequence = 0;
 let editId = null, editRevision = null, saving = false, selected = 0, drawing = false, points = [];
 let drawn = null, ghost = null, markers = [], plotLayers = [], vertices = [], currentArea = 0;
@@ -101,7 +102,65 @@ function select(index) {
 }
 
 $('price').onchange = $('area').onchange = () => DATA.configured ? loadListings() : render();
-$('reset').onclick = () => { $('price').value = 0; $('area').value = 0; if (DATA.configured) loadListings(); else render(); map.setView([-21.782, -43.392], 14); };
+$('reset').onclick = () => { clearLocation(false); $('sort-order').value = 'recent'; $('price').value = 0; $('area').value = 0; if (DATA.configured) loadListings(); else render(); map.setView([-21.782, -43.392], 14); };
+
+function clearLocation(reload = true) {
+  searchLocation = null;
+  if (searchMarker) { searchMarker.remove(); searchMarker = null; }
+  $('catalog-location').hidden = true;
+  $('location-query').value = '';
+  $('location-panel').hidden = true;
+  locationSearchSequence++;
+  if (reload && DATA.configured && !drawing) loadListings();
+}
+$('clear-location').onclick = () => clearLocation();
+$('sort-order').onchange = () => DATA.configured ? loadListings() : render();
+$('close-location-results').onclick = () => { $('location-panel').hidden = true; $('location-query').focus(); };
+$('location-query').addEventListener('keydown', event => { if (event.key === 'Escape') { $('location-panel').hidden = true; event.stopPropagation(); } });
+function chooseLocation(place) {
+  $('location-panel').hidden = true;
+  $('location-query').value = place.postalCode ? place.postalCode + ' · ' + place.label : place.label;
+  const b = place.bounds;
+  map.fitBounds([[b.south,b.west],[b.north,b.east]], {padding:[25,25],maxZoom:place.cityLevel ? 13 : 17});
+  if (searchMarker) searchMarker.remove();
+  const label = document.createElement('span'); label.textContent = place.label;
+  searchMarker = L.circleMarker([place.lat,place.lng],{radius:8,color:'#245da0',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(map).bindTooltip(label);
+  if (drawing) {
+    if (!editRevision && !points.length) {
+      if (place.city) $('city').value = place.city;
+      if (place.state) $('state').value = place.state;
+      $('neighborhood').value = place.neighborhood || '';
+    }
+    toast(place.cityFallback ? 'CEP localizado apenas pela cidade. Ajuste o mapa até o terreno.' : points.length ? 'Mapa posicionado. O desenho foi mantido.' : 'Confira a posição e marque os limites do terreno.');
+  } else {
+    searchLocation = place;
+    $('catalog-location-label').textContent = place.cityLevel ? 'Cidade: ' + place.city + (place.state ? ', ' + place.state : '') : 'Área próxima: ' + place.label;
+    $('catalog-location').hidden = false;
+    if (DATA.configured) loadListings(); else render();
+    if (place.cityFallback) toast('Não encontramos a rua no mapa. Mostrando os terrenos da cidade do CEP.');
+  }
+}
+$('location-form').onsubmit = async event => {
+  event.preventDefault();
+  if ($('location-submit').disabled || saving) return;
+  const sequence = ++locationSearchSequence;
+  $('location-submit').disabled = true; $('location-submit').textContent = 'Buscando…';
+  $('location-panel').hidden = false; $('location-results').replaceChildren(); $('location-message').textContent = 'Buscando localização…';
+  try {
+    const places = await window.TerraLocation.search($('location-query').value);
+    if (sequence !== locationSearchSequence) return;
+    $('location-message').textContent = places.length ? 'Escolha a localização:' : 'Nenhuma localização encontrada. Tente informar rua, cidade e estado.';
+    places.forEach(place => {
+      const button = document.createElement('button'), title = document.createElement('strong'), hint = document.createElement('span');
+      button.type = 'button'; title.textContent = place.label;
+      hint.textContent = place.cityFallback ? 'CEP encontrado · posição aproximada da cidade' : place.cityLevel ? 'Cidade' : 'Endereço ou local · posição aproximada';
+      button.append(title,hint); button.onclick = () => chooseLocation(place); $('location-results').append(button);
+    });
+  } catch (error) {
+    if (sequence !== locationSearchSequence) return;
+    $('location-message').textContent = ['TypeError','TimeoutError','AbortError'].includes(error.name) ? 'Não foi possível consultar a localização. Confira a conexão e tente novamente.' : error.message;
+  } finally { $('location-submit').disabled = false; $('location-submit').textContent = 'Buscar'; }
+};
 
 function measure(ps) {
   if (ps.length < 3) return 0;
@@ -218,7 +277,7 @@ function stop() {
 
 $('announce').onclick = () => start();
 $('cancel').onclick = stop;
-$('explore').onclick = () => { if (saving) return; mine = false; stop(); if (DATA.configured) loadListings(); map.setView([-21.782, -43.392], 14); };
+$('explore').onclick = () => { if (saving) return; clearLocation(false); mine = false; stop(); if (DATA.configured) loadListings(); map.setView([-21.782, -43.392], 14); };
 $('undo').onclick = () => { if (!saving) { points.pop(); updateDraw(); } };
 $('clear').onclick = () => { if (!saving) { points = []; updateDraw(); } };
 map.on('click', event => {
@@ -458,7 +517,7 @@ async function loadListings(append = false) {
   $('my-listings').classList.toggle('active', mine);
   $('list-meta').textContent = mine ? 'Seus anúncios' : 'Anúncios publicados';
   try {
-    const result = await DATA.list({ mine, offset: append ? plots.length : 0, price: +$('price').value, area: +$('area').value });
+    const result = await DATA.list({ mine, offset: append ? plots.length : 0, price: +$('price').value, area: +$('area').value, sort:$('sort-order').value, location:searchLocation });
     if (sequence !== loadSequence) return;
     plots.push(...result.rows.map(fromRow));
     totalListings = result.total ?? plots.length;
@@ -600,8 +659,6 @@ async function initializeData() {
   $('title').minLength = 3;
   $('save-listing').textContent = 'Salvar terreno';
   $('save-note').textContent = 'Rascunhos e anúncios pausados ficam visíveis somente para você.';
-  document.querySelector('.location strong').textContent = 'Terrenos no mapa';
-  document.querySelector('.location span').textContent = 'Brasil';
   const initialHash = new URLSearchParams(location.hash.slice(1));
   if (initialHash.has('error')) { toast('Este link não está mais disponível. Solicite um novo e-mail.'); history.replaceState(null, '', location.pathname); }
   try {

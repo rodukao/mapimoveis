@@ -22,7 +22,7 @@ Abra http://localhost:8000. Para autenticação local, inclua esse endereço nos
 - `dist/config.js`: URL e chave PUBLICÁVEL do Supabase, sitekey pública do CAPTCHA.
 - `supabase/migrations/`: histórico inicial do banco.
 - `docs/photo-upload-fix.sql`: correções posteriores já aplicadas ao projeto atual.
-- `tests/data.test.cjs`: testes do adaptador de dados, executáveis com `node --test tests/data.test.cjs`.
+- `tests/data.test.cjs`: testes do adaptador de dados, executáveis com `node --test tests/*.test.cjs`.
 - `.openai/hosting.json`: identidade do site na hospedagem Sites. Preserve para atualizar este site; não reutilize sua identidade para criar outro.
 
 As chaves presentes em config.js são públicas por definição. Nunca coloque senha do banco, service_role, secret key, segredo OAuth ou token GitHub no front-end. A autorização é aplicada pelo banco com RLS, não pelo botão de edição.
@@ -43,12 +43,24 @@ Em um projeto novo, revise e aplique nesta ordem: `202609060001_terra_accounts_l
 
 ## Hospedagem e GitHub
 
-Para outra hospedagem estática, publique o conteúdo de `dist` e atualize URLs autorizadas no Supabase, Google OAuth e Turnstile. Para guardar no GitHub, crie um repositório e envie os arquivos deste ZIP. O ZIP não contém histórico Git, senhas, usuários nem dados dos anúncios: o banco permanece no Supabase. Código disponível em https://github.com/rodukao/mapimoveis/tree/terra-site (snapshot do site publicado em 2026-09-07).
+Para outra hospedagem estática, publique o conteúdo de `dist` e atualize URLs autorizadas no Supabase, Google OAuth e Turnstile. Para guardar no GitHub, crie um repositório e envie os arquivos deste ZIP. O ZIP não contém histórico Git, senhas, usuários nem dados dos anúncios: o banco permanece no Supabase. Código disponível em https://github.com/rodukao/mapimoveis/tree/terra-site.
 
 ## Limites de produção e validação
 
-17 testes do adaptador e verificações de sintaxe/referências passaram. Foi verificado com o papel authenticated que anúncios publicados de outro proprietário são visíveis e que sua atualização é bloqueada. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
+25 testes do adaptador e busca e verificações de sintaxe/referências passaram. Foi verificado com o papel authenticated que anúncios publicados de outro proprietário são visíveis e que sua atualização é bloqueada. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
 
 O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança já registrados em `docs/photo-upload-verification.md` antes do lançamento comercial. Fotos usam um bucket público: quem tem a URL pode abri-las, inclusive fotos vinculadas a rascunhos. As operações de catálogo e edição continuam protegidas por RLS.
 
 O mapa de ruas usa OpenStreetMap sem chave de API; respeita atribuição e cache do navegador. O serviço comunitário não oferece garantia de disponibilidade ou uso ilimitado: https://operations.osmfoundation.org/policies/tiles/
+
+## Busca e ordenação
+
+Busque por cidade, endereço ou CEP no topo e selecione uma localização. Cidades filtram o catálogo pelo nome do município e UF cadastrados. Endereços e CEPs filtram pelos centros dos terrenos em uma janela aproximada de 3 × 3 km ao redor do local encontrado. CEP sem rua mapeada pode retornar a cidade, com aviso explícito. Os resultados não representam limites de lotes: o anunciante deve conferir o ponto e desenhar o terreno.
+
+Durante o cadastro, a busca move o mapa sem apagar vértices; cidade, UF e bairro são preenchidos somente para um cadastro novo que ainda não tenha desenho. A ordenação por preço, área e data é feita pelo Supabase antes da paginação.
+
+O módulo `dist/location.js` consulta ViaCEP para CEP e Photon para posições. São requisições disparadas pelo botão Buscar, com cache em memória, intervalo entre consultas e timeout; não há autocomplete nem coleta em lote. O endereço do Photon pode ser alterado em `dist/config.js`. O servidor público do Photon permite uso moderado, sem SLA e com possibilidade de limitação; para crescimento comercial, planeje uma instância própria ou provedor contratado.
+
+Fontes: https://github.com/komoot/photon e https://viacep.com.br/
+
+A consulta real de Juiz de Fora retornou o município e seus limites. Os testes automatizados cobrem validação de CEP, normalização, cache, filtros e ordenação. Não houve teste visual no navegador nesta atualização.

@@ -39,14 +39,23 @@
     return data.user;
   }
 
-  async function list({ mine = false, limit = 50, offset = 0, price = 0, area = 0 } = {}) {
+  async function list({ mine = false, limit = 50, offset = 0, price = 0, area = 0, sort = 'recent', location = null } = {}) {
     const ownerId = mine ? (await user()).id : null;
+    const sorting = {recent:['created_at',false],price_asc:['price_brl',true],price_desc:['price_brl',false],area_asc:['area_m2',true],area_desc:['area_m2',false]}[sort] || ['created_at',false];
     const run = selection => {
       let q = db().from('terra_listings').select(selection, { count: 'exact' })
-        .order('created_at', { ascending: false }).order('id', { ascending: false });
+        .order(sorting[0], { ascending: sorting[1] }).order('id', { ascending: false });
       q = mine ? q.eq('owner_id', ownerId) : q.eq('status', 'published');
       if (price > 0) q = q.lte('price_brl', price);
       if (area > 0) q = q.gte('area_m2', area);
+      if (location?.cityLevel && location.city) {
+        q = q.ilike('city',location.city.replace(/[\\%_]/g,character => '\\' + character));
+        if (location.state) q = q.eq('state',location.state);
+      } else if (location?.bounds) {
+        const {south,north,west,east} = location.bounds;
+        if (![south,north,west,east].every(Number.isFinite) || south > north || west > east) throw new Error('Área de busca inválida.');
+        q = q.gte('latitude',south).lte('latitude',north).gte('longitude',west).lte('longitude',east);
+      }
       return q.range(offset, offset + Math.min(limit, 100) - 1);
     };
     let result = await run(listFields);

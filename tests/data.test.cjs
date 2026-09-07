@@ -6,7 +6,7 @@ const source=fs.readFileSync('dist/data.js','utf8');
 const valid={title:'Terreno de teste',description:'',city:'Juiz de Fora',state:'MG',neighborhood:'',category:'residencial',price_brl:'100000',status:'draft',boundary_geojson:{type:'Polygon',coordinates:[[[-43,-21],[-42.999,-21],[-42.999,-20.999],[-43,-21]]]}};
 function setup({configured=true,key='sb_publishable_test',updateRow={id:'own'},insertError=null,providers={google:true},oauthError=null}={}){
  const calls=[],authCalls=[];let inserted,updated;
- const query={eq(...a){calls.push(['eq',...a]);return this},select(){return this},order(){return this},lte(){return this},gte(){return this},range(){return Promise.resolve({data:[],count:0,error:null})},single(){return Promise.resolve({data:{id:'own'},error:insertError})},maybeSingle(){return Promise.resolve({data:updateRow,error:null})},insert(data){inserted=data;return this},update(data){updated=data;return this}};
+ const query={eq(...a){calls.push(['eq',...a]);return this},select(){return this},order(...a){calls.push(['order',...a]);return this},ilike(...a){calls.push(['ilike',...a]);return this},lte(...a){calls.push(['lte',...a]);return this},gte(...a){calls.push(['gte',...a]);return this},range(){return Promise.resolve({data:[],count:0,error:null})},single(){return Promise.resolve({data:{id:'own'},error:insertError})},maybeSingle(){return Promise.resolve({data:updateRow,error:null})},insert(data){inserted=data;return this},update(data){updated=data;return this}};
  const client={auth:{signInWithOAuth:async x=>{authCalls.push(x);return {data:{url:'https://example.supabase.co/auth/v1/authorize'},error:oauthError}},signUp:async x=>{authCalls.push(x);return {data:{},error:null}},signInWithPassword:async x=>{authCalls.push(x);return {data:{},error:null}},resetPasswordForEmail:async(email,options)=>{authCalls.push({email,options});return {data:{},error:null}},getUser:async()=>({data:{user:{id:'user-a'}},error:null})},from(name){calls.push(['from',name]);return query}};
  const ctx={URL,AbortSignal,fetch:async()=>({ok:true,json:async()=>({external:providers})}),window:{TERRA_CONFIG:configured?{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:key}:{},location:{href:'https://example.com/',assign:url=>authCalls.push({redirect:url})},supabase:{createClient(){return client}}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {api:ctx.window.TerraData,calls,authCalls,get inserted(){return inserted},get updated(){return updated}};
@@ -69,4 +69,16 @@ test('Google OAuth redirects back to the site without asking for extra scopes',a
 });
 test('OAuth errors do not redirect and unsupported providers are rejected',async()=>{
  const s=setup({oauthError:{message:'disabled'}});await assert.rejects(s.api.loginWithProvider('google'));assert.equal(s.authCalls.length,1);await assert.rejects(s.api.loginWithProvider('unknown'),/inválida/);
+});
+
+test('price and area ordering is applied on the server before paging with deterministic tie-break',async()=>{
+ for(const [sort,column,ascending] of [['price_asc','price_brl',true],['price_desc','price_brl',false],['area_asc','area_m2',true],['area_desc','area_m2',false]]){
+  const s=setup();await s.api.list({sort});const orders=s.calls.filter(x=>x[0]==='order');assert.equal(orders[0][1],column);assert.equal(orders[0][2].ascending,ascending);assert.equal(orders[1][1],'id');
+ }
+});
+test('city search filters city/state without restricting the catalog to the logged-in owner',async()=>{
+ const s=setup();await s.api.list({location:{cityLevel:true,city:'Juiz de Fora',state:'MG'}});assert.ok(s.calls.some(x=>x[0]==='ilike'&&x[1]==='city'&&x[2]==='Juiz de Fora'));assert.ok(s.calls.some(x=>x[1]==='state'&&x[2]==='MG'));assert.ok(!s.calls.some(x=>x[1]==='owner_id'));
+});
+test('address searches bound both latitude and longitude on the server',async()=>{
+ const s=setup();await s.api.list({location:{bounds:{south:-22,north:-21,west:-44,east:-43}}});for(const [op,field,value] of [['gte','latitude',-22],['lte','latitude',-21],['gte','longitude',-44],['lte','longitude',-43]])assert.ok(s.calls.some(x=>x[0]===op&&x[1]===field&&x[2]===value));
 });

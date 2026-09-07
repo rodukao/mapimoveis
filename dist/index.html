@@ -15,12 +15,12 @@
     <nav><button class="nav-active" id="explore">Explorar terrenos</button><span class="demo" id="demo-badge">Versão demonstrativa</span></nav>
     <div class="header-actions"><button id="account">Entrar</button><button class="primary" id="announce">＋ Anunciar terreno</button></div>
   </header>
-  <div class="toolbar"><div class="location">⌖ <strong>Juiz de Fora, MG</strong><span>e região</span></div><label>Preço <select id="price"><option value="0">Qualquer valor</option><option value="200000">Até R$ 200 mil</option><option value="400000">Até R$ 400 mil</option></select></label><label>Área <select id="area"><option value="0">Todos os tamanhos</option><option value="500">A partir de 500 m²</option><option value="1000">A partir de 1.000 m²</option></select></label><button id="reset" class="subtle">Limpar filtros</button></div>
+  <div class="toolbar"><div class="location-search"><form id="location-form" role="search"><label class="sr-only" for="location-query">Buscar cidade, endereço ou CEP</label><input id="location-query" type="search" placeholder="Cidade, endereço ou CEP" maxlength="180" autocomplete="off" aria-controls="location-results"><button id="location-submit" type="submit">Buscar</button></form><div id="location-panel" hidden><p id="location-message" role="status"></p><div id="location-results" aria-label="Localizações encontradas"></div><div class="search-footer"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>Photon · ViaCEP</span><button id="close-location-results" type="button">Fechar</button></div></div></div><label class="catalog-filter">Preço <select id="price"><option value="0">Qualquer valor</option><option value="200000">Até R$ 200 mil</option><option value="400000">Até R$ 400 mil</option></select></label><label class="catalog-filter">Área <select id="area"><option value="0">Todos os tamanhos</option><option value="500">A partir de 500 m²</option><option value="1000">A partir de 1.000 m²</option></select></label><button id="reset" class="subtle">Limpar filtros</button></div>
   <main>
     <aside id="sidebar">
       <div id="browse">
         <div class="list-heading"><div class="list-tabs" id="listing-tabs" hidden><button class="active" id="all-listings">Todos os terrenos</button><button id="my-listings">Meus terrenos</button></div><div class="eyebrow">ENCONTRE SEU LUGAR</div><h1>Um terreno.<br>Novas possibilidades.</h1><div class="result-line"><span id="count"></span><span class="small" id="list-meta">Anúncios de exemplo</span></div></div>
-        <div id="cards"></div>
+        <div class="catalog-location" id="catalog-location" hidden><span id="catalog-location-label"></span><button id="clear-location" aria-label="Remover filtro de localização">×</button></div><label class="sort-control" for="sort-order">Ordenar por<select id="sort-order"><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="area_asc">Menor área</option><option value="area_desc">Maior área</option></select></label><div id="cards"></div>
         <button id="more-listings" class="full" hidden>Carregar mais terrenos</button><button id="retry-listings" class="full" hidden>Tentar novamente</button>
 
         <div class="list-foot">Explore o mapa para conhecer a localização de cada terreno.</div>
@@ -69,6 +69,6 @@
     <div id="lightbox-viewport"><img id="lightbox-photo" alt=""></div><p id="lightbox-error" hidden role="status">Não foi possível carregar esta foto.</p>
     <button id="lightbox-prev" class="gallery-arrow previous" aria-label="Foto anterior">‹</button><button id="lightbox-next" class="gallery-arrow next" aria-label="Próxima foto">›</button>
   </dialog>
-  <script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="app.js"></script>
+  <script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="app.js"></script>
 </body>
 </html>
