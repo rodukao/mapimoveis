@@ -1,0 +1,2 @@
+-- Version allocated by Supabase's migration service. CLI installation was unavailable.
+create policy terra_listing_photos_storage_published_read on storage.objects for select to anon,authenticated using (bucket_id = 'terra-listing-photos' and exists (select 1 from public.terra_listing_photos p join public.terra_listings l on l.id = p.listing_id where p.storage_path = objects.name and l.status = 'published'));

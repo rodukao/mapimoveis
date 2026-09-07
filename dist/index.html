@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Terra — seu próximo terreno está no mapa</title>
+  <meta name="description" content="Explore terrenos no mapa, compare preços e desenhe os limites do seu terreno.">
+  <link rel="stylesheet" href="leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 10 16 3l12 7v13l-12 7-12-7Z M4 10l12 7 12-7M16 17v13"/></svg>terra<span>terrenos no mapa</span></a>
+    <nav><button class="nav-active" id="explore">Explorar terrenos</button></nav>
+    <div class="header-actions"><button id="account">Entrar</button><button class="primary" id="announce">＋ Anunciar terreno</button></div>
+  </header>
+  <div class="toolbar"><div class="location-search"><form id="location-form" role="search"><label class="sr-only" for="location-query">Buscar cidade, endereço ou CEP</label><input id="location-query" type="search" placeholder="Cidade, endereço ou CEP" maxlength="180" autocomplete="off" aria-controls="location-results"><button id="location-submit" type="submit">Buscar</button></form><div id="location-panel" hidden><p id="location-message" role="status"></p><div id="location-results" aria-label="Localizações encontradas"></div><div class="search-footer"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><span>Photon · ViaCEP</span><button id="close-location-results" type="button">Fechar</button></div></div></div><label class="catalog-filter">Preço <select id="price"><option value="0">Qualquer valor</option><option value="200000">Até R$ 200 mil</option><option value="400000">Até R$ 400 mil</option></select></label><label class="catalog-filter">Área <select id="area"><option value="0">Todos os tamanhos</option><option value="500">A partir de 500 m²</option><option value="1000">A partir de 1.000 m²</option></select></label><button id="reset" class="subtle">Limpar filtros</button></div>
+  <main>
+    <aside id="sidebar">
+      <div id="browse">
+        <div class="list-heading"><div class="list-tabs" id="listing-tabs" hidden><button class="active" id="all-listings">Todos os terrenos</button><button id="my-listings">Meus terrenos</button></div><div class="eyebrow">ENCONTRE SEU LUGAR</div><h1>Um terreno.<br>Novas possibilidades.</h1><div class="result-line"><span id="count"></span><span class="small" id="list-meta">Anúncios publicados</span></div></div>
+        <div class="catalog-location" id="catalog-location" hidden><span id="catalog-location-label"></span><button id="clear-location" aria-label="Remover filtro de localização">×</button></div><label class="sort-control" for="sort-order">Ordenar por<select id="sort-order"><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="area_asc">Menor área</option><option value="area_desc">Maior área</option></select></label><div id="cards"></div>
+        <button id="more-listings" class="full" hidden>Carregar mais terrenos</button><button id="retry-listings" class="full" hidden>Tentar novamente</button>
+
+        <div class="list-foot">Explore o mapa para conhecer a localização de cada terreno.</div>
+      </div>
+      <div id="editor" hidden>
+        <button class="back" id="cancel">← Voltar aos terrenos</button><div class="eyebrow">SEU TERRENO NO MAPA</div><h1>Marque os limites.<br>Veja as possibilidades.</h1><div class="steps"><b>1 Localização</b><span>2 Informações</span></div><p>Amplie o mapa e toque em cada canto do terreno. Use pelo menos 3 pontos.</p>
+        <div class="measure"><span>Área estimada</span><strong id="draw-area">0 <small>m²</small></strong><span id="perimeter">Perímetro: 0 m</span></div>
+        <div class="draw-actions"><button id="undo">↶ Desfazer ponto</button><button id="clear">Recomeçar</button></div>
+        <form id="form"><fieldset id="listing-fields">
+          <label>Título do anúncio<input id="title" required maxlength="90" placeholder="Ex.: Terreno com vista em São Pedro"></label>
+          <label>Preço de venda (R$)<input id="value" required type="number" min="1" step="0.01" placeholder="250000"></label>
+          <div id="persisted-fields">
+            <label>Descrição<textarea id="description" maxlength="4000" rows="3" placeholder="Conte sobre o acesso, o relevo e os diferenciais do terreno."></textarea></label>
+            <div class="field-row"><label>Cidade<input id="city" maxlength="100" value="Juiz de Fora"></label><label>UF<select id="state"><option>MG</option></select></label></div>
+            <label>Bairro<input id="neighborhood" maxlength="100"></label>
+            <label>Tipo de terreno<select id="category"><option value="residencial">Residencial</option><option value="condominio">Condomínio</option><option value="chacara">Chácara</option><option value="rural">Rural</option><option value="comercial">Comercial</option></select></label>
+            <label>Situação<select id="listing-status"><option value="draft">Rascunho — só você pode ver</option><option value="published">Publicado — visível no catálogo</option><option value="paused">Pausado — fora do catálogo</option></select></label>
+            <div class="photo-upload"><label for="photos">Fotos do terreno</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="small">Até 12 fotos, JPG, PNG ou WebP. Cada arquivo pode ter até 10 MB.</p><div id="photo-preview" class="photo-grid" aria-live="polite"></div></div>
+          </div>
+          <div class="price-m2">Valor por m² <strong id="unit">—</strong></div><p class="small">A área é uma estimativa pelo desenho no mapa e não substitui o levantamento topográfico.</p><p id="listing-error" role="alert" hidden></p><button id="save-listing" class="primary full" type="submit">Salvar terreno</button><p class="small" id="save-note">Rascunhos e anúncios pausados ficam visíveis somente para você.</p>
+        </fieldset></form>
+      </div>
+    </aside>
+    <section class="map-wrap" aria-label="Mapa de terrenos"><div id="map"></div><div class="map-top"><div class="map-switch"><button class="active" id="street">Mapa</button><button id="satellite">Satélite</button></div><span class="map-caption" id="map-caption">Seu próximo endereço começa aqui.</span></div><div class="map-bottom"><div class="legend"><i></i> Terrenos disponíveis <span>·</span> Toque para explorar</div></div><div class="map-error" id="map-error" hidden>Não foi possível carregar o mapa. Verifique sua conexão e recarregue a página.</div><div id="distance" hidden></div></section>
+  </main>
+  <button id="mobile-toggle">Ver lista de terrenos</button><div id="toast" role="status"></div>
+  <dialog id="auth-dialog" aria-labelledby="auth-heading"><button class="dialog-close" id="close-auth" aria-label="Fechar">×</button><div class="eyebrow">SUA CONTA TERRA</div><h2 id="auth-heading">Entre para anunciar</h2><div id="signed-in" hidden><p id="account-email"></p><button id="account-listings" class="primary full">Meus terrenos</button><button id="signout" class="full">Sair desta conta</button></div><form id="auth-form"><fieldset id="auth-fields"><div id="social-auth" hidden><div id="social-buttons"></div><p class="auth-divider">ou use seu e-mail</p></div><label id="name-label" hidden>Seu nome<input id="auth-name" autocomplete="name" maxlength="100"></label><label id="email-label">E-mail<input id="auth-email" type="email" autocomplete="email" required maxlength="254"></label><div id="password-label" class="password-field"><label for="auth-password">Senha</label><div class="password-control"><input id="auth-password" type="password" autocomplete="current-password" required maxlength="128"><button id="toggle-password" type="button" aria-label="Mostrar senha" aria-controls="auth-password" aria-pressed="false">Mostrar</button></div></div><p id="password-hint" class="small" hidden>Use pelo menos 12 caracteres.</p><div id="captcha-block" hidden><div id="captcha-widget"></div><p id="captcha-message" role="status" hidden></p></div><p id="auth-message" role="status" hidden></p><button id="auth-submit" class="primary full" type="submit">Entrar</button></fieldset><button type="button" class="text-button full" id="forgot-password">Esqueci minha senha</button><button type="button" class="text-button full" id="switch-auth">Ainda não tem conta? Cadastre-se</button></form></dialog>
+  <dialog id="delete-dialog" aria-labelledby="delete-heading"><h2 id="delete-heading">Excluir este terreno?</h2><p>O anúncio e seu desenho serão removidos. Esta ação não pode ser desfeita.</p><p id="delete-error" role="alert" hidden></p><div class="draw-actions"><button id="cancel-delete">Manter terreno</button><button id="confirm-delete" class="danger">Excluir terreno</button></div></dialog>
+  <dialog id="listing-detail" aria-labelledby="detail-title">
+    <div class="detail-header"><span class="eyebrow">DETALHES DO TERRENO</span><button id="close-detail" aria-label="Fechar detalhes" autofocus>×</button></div>
+    <div class="detail-layout">
+      <section class="detail-photos" aria-label="Fotos do terreno">
+        <div id="detail-gallery" aria-roledescription="carrossel" aria-label="Fotos do anúncio">
+          <div class="photo-stage"><button id="expand-photo" aria-label="Ampliar foto"><img id="detail-photo" alt=""><span class="expand-hint">⛶ Ampliar foto</span></button><button id="photo-prev" class="gallery-arrow previous" aria-label="Foto anterior">‹</button><button id="photo-next" class="gallery-arrow next" aria-label="Próxima foto">›</button></div>
+          <div class="gallery-meta"><span id="photo-counter" aria-live="polite"></span><span>Deslize para ver mais</span></div>
+          <p id="photo-error" role="status" hidden>Não foi possível carregar esta foto. Tente outra imagem.</p>
+          <div id="photo-thumbnails" class="photo-thumbnails" aria-label="Selecionar foto"></div>
+        </div>
+        <div id="no-photos" class="no-photos" hidden>Este terreno ainda não possui fotos.</div>
+      </section>
+      <section class="detail-info"><span id="detail-category" class="tag"></span><h2 id="detail-title"></h2><p id="detail-address"></p><div id="detail-price"></div><p id="detail-unit"></p><dl id="detail-facts"></dl><h3>Sobre o terreno</h3><p id="detail-description"></p><p class="measurement-note">As medidas são estimadas a partir do desenho no mapa.</p><button id="detail-map" class="full">Ver localização no mapa</button><div id="owner-actions" hidden><button id="edit-listing">Editar terreno</button><button id="delete-listing" class="danger">Excluir</button></div></section>
+    </div>
+  </dialog>
+  <dialog id="photo-lightbox" aria-label="Visualização ampliada das fotos">
+    <div class="lightbox-toolbar"><span id="lightbox-counter" aria-live="polite"></span><div><button id="photo-zoom" aria-pressed="false">Ampliar 2×</button><button id="close-lightbox" aria-label="Fechar foto ampliada" autofocus>×</button></div></div>
+    <div id="lightbox-viewport"><img id="lightbox-photo" alt=""></div><p id="lightbox-error" hidden role="status">Não foi possível carregar esta foto.</p>
+    <button id="lightbox-prev" class="gallery-arrow previous" aria-label="Foto anterior">‹</button><button id="lightbox-next" class="gallery-arrow next" aria-label="Próxima foto">›</button>
+  </dialog>
+  <script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="app.js"></script><script src="location-ui.js"></script><script src="detail.js"></script><script src="auth.js"></script><script src="boot.js"></script>
+</body>
+</html>
