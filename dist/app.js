@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const money = n => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const unitMoney = n => n>0&&n<.01 ? '< R$ 0,01' : n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2});
 const num = n => Math.round(n).toLocaleString('pt-BR');
 const DATA = window.TerraData;
 const plots = [];
@@ -45,9 +46,9 @@ function render() {
   plots.forEach((plot, index) => {
     if (!visible(plot)) return;
     count++;
-    const card = document.createElement('button');
+    const card = document.createElement('article');
     card.className = 'card' + (selected === index ? ' selected' : '');
-    card.innerHTML = '<div class="card-media" hidden><img alt=""></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div>';
+    card.innerHTML = '<button type="button" class="card-open"><div class="card-media" hidden><img alt=""></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div></button><div class="card-actions"></div>';
     const firstPhoto = plot.photos?.[0];
     if (firstPhoto?.url) {
       const media = card.querySelector('.card-media');
@@ -55,13 +56,14 @@ function render() {
       media.querySelector('img').src = firstPhoto.url;
       media.querySelector('img').alt = `Foto de ${plot.title}`;
     }
-    card.querySelector('.tag').textContent = plot.tag + (mine ? ' · ' + ({ draft: 'Rascunho', published: 'Publicado', paused: 'Pausado' }[plot.status] || '') : '');
+    card.querySelector('.tag').textContent = plot.tag + (mine ? ' · ' + ({ draft: 'Rascunho', published: 'Ativo', reserved: 'Reservado', sold: 'Vendido', paused: 'Pausado' }[plot.status] || '') : '');
     card.querySelector('h2').textContent = plot.title;
     card.querySelector('.address').textContent = plot.address;
     card.querySelector('.amount').textContent = money(plot.price);
-    card.querySelector('.sqm').textContent = money(plot.price / plot.area) + ' / m²';
+    card.querySelector('.sqm').textContent = unitMoney(plot.price / plot.area) + ' / m²';
     card.querySelector('.plot-area strong').textContent = num(plot.area) + ' m²';
-    card.onclick = () => select(index);
+    card.querySelector('.card-open').onclick = () => select(index);
+    window.TerraMarketplace?.decorateCard(card,plot);
     $('cards').append(card);
     if (!drawing) {
       const polygon = L.polygon(bounds(plot), { color: index === selected ? '#186244' : '#408666', weight: 2, fillOpacity: .25 }).addTo(map).on('click', () => select(index));
@@ -81,17 +83,10 @@ function render() {
   $('retry-listings').hidden = !loadFailed;
 }
 
-function select(index) {
-  selected = index;
-  render();
-  showDetail(plots[index]);
-  map.flyTo([plots[index].lat, plots[index].lng], 17, { duration: .7 });
-  document.body.classList.remove('show-list');
-  $('mobile-toggle').textContent = 'Ver lista de terrenos';
-}
+function select(index) { if (plots[index]) TerraMarketplace.openPlot(plots[index]); }
 
 $('price').onchange = $('area').onchange = () => loadListings();
-$('reset').onclick = () => { clearLocation(false); $('sort-order').value = 'recent'; $('price').value = 0; $('area').value = 0; loadListings(); map.setView([-21.782, -43.392], 14); };
+$('reset').onclick = () => { clearLocation(false); window.TerraFilters?.reset(); $('sort-order').value = 'recent'; $('price').value = 0; $('area').value = 0; loadListings(); map.setView([-21.782, -43.392], 14); };
 
 function measure(ps) {
   if (ps.length < 3) return 0;
@@ -119,11 +114,13 @@ function updateDraw() {
   if (points.length >= 3) perimeter += map.distance(points.at(-1), points[0]);
   $('perimeter').textContent = 'Perímetro: ' + num(perimeter) + ' m';
   updateUnit();
+  window.TerraFilters?.updateArea();
+  window.TerraMapTools?.drawUpdated(points);
   if (ghost) ghost.remove();
   $('distance').hidden = true;
 }
 
-function updateUnit() { $('unit').textContent = currentArea && +$('value').value ? money(+$('value').value / currentArea) : '—'; }
+function updateUnit() { $('unit').textContent = currentArea && +$('value').value ? unitMoney(+$('value').value / currentArea) : '—'; }
 $('value').oninput = updateUnit;
 
 function clearPhotoDraft() {
@@ -176,7 +173,9 @@ function start(record = null) {
   editRevision = record?.revision || null;
   points = record?.points ? record.points.map(point => L.latLng(point[0], point[1])) : [];
   fillEditor(record);
+  $('sidebar').style.height = '';
   drawing = true;
+  document.dispatchEvent(new CustomEvent('terra:editstart'));
   document.body.classList.remove('show-list');
   document.body.classList.add('editing');
   $('browse').hidden = true;
@@ -192,6 +191,7 @@ function start(record = null) {
 function stop() {
   if (saving) return;
   drawing = false;
+  document.dispatchEvent(new CustomEvent('terra:editstop'));
   editId = null;
   editRevision = null;
   points = [];
@@ -212,14 +212,14 @@ $('explore').onclick = () => { if (saving) return; clearLocation(false); mine = 
 $('undo').onclick = () => { if (!saving) { points.pop(); updateDraw(); } };
 $('clear').onclick = () => { if (!saving) { points = []; updateDraw(); } };
 map.on('click', event => {
-  if (!drawing || saving) return;
+  if (!drawing || saving || !window.TerraMapTools?.canMapDraw()) return;
   if (points.length >= 200) return toast('Use no máximo 200 vértices.');
   if (points.length && map.distance(points.at(-1), event.latlng) < .2) return;
   points.push(event.latlng);
   updateDraw();
 });
 map.on('mousemove', event => {
-  if (!drawing || !points.length) return;
+  if (!drawing || !points.length || !window.TerraMapTools?.canMapDraw()) return;
   if (ghost) ghost.remove();
   ghost = L.polyline([points.at(-1), event.latlng], { color: '#156448', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
   $('distance').hidden = false;
@@ -236,10 +236,13 @@ function crosses(ps) {
   return false;
 }
 
+let toastTimer;
 function toast(message) {
-  $('toast').textContent = message;
-  $('toast').style.display = 'block';
-  setTimeout(() => $('toast').style.display = 'none', 5000);
+  let node=$('toast');
+  if(!node){node=document.createElement('div');node.id='toast';node.setAttribute('role','status');}
+  const host=[...document.querySelectorAll('dialog.terra-panel[open]')].at(-1) || ($('auth-dialog').open ? $('auth-dialog') : $('photo-lightbox').open ? $('photo-lightbox') : $('listing-detail').open ? $('listing-detail') : document.body);
+  host.append(node);node.textContent=message;node.style.display='block';
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.style.display='none',5000);
 }
 
 if ($('photos')) $('photos').onchange = event => {
@@ -256,12 +259,13 @@ if ($('photos')) $('photos').onchange = event => {
 $('form').onsubmit = async event => {
   event.preventDefault();
   if (saving) return;
+  try { window.TerraMapTools?.validateEditor(); } catch (error) { return toast(error.message); }
   if (points.length < 3 || currentArea < 1) return toast('Marque pelo menos 3 pontos para formar o terreno.');
   if (crosses(points)) return toast('Os limites se cruzam. Ajuste os pontos antes de continuar.');
   if (!$('title').value.trim()) return toast('Preencha o título do anúncio.');
   const ring = points.map(point => [point.lng, point.lat]);
   ring.push([...ring[0]]);
-  const form = { title: $('title').value, description: $('description').value, city: $('city').value, state: $('state').value, neighborhood: $('neighborhood').value, category: $('category').value, price_brl: $('value').value, status: $('listing-status').value, boundary_geojson: { type: 'Polygon', coordinates: [ring] } };
+  const form = { title: $('title').value, description: $('description').value, city: $('city').value, state: $('state').value, neighborhood: $('neighborhood').value, category: $('category').value, price_brl: $('value').value, status: $('listing-status').value, ...TerraFilters.editorValues(), boundary_geojson: { type: 'Polygon', coordinates: [ring] } };
   const filesToUpload = selectedPhotoFiles.slice();
   const keepPhotoIds = retainedPhotos.map(photo => photo.id);
   saving = true;
@@ -304,7 +308,7 @@ $('mobile-toggle').onclick = () => { const open = document.body.classList.toggle
 const categoryNames = { residencial: 'Residencial', condominio: 'Condomínio', chacara: 'Chácara', rural: 'Rural', comercial: 'Comercial' };
 function fromRow(row) {
   const photos = (row.terra_listing_photos || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map(photo => ({ ...photo, url: photo.url || '' }));
-  return { ...row, photos, price: Number(row.price_brl), area: Number(row.area_m2), lat: row.latitude, lng: row.longitude, points: row.boundary_geojson.coordinates[0].slice(0, -1).map(point => [point[1], point[0]]), address: [row.neighborhood, row.city + ', ' + row.state].filter(Boolean).join(' · '), tag: categoryNames[row.category] };
+  return { ...row, photos, price: Number(row.price_brl), area: Number(row.area_m2), lat: row.latitude, lng: row.longitude, points: row.boundary_geojson.coordinates[0].slice(0, -1).map(point => [point[1], point[0]]), address: [row.neighborhood, row.city + ', ' + row.state].filter(Boolean).join(' · '), tag: window.TerraFilters?.categories[row.category] || categoryNames[row.category] || row.category };
 }
 
 function fillEditor(plot) {
@@ -323,10 +327,12 @@ function fillEditor(plot) {
   $('listing-status').value = plot?.status || 'draft';
   $('save-listing').textContent = plot ? 'Salvar alterações' : 'Salvar terreno';
   renderPhotoPreview();
+  window.TerraFilters?.fillEditor(plot);
 }
 
 async function loadListings(append = false) {
   const sequence = ++loadSequence;
+  document.dispatchEvent(new CustomEvent('terra:catalog'));
   loading = true;
   loadFailed = false;
   if (!append) { plots.splice(0); totalListings = 0; closeDetail(); }
@@ -335,7 +341,8 @@ async function loadListings(append = false) {
   $('my-listings').classList.toggle('active', mine);
   $('list-meta').textContent = mine ? 'Seus anúncios' : 'Anúncios publicados';
   try {
-    const result = await DATA.list({ mine, offset: append ? plots.length : 0, price: +$('price').value, area: +$('area').value, sort:$('sort-order').value, location:searchLocation });
+    const result = await TerraMarketData.search(TerraFilters.get(),$('sort-order').value,append ? plots.length : 0,mine);
+    if (!append) window.TerraMarketplace?.track('search');
     if (sequence !== loadSequence) return;
     plots.push(...result.rows.map(fromRow));
     totalListings = result.total ?? plots.length;
@@ -352,9 +359,9 @@ $('all-listings').onclick = () => { if (!saving) { mine = false; stop(); loadLis
 $('my-listings').onclick = () => { if (!saving) { mine = true; stop(); loadListings(); } };
 $('more-listings').onclick = () => loadListings(true);
 $('retry-listings').onclick = () => loadListings();
-$('edit-listing').onclick = () => { const plot = plots[selected]; if (plot?.owner_id === currentSession?.user.id) { start(plot); map.fitBounds(plot.points, { padding: [35, 35], maxZoom: 19 }); } };
+$('edit-listing').onclick = () => { const plot = detailPlot; if (plot?.owner_id === currentSession?.user.id) { start(plot); map.fitBounds(plot.points, { padding: [35, 35], maxZoom: 19 }); } };
 let deleteTarget = null;
-$('delete-listing').onclick = () => { const plot = plots[selected]; if (plot?.owner_id !== currentSession?.user.id) return; deleteTarget = { id: plot.id, revision: plot.revision }; $('delete-error').hidden = true; $('delete-dialog').showModal(); };
+$('delete-listing').onclick = () => { const plot = detailPlot; if (plot?.owner_id !== currentSession?.user.id) return; deleteTarget = { id: plot.id, revision: plot.revision }; $('delete-error').hidden = true; $('delete-dialog').showModal(); };
 $('cancel-delete').onclick = () => $('delete-dialog').close();
 $('confirm-delete').onclick = async () => {
   if (!deleteTarget) return;

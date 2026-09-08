@@ -8,6 +8,7 @@
   <meta name="description" content="Explore terrenos no mapa, compare preços e desenhe os limites do seu terreno.">
   <link rel="stylesheet" href="leaflet.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="marketplace.css">
 </head>
 <body>
   <header>
@@ -20,7 +21,7 @@
     <aside id="sidebar">
       <div id="browse">
         <div class="list-heading"><div class="list-tabs" id="listing-tabs" hidden><button class="active" id="all-listings">Todos os terrenos</button><button id="my-listings">Meus terrenos</button></div><div class="eyebrow">ENCONTRE SEU LUGAR</div><h1>Um terreno.<br>Novas possibilidades.</h1><div class="result-line"><span id="count"></span><span class="small" id="list-meta">Anúncios publicados</span></div></div>
-        <div class="catalog-location" id="catalog-location" hidden><span id="catalog-location-label"></span><button id="clear-location" aria-label="Remover filtro de localização">×</button></div><label class="sort-control" for="sort-order">Ordenar por<select id="sort-order"><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="area_asc">Menor área</option><option value="area_desc">Maior área</option></select></label><div id="cards"></div>
+        <div class="catalog-location" id="catalog-location" hidden><span id="catalog-location-label"></span><button id="clear-location" aria-label="Remover filtro de localização">×</button></div><label class="sort-control" for="sort-order">Ordenar por<select id="sort-order"><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="area_asc">Menor área</option><option value="area_desc">Maior área</option><option value="unit_asc">Menor preço por m²</option></select></label><div id="cards"></div>
         <button id="more-listings" class="full" hidden>Carregar mais terrenos</button><button id="retry-listings" class="full" hidden>Tentar novamente</button>
 
         <div class="list-foot">Explore o mapa para conhecer a localização de cada terreno.</div>
@@ -37,7 +38,7 @@
             <div class="field-row"><label>Cidade<input id="city" maxlength="100" value="Juiz de Fora"></label><label>UF<select id="state"><option>MG</option></select></label></div>
             <label>Bairro<input id="neighborhood" maxlength="100"></label>
             <label>Tipo de terreno<select id="category"><option value="residencial">Residencial</option><option value="condominio">Condomínio</option><option value="chacara">Chácara</option><option value="rural">Rural</option><option value="comercial">Comercial</option></select></label>
-            <label>Situação<select id="listing-status"><option value="draft">Rascunho — só você pode ver</option><option value="published">Publicado — visível no catálogo</option><option value="paused">Pausado — fora do catálogo</option></select></label>
+            <label>Situação<select id="listing-status"><option value="draft">Rascunho — só você pode ver</option><option value="published">Publicado — visível no catálogo</option><option value="reserved">Reservado — visível com aviso</option><option value="sold">Vendido — acessível pelo link</option><option value="paused">Pausado — fora do catálogo</option></select></label>
             <div class="photo-upload"><label for="photos">Fotos do terreno</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="small">Até 12 fotos, JPG, PNG ou WebP. Cada arquivo pode ter até 10 MB.</p><div id="photo-preview" class="photo-grid" aria-live="polite"></div></div>
           </div>
           <div class="price-m2">Valor por m² <strong id="unit">—</strong></div><p class="small">A área é uma estimativa pelo desenho no mapa e não substitui o levantamento topográfico.</p><p id="listing-error" role="alert" hidden></p><button id="save-listing" class="primary full" type="submit">Salvar terreno</button><p class="small" id="save-note">Rascunhos e anúncios pausados ficam visíveis somente para você.</p>
@@ -69,6 +70,6 @@
     <div id="lightbox-viewport"><img id="lightbox-photo" alt=""></div><p id="lightbox-error" hidden role="status">Não foi possível carregar esta foto.</p>
     <button id="lightbox-prev" class="gallery-arrow previous" aria-label="Foto anterior">‹</button><button id="lightbox-next" class="gallery-arrow next" aria-label="Próxima foto">›</button>
   </dialog>
-  <script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="app.js"></script><script src="location-ui.js"></script><script src="detail.js"></script><script src="auth.js"></script><script src="boot.js"></script>
+  <script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="js/ui/dialogs.js"></script><script src="js/repository/marketplace.js"></script><script src="app.js"></script><script src="location-ui.js"></script><script src="detail.js"></script><script src="auth.js"></script><script src="js/search/filters.js"></script><script src="js/terrenos/marketplace.js"></script><script src="js/account/panel.js"></script><script src="js/map/geometry.js"></script><script src="js/map/tools.js"></script><script src="js/analysis/rayx.js"></script><script src="boot.js"></script>
 </body>
 </html>

@@ -10,12 +10,12 @@ function showDetail(plot) {
   $('detail-category').textContent = plot.tag;
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
-  $('detail-unit').textContent = money(plot.price / plot.area) + ' / m²';
+  $('detail-unit').textContent = unitMoney(plot.price / plot.area) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
   const facts = [['Área estimada', num(plot.area) + ' m²']];
   if (Number.isFinite(Number(plot.perimeter_m))) facts.push(['Perímetro', num(Number(plot.perimeter_m)) + ' m']);
-  if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Publicado',paused:'Pausado'}[plot.status] || plot.status]);
+  if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Ativo',reserved:'Reservado',sold:'Vendido',paused:'Pausado'}[plot.status] || plot.status]);
   if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);
   for (const [key, label] of [['created_at','Cadastrado em'],['updated_at','Atualizado em']]) {
     if (plot[key] && Number.isFinite(Date.parse(plot[key]))) facts.push([label,new Date(plot[key]).toLocaleDateString('pt-BR')]);
@@ -39,6 +39,7 @@ function showDetail(plot) {
   if (detailPhotos.length) displayPhoto(0);
   if (!$('listing-detail').open) $('listing-detail').showModal();
   $('listing-detail').scrollTop = 0;
+  document.dispatchEvent(new CustomEvent('terra:detail',{detail:plot}));
 }
 function resetPhotoZoom() {
   $('lightbox-viewport').classList.remove('zoomed');
@@ -76,6 +77,7 @@ for (const id of ['photo-prev','lightbox-prev']) $(id).onclick = () => displayPh
 for (const id of ['photo-next','lightbox-next']) $(id).onclick = () => displayPhoto(detailPhotoIndex + 1);
 for (const id of ['listing-detail','photo-lightbox']) {
   $(id).addEventListener('keydown', event => {
+    if (event.target.closest('input,textarea,select')) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); event.stopPropagation(); displayPhoto(detailPhotoIndex + (event.key === 'ArrowRight' ? 1 : -1));
     }

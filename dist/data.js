@@ -9,7 +9,7 @@
   const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
   const PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const PHOTO_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at';
+  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at,terrain_context,topography,infrastructure,features,documents,details';
   const photoFields = 'terra_listing_photos(id,listing_id,storage_path,alt_text,sort_order,created_at)';
   const listFields = `${fields},${photoFields}`;
   let client = null;
@@ -67,12 +67,14 @@
     const clean = {
       title: form.title.trim(), description: form.description.trim(), city: form.city.trim(), state: form.state,
       neighborhood: form.neighborhood.trim(), category: form.category, price_brl: Number(form.price_brl),
-      status: form.status, boundary_geojson: form.boundary_geojson
+      status: form.status, boundary_geojson: form.boundary_geojson,
+      terrain_context: form.terrain_context || 'urban', topography: form.topography || '',
+      infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: form.details || {}
     };
     if (clean.title.length < 3 || clean.title.length > 90) throw new Error('Use entre 3 e 90 caracteres no título.');
     if (clean.description.length > 4000 || clean.city.length < 2 || clean.city.length > 100 || clean.neighborhood.length > 100) throw new Error('Revise a descrição e a localização do terreno.');
     if (!Number.isFinite(clean.price_brl) || clean.price_brl <= 0 || clean.price_brl > 999999999999.99) throw new Error('Informe um preço de venda válido.');
-    if (!['draft', 'published', 'paused'].includes(clean.status)) throw new Error('Selecione uma situação válida.');
+    if (!['draft', 'published', 'reserved', 'sold', 'paused'].includes(clean.status)) throw new Error('Selecione uma situação válida.');
     return clean;
   }
 
@@ -182,6 +184,7 @@
     return row;
   }
 
+  window.TerraRepository = {db, user, unwrap, fields, listFields, hydratePhotos};
   window.TerraData = {
     configured, list, save, syncPhotos, maxPhotos: MAX_PHOTOS,
     session: async () => configured ? unwrap(await db().auth.getSession()).session : null,
@@ -223,6 +226,7 @@
       if (error?.code === 'captcha_failed') return 'A verificação de segurança expirou ou falhou. Confirme novamente e tente outra vez.';
       if (error?.code === 'PGRST205') return 'A estrutura de fotos ainda não foi ativada no Supabase. Execute a migração de fotos e tente novamente.';
       if (['invalid_credentials', 'email_not_confirmed', 'over_request_rate_limit', 'over_email_send_rate_limit', 'weak_password', 'user_already_exists', 'otp_expired'].includes(error?.code)) return ({ invalid_credentials: 'E-mail ou senha incorretos.', email_not_confirmed: 'Confirme seu e-mail antes de entrar.', over_request_rate_limit: 'Muitas tentativas. Aguarde alguns minutos.', over_email_send_rate_limit: 'O limite de envio de e-mails foi atingido. Tente mais tarde.', weak_password: 'Escolha uma senha mais forte.', user_already_exists: 'Confira seu e-mail ou tente entrar na sua conta.', otp_expired: 'O link expirou. Solicite um novo e-mail.' })[error.code];
+      if (error?.code === 'P0001' && error.message?.length <= 240) return error.message;
       if (error?.code === '42501') return 'Você não tem permissão para esta ação. Entre novamente na sua conta.';
       if (error?.code === '23514' || error?.code === '22023') return 'Revise os dados e os limites do terreno. O desenho precisa formar uma área válida.';
       if (error?.code || error?.name === 'TypeError') return 'Não foi possível concluir. Verifique sua conexão e tente novamente.';
