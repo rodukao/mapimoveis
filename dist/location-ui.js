@@ -1,5 +1,6 @@
 function clearLocation(reload = true) {
   searchLocation = null;
+  window.TerraFilters?.clearSpatial();
   if (searchMarker) { searchMarker.remove(); searchMarker = null; }
   $('catalog-location').hidden = true;
   $('location-query').value = '';
@@ -27,6 +28,7 @@ function chooseLocation(place) {
     }
     toast(place.cityFallback ? 'CEP localizado apenas pela cidade. Ajuste o mapa até o terreno.' : points.length ? 'Mapa posicionado. O desenho foi mantido.' : 'Confira a posição e marque os limites do terreno.');
   } else {
+    window.TerraFilters?.clearSpatial();
     searchLocation = place;
     $('catalog-location-label').textContent = place.cityLevel ? 'Cidade: ' + place.city + (place.state ? ', ' + place.state : '') : 'Área próxima: ' + place.label;
     $('catalog-location').hidden = false;
@@ -55,4 +57,3 @@ $('location-form').onsubmit = async event => {
     $('location-message').textContent = ['TypeError','TimeoutError','AbortError'].includes(error.name) ? 'Não foi possível consultar a localização. Confira a conexão e tente novamente.' : error.message;
   } finally { $('location-submit').disabled = false; $('location-submit').textContent = 'Buscar'; }
 };
-

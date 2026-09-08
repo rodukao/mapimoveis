@@ -99,7 +99,7 @@ $('auth-form').onsubmit = async event => {
 };
 $('signout').onclick = async () => { if (saving) return; $('signout').disabled = true; try { await DATA.logout(); currentSession = null; mine = false; stop(); $('auth-dialog').close(); updateAccount(); await loadListings(); toast('Você saiu da sua conta.'); } catch (error) { toast(DATA.explain(error)); } finally { $('signout').disabled = false; } };
 $('account-listings').onclick = () => { if (saving) return; $('auth-dialog').close(); mine = true; stop(); loadListings(); if (matchMedia('(max-width:720px)').matches) { document.body.classList.add('show-list'); $('mobile-toggle').textContent = 'Voltar para o mapa'; } };
-function updateAccount() { $('account').textContent = currentSession ? 'Minha conta' : 'Entrar'; $('listing-tabs').hidden = false; $('my-listings').hidden = !currentSession; }
+function updateAccount() { $('account').textContent = currentSession ? 'Minha conta' : 'Entrar'; $('listing-tabs').hidden = false; $('my-listings').hidden = !currentSession; document.dispatchEvent(new CustomEvent('terra:session')); }
 
 async function initializeData() {
   $('persisted-fields').hidden = false;
@@ -117,6 +117,7 @@ async function initializeData() {
     currentSession = await DATA.session();
     updateAccount();
     await loadListings();
+    document.dispatchEvent(new CustomEvent('terra:ready'));
   } catch (error) { toast(DATA.explain(error)); loadFailed = true; render(); }
 }
 
