@@ -50,7 +50,7 @@ O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist
 
 25 testes do adaptador e busca e verificações de sintaxe/referências passaram. Foi verificado com o papel authenticated que anúncios publicados de outro proprietário são visíveis e que sua atualização é bloqueada. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
 
-O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança já registrados em `docs/photo-upload-verification.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. A transição do bucket para privado deve ocorrer após a publicação deste cliente.
+O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança já registrados em `docs/photo-upload-verification.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. O bucket de fotos dos terrenos está privado desde a publicação da versão 12; apenas fotos de anúncios públicos ou do próprio proprietário recebem uma URL assinada.
 
 O mapa de ruas usa OpenStreetMap sem chave de API; respeita atribuição e cache do navegador. O serviço comunitário não oferece garantia de disponibilidade ou uso ilimitado: https://operations.osmfoundation.org/policies/tiles/
 
