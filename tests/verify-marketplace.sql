@@ -1,5 +1,6 @@
--- Run in a test project AFTER both proposed migrations. No data persists: final ROLLBACK.
--- This suite is prepared, not yet executed. Stop on the first SQL error.
+-- Run after the marketplace, search, and qualified PostGIS-operator migrations.
+-- Passed on 2026-09-08 in a transaction on the existing project; no test data persisted.
+-- Prefer an isolated test project for future changes. Stop on the first SQL error.
 begin;
 select set_config('terra_test.a',gen_random_uuid()::text,true),set_config('terra_test.b',gen_random_uuid()::text,true),set_config('terra_test.listing_a',gen_random_uuid()::text,true),set_config('terra_test.listing_b',gen_random_uuid()::text,true),set_config('terra_test.session',gen_random_uuid()::text,true);
 insert into auth.users(id,aud,role,email,raw_user_meta_data,created_at,updated_at)

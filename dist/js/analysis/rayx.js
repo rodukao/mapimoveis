@@ -3,6 +3,9 @@ window.TerraRayX = (() => {
   const distance=n=>n>=1000?(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' km':Math.round(n)+' m';
   function summary(id,revision){const result=cache.get(id+':'+revision);return result?.distances?.length?result.distances.map(item=>item.label+': '+distance(item.meters)).join(' · '):'Ainda não consultadas';}
   function attach(plot,parent){
+    if(!['published','reserved','sold'].includes(plot.status)){
+      parent.append(el('section',{class:'rayx'},el('h3',{},'Raio-X Terra'),el('p',{},'Disponível após publicar o anúncio. A localização de rascunhos e anúncios pausados não é enviada aos serviços de análise geográfica.')));return;
+    }
     const section=el('section',{class:'rayx'},el('h3',{},'Raio-X Terra'),el('p',{},'Consulte distâncias e altitude a partir das fontes geográficas disponíveis.')),content=el('div'),button=el('button',{},'Consultar dados geográficos');section.append(button,content);parent.append(section);
     function display(result){
       content.replaceChildren();

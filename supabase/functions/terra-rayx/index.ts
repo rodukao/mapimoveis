@@ -1,5 +1,5 @@
-// Deploy only after review. Uses the existing Supabase URL/key supplied to Edge Functions.
-// No service_role: the caller's own RLS permissions authorize every listing before any cache read.
+// Only public listings may be sent to geographic providers. No service_role or user JWT.
+// An anonymous RLS read and explicit public-status filter precede every cache read.
 const cache=new Map(),inFlight=new Map();
 const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Content-Type':'application/json'};
 const response=(status,body)=>new Response(JSON.stringify(body),{status,headers});
@@ -21,7 +21,7 @@ async function analyze(plot){
  if(sources[0].status==='fulfilled'){
   const normalize=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const states={AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-  const point=sources[0].value.features?.find(f=>f.properties?.countrycode==='BR'&&['city','town','village'].includes(f.properties?.osm_value)&&normalize(f.properties?.name)===normalize(plot.city)&&[normalize(states[plot.state]),normalize(plot.state)].includes(normalize(f.properties?.state)));
+  const point=sources[0].value.features?.find(f=>f.properties?.countrycode==='BR'&&['city','town','village','municipality'].includes(f.properties?.osm_value)&&normalize(f.properties?.name)===normalize(plot.city)&&[normalize(states[plot.state]),normalize(plot.state)].includes(normalize(f.properties?.state)));
   if(point?.geometry?.coordinates){const c=point.geometry.coordinates,meters=distance(origin,[c[1],c[0]]);if(meters<200000){result.distances.push({label:'Referência central da cidade',meters});result.sources.push({name:'Photon / OpenStreetMap',url:'https://www.openstreetmap.org/copyright'});}}
  }
  if(!result.distances.length)result.unavailable.push('Referência central da cidade indisponível.');
@@ -65,10 +65,11 @@ Deno.serve(async req=>{
  try{
   const text=await readText(req.body,512);if(text.length>200)return response(400,{error:'Requisição inválida.'});
   const {listingId}=JSON.parse(text);if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId || ''))return response(400,{error:'Terreno inválido.'});
-  const project=Deno.env.get('SUPABASE_URL'),key=Deno.env.get('SUPABASE_ANON_KEY');if(!project||!key)return response(503,{error:'Análise temporariamente indisponível.'});
-  const auth=req.headers.get('authorization'),query=new URL(project+'/rest/v1/terra_listings');query.searchParams.set('id','eq.'+listingId);query.searchParams.set('select','id,city,state,latitude,longitude,boundary_geojson,revision');
-  const dbHeaders={apikey:key};if(auth&&auth.startsWith('Bearer eyJ'))dbHeaders.Authorization=auth;
-  const rows=await json(query,{headers:dbHeaders});if(!Array.isArray(rows)||rows.length!==1)return response(404,{error:'Este terreno não está disponível.'});
+  const project=Deno.env.get('SUPABASE_URL'),configuredKeys=Deno.env.get('SUPABASE_PUBLISHABLE_KEYS');
+  const publicKeys=configuredKeys?JSON.parse(configuredKeys):{},key=publicKeys.default || Object.values(publicKeys).find(value=>typeof value==='string'&&value.startsWith('sb_publishable_')) || Deno.env.get('SUPABASE_ANON_KEY');
+  if(!project||!key)return response(503,{error:'Análise temporariamente indisponível.'});
+  const query=new URL(project+'/rest/v1/terra_listings');query.searchParams.set('id','eq.'+listingId);query.searchParams.set('status','in.(published,reserved,sold)');query.searchParams.set('select','id,city,state,latitude,longitude,boundary_geojson,revision');
+  const rows=await json(query,{headers:{apikey:key}});if(!Array.isArray(rows)||rows.length!==1)return response(404,{error:'A análise está disponível apenas para anúncios públicos.'});
   const plot=rows[0],cacheKey=plot.id+':'+plot.revision,cached=cache.get(cacheKey);
   if(cached&&cached.until>Date.now())return response(200,cached.data);
   if(inFlight.size>=3&&!inFlight.has(cacheKey))return response(429,{error:'Aguarde alguns segundos antes de consultar.'});

@@ -4,7 +4,7 @@ Site de anúncios de terrenos com mapa, cadastro de contas, desenho dos limites,
 
 Site atual: https://terramapa.danielleczfranco.chatgpt.site
 
-**Branch de próxima versão, ainda não publicada.** O site atual permanece na versão 12. Favoritos, painel da conta, filtros avançados, comparação e ferramentas geográficas estão preparados nesta branch e dependem das propostas de banco ainda não aplicadas. Consulte [o estado da entrega e as pendências](docs/ROADMAP_STATUS.md) antes de publicar.
+Esta versão inclui favoritos, painel da conta, filtros avançados, comparação e ferramentas geográficas. As migrações foram autorizadas, aplicadas e verificadas no projeto existente. Consulte [o estado da entrega e as pendências](docs/ROADMAP_STATUS.md).
 
 ## Código e execução local
 
@@ -24,20 +24,20 @@ Abra http://localhost:8000. Para autenticação local, inclua esse endereço nos
 - `dist/captcha.js`: integração com Turnstile.
 - `dist/js/repository/marketplace.js`: consultas e gravações das novas funcionalidades.
 - `dist/js/terrenos`, `dist/js/account`, `dist/js/search`, `dist/js/map` e `dist/js/analysis`: anúncios, painel da conta, filtros, perímetros e Raio-X.
-- `dist/js/ui/dialogs.js` e `dist/marketplace.css`: componentes compartilhados e estilos da próxima versão.
+- `dist/js/ui/dialogs.js` e `dist/marketplace.css`: componentes compartilhados e estilos do marketplace.
 - `dist/config.js`: URL e chave PUBLICÁVEL do Supabase, sitekey pública do CAPTCHA.
-- `supabase/migrations/`: histórico inicial do banco.
+- `supabase/migrations/`: esquema inicial e migrações registradas no projeto atual.
 - `docs/photo-upload-fix.sql`: correções posteriores já aplicadas ao projeto atual.
-- `docs/proposed/`: propostas SQL não aplicadas, dependentes de aprovação e validação.
-- `supabase/functions/terra-rayx/index.ts`: análise geográfica preparada, ainda não implantada.
-- `tests/`: 40 testes, executáveis com `node --test tests/*.test.cjs`.
+- `docs/DATABASE.md`: permissões e migrações aplicadas, incluindo a configuração do Raio-X.
+- `supabase/functions/terra-rayx/index.ts`: análise geográfica implantada, restrita a anúncios públicos.
+- `tests/`: 42 testes, executáveis com `node --test tests/*.test.cjs`.
 - `.openai/hosting.json`: identidade do site na hospedagem Sites. Preserve para atualizar este site; não reutilize sua identidade para criar outro.
 
 As chaves presentes em config.js são públicas por definição. Nunca coloque senha do banco, service_role, secret key, segredo OAuth ou token GitHub no front-end. A autorização é aplicada pelo banco com RLS, não pelo botão de edição.
 
 ## Comportamento do catálogo
 
-Todos os visitantes, incluindo os autenticados, podem ver anúncios publicados. “Meus terrenos” é um filtro acionado explicitamente que também mostra rascunhos e anúncios pausados da própria conta. Somente o proprietário pode editar e excluir. Salvar um anúncio não ativa o filtro da conta automaticamente. Entrar e “Explorar” retornam ao catálogo geral.
+Todos os visitantes, incluindo os autenticados, podem ver anúncios ativos e reservados. Vendidos continuam acessíveis pelo link individual, fora da busca padrão. “Meus terrenos” é um filtro acionado explicitamente que também mostra rascunhos e anúncios pausados da própria conta. Somente o proprietário pode editar e excluir. Salvar um anúncio não ativa o filtro da conta automaticamente. Entrar e “Explorar” retornam ao catálogo geral.
 
 ## Login social
 
@@ -49,7 +49,7 @@ No projeto atual, as migrações e as correções de fotos já foram aplicadas: 
 
 Em um projeto novo, revise e aplique nesta ordem: `202609060001_terra_accounts_listings.sql`, `202609060003_terra_listing_photos_cast_text.sql` e `docs/photo-upload-fix.sql`. O arquivo 002 é histórico e foi substituído pelo 003. A sequência de instalação nova não foi executada em um projeto vazio nesta entrega. Configure Auth, URL do site, redirecionamentos e CAPTCHA separadamente, conforme os guias. Copie somente dados que você decidir migrar.
 
-Essa sequência histórica exige revisão das referências ao schema PostGIS e das migrações posteriores de Storage; não representa um instalador completo validado. As propostas novas de `docs/proposed` também não foram aplicadas ao projeto atual.
+Essa sequência histórica exige revisão das referências ao schema PostGIS e das migrações posteriores de Storage; não representa um instalador completo validado. As migrações adicionais com versões alocadas pelo Supabase já estão aplicadas ao projeto atual e não devem ser repetidas.
 
 ## Hospedagem e GitHub
 
@@ -57,17 +57,17 @@ O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist
 
 ## Limites de produção e validação
 
-40 testes automatizados e verificações de sintaxe/referências passaram nesta branch. Antes dela, foi verificado no banco atual com o papel authenticated que anúncios publicados de outro proprietário são visíveis e que sua atualização é bloqueada. As novas políticas e funções propostas ainda não foram executadas. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
+42 testes automatizados e verificações de sintaxe/referências passaram. O roteiro transacional `tests/verify-marketplace.sql` passou com duas contas temporárias no banco atual, sem persistir os registros de teste. A API real foi verificada para catálogo, ordenação, interseção de perímetros, perfil público, assinatura das fotos e Raio-X. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
 
-O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança já registrados em `docs/photo-upload-verification.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. O bucket de fotos dos terrenos está privado desde a publicação da versão 12; apenas fotos de anúncios públicos ou do próprio proprietário recebem uma URL assinada.
+O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança registrados em `docs/ROADMAP_STATUS.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. O bucket de fotos dos terrenos está privado desde a publicação da versão 12; apenas fotos de anúncios públicos ou do próprio proprietário recebem uma URL assinada.
 
 O mapa de ruas usa OpenStreetMap sem chave de API; respeita atribuição e cache do navegador. O serviço comunitário não oferece garantia de disponibilidade ou uso ilimitado: https://operations.osmfoundation.org/policies/tiles/
 
 ## Busca e ordenação
 
-Busque por cidade, endereço ou CEP no topo e selecione uma localização. Cidades filtram o catálogo pelo nome do município e UF cadastrados. Endereços e CEPs filtram pelos centros dos terrenos em uma janela aproximada de 3 × 3 km ao redor do local encontrado. CEP sem rua mapeada pode retornar a cidade, com aviso explícito. Os resultados não representam limites de lotes: o anunciante deve conferir o ponto e desenhar o terreno.
+Busque por cidade, endereço ou CEP no topo e selecione uma localização. Cidades filtram o catálogo pelo nome do município e UF cadastrados. Endereços e CEPs filtram os terrenos cujo perímetro intersecta uma janela aproximada de 3 × 3 km ao redor do local encontrado. CEP sem rua mapeada pode retornar a cidade, com aviso explícito. Os resultados não representam limites de lotes: o anunciante deve conferir o ponto e desenhar o terreno.
 
-Na próxima versão, a seleção de área utiliza interseção do perímetro com a região no PostGIS; inclui também “Buscar nesta área” e áreas de interesse desenhadas ou salvas. O comportamento anterior descrito acima corresponde ao site em produção.
+A seleção de área utiliza interseção do perímetro com a região no PostGIS; inclui “Buscar nesta área” e áreas de interesse desenhadas ou salvas. As buscas podem ter filtros avançados e alertas internos para novos anúncios correspondentes.
 
 Durante o cadastro, a busca move o mapa sem apagar vértices; cidade, UF e bairro são preenchidos somente para um cadastro novo que ainda não tenha desenho. A ordenação por preço, área e data é feita pelo Supabase antes da paginação.
 

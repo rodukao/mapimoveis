@@ -1,83 +1,60 @@
-# Terra — próxima versão
+# Terra — estado da entrega
 
-Estado em 8 de setembro de 2026. Este documento descreve a branch `roadmap-marketplace`, ainda não publicada. O site público permanece na versão 12.
+Atualizado em 8 de setembro de 2026. As migrações foram aplicadas após autorização explícita do proprietário e o Raio-X está implantado. Este código está pronto para a sequência de publicação. Os limites de validação abaixo continuam válidos após publicar.
 
-## O que está no ar
+## Funcionalidades
 
-- [Site público](https://terramapa.danielleczfranco.chatgpt.site), acessível sem login no ChatGPT.
-- Contas com e-mail/senha e CAPTCHA; anúncios com desenho, área calculada no PostGIS, até 12 fotos, galeria e ampliação.
-- Busca por cidade, endereço e CEP; ordenação por preço, área e data.
-- Catálogo público igual para visitantes e usuários autenticados; edição restrita ao proprietário.
-- Etapa 0: dados demonstrativos e salvamento em memória removidos, módulos de conta/detalhe/localização separados e GitHub principal consolidado com Terra.
-- Fotos dos terrenos em bucket privado desde a versão 12, com URLs assinadas por uma hora e leitura autorizada por RLS.
-
-Publicação verificada: versão 12, fonte Sites `3b38125d3fc5d1be0d689d5dd225daf1a527ecc4`. As mudanças posteriores de documentação no GitHub não alteram o site.
-
-## Entrega preparada para revisão
-
-| Etapa | Código nesta branch | Ativação pendente |
+| Etapa | Entrega | Validação |
 | --- | --- | --- |
-| 1 — Marketplace | URL individual `?terreno=ID`, favoritos, compartilhamento, WhatsApp com registro do contato, visualizações deduplicadas, situação do anúncio, denúncias e perfil público do anunciante | Proposta SQL 01; verificação com contas distintas |
-| 2 — Busca e conta | Filtros por preço, área em m²/ha, tipo, contexto urbano/rural, topografia, infraestrutura e documentação; buscas salvas; alertas dentro do site; similares; comparação de 2 a 4 terrenos; painel da conta | Propostas SQL 01 e 02; verificação dos alertas e paginação no banco |
-| 3 — Mapa e cadastro | Busca pela área visível ou por polígono de interesse; entrada de coordenadas; importação GeoJSON/KML/KMZ; distâncias entre vértices; campos urbanos e rurais | SQL 02 para pesquisa espacial; testes em navegador dos desenhos e arquivos |
-| 4 — Raio-X | Função com leitura autorizada por RLS, cache por revisão do anúncio, referência central da cidade e amostras de altitude reais; campos indisponíveis são identificados | Publicar e testar `terra-rayx`; configurar uma fonte própria/contratada de vias e serviços próximos |
+| 0 — Base | Terra consolidado no GitHub, sem dados demonstrativos nem salvamento em memória; módulos separados; fotos em bucket privado | Publicado anteriormente; assinatura de fotos reconferida na API |
+| 1 — Marketplace | URL individual, favoritos, compartilhamento, WhatsApp com registro do contato, visualizações, situações, denúncias e perfil do anunciante | Migração aplicada; testes de isolamento, métricas, favoritos e visibilidade passaram |
+| 2 — Busca e conta | Filtros avançados, m²/ha, buscas salvas, alertas internos, similares, comparação de 2 a 4 terrenos e painel da conta | Migração aplicada; geração de alertas e pesquisa real verificadas |
+| 3 — Mapa e cadastro | Busca pela área visível ou polígono; coordenadas; GeoJSON/KML/KMZ; distâncias dos vértices; campos urbanos/rurais | Interseção PostGIS testada na API; importadores cobertos por testes automatizados |
+| 4 — Raio-X | Referência central da cidade e amostras de altitude reais, com indicação de indisponibilidade | Função implantada e chamada pela API; limitada a anúncios públicos |
 
-**TerraScore e inteligência de preço regional não foram implementados.** O projeto tem apenas três anúncios públicos de teste; não há volume representativo para produzir comparações de mercado confiáveis. Preço por m² exibido é a divisão do preço anunciado pela área calculada.
+**TerraScore e inteligência de preço regional continuam fora da entrega.** Existem apenas três anúncios públicos de teste, sem volume representativo para comparar o mercado. Preço por m² é a divisão do preço anunciado pela área calculada.
 
-Esta branch exige as novas tabelas, colunas e funções. Publicar somente seu `dist` sobre o banco atual interromperia a consulta do catálogo. Não houve publicação parcial dessa versão.
+## Privacidade
 
-## Decisões de produto e privacidade propostas
-
-| Situação | Catálogo e busca padrão | Link individual e fotos | Edição |
+| Situação | Busca padrão | Link individual e fotos | Edição |
 | --- | --- | --- | --- |
-| Rascunho | Apenas em Meus terrenos | Apenas proprietário | Proprietário |
+| Rascunho | Apenas Meus terrenos | Proprietário | Proprietário |
 | Ativo | Público | Público | Proprietário |
-| Reservado | Público, identificado como reservado | Público | Proprietário |
-| Vendido | Fora da busca padrão | Público, identificado como vendido | Proprietário |
-| Pausado | Apenas em Meus terrenos | Apenas proprietário | Proprietário |
+| Reservado | Público, identificado | Público | Proprietário |
+| Vendido | Fora da busca padrão | Público, identificado | Proprietário |
+| Pausado | Apenas Meus terrenos | Proprietário | Proprietário |
 
-- O perfil público inclui nome, foto, cidade, tipo de anunciante e quantidade de anúncios ativos. A foto de perfil usa um novo bucket público separado das fotos dos terrenos.
-- O número de WhatsApp fica em tabela privada. Só é fornecido pelo fluxo de contato quando o anunciante habilita essa opção. Não há verificação automática do telefone; o usuário não pode marcar o próprio número como verificado.
-- Favoritos, buscas e notificações pertencem à conta que os criou. A edição dos anúncios continua limitada ao proprietário, com controle de revisão para detectar alterações concorrentes.
-- O anunciante recebe contagens agregadas de visualizações, favoritos e contatos. Identificadores brutos de visitantes não são disponibilizados pela API pública.
-- Denúncias ficam pendentes para revisão administrativa no Supabase. A interface não remove automaticamente um anúncio denunciado.
-- Os alertas desta entrega aparecem na conta, sem envio de e-mail. Eles são gerados para novos anúncios compatíveis ou anúncios reativados; não notificam novamente a cada edição.
+O perfil público inclui nome, foto, cidade, tipo de anunciante e número de anúncios ativos. Avatares usam um bucket público separado. O WhatsApp fica em tabela privada e só é fornecido no fluxo de contato quando habilitado; não existe verificação automática do telefone. Favoritos, buscas e notificações pertencem à conta. O anunciante recebe métricas agregadas; identificadores brutos de visitantes não ficam disponíveis na API. Denúncias ficam pendentes de revisão administrativa.
 
-## Validação realizada
+O Raio-X lê o anúncio como visitante anônimo, com filtro público, **antes de qualquer cache ou consulta externa**. O JWT do proprietário não é encaminhado nem pode liberar rascunhos ou pausados. Essa restrição resolveu a rejeição automática da implementação inicial, que poderia encaminhar coordenadas privadas aos provedores.
 
-Em 8 de setembro de 2026, `node --test tests/*.test.cjs` passou em **40 testes**, sem falhas. A sintaxe de 20 módulos foi verificada; os 22 scripts/estilos referenciados existem e os 120 IDs do HTML são únicos.
+## Verificação
 
-Cobertura: autorização e revisão enviadas pelo cliente, autenticação/CAPTCHA, ordem de upload e sincronização de fotos, CEP/localização/cache, parâmetros de busca/paginação, perfis e falhas parciais, perímetros válidos e inválidos, KML/KMZ comprimido e limites de tamanho, autorização antes do cache do Raio-X e ausência de dados externos.
+- **42 testes automatizados**: autorização/revisão no cliente, autenticação/CAPTCHA, fotos, CEP/localização/cache, filtros/paginação, perfil, perímetros, KML/KMZ, autorização do Raio-X, chaves publicáveis e ausência de fontes.
+- `tests/verify-marketplace.sql` passou no banco existente em transação com duas contas temporárias e `ROLLBACK`. Confere terreno alheio, rascunhos, telefone verificado, contatos privados, métricas, favoritos únicos, denúncias, alerta correspondente e situação vendido.
+- Permaneceram **cinco perfis e três anúncios existentes**, sem usuários de teste persistidos e com RLS em todas as oito novas tabelas.
+- A API real retornou os três anúncios de Juiz de Fora por preço crescente, encontrou um terreno pela interseção de seu polígono, expôs o perfil sem telefone e assinou as duas fotos do anúncio consultado.
+- O Raio-X retornou altitude amostrada entre 810 e 813 m, distância de aproximadamente 6,29 km à referência central de Juiz de Fora e rejeitou IDs inválidos ou indisponíveis. A classificação `municipality` retornada pelo Photon para Juiz de Fora foi incorporada ao reconhecimento de cidades.
 
-Os testes de integração usam respostas controladas. Os testes KML adaptam o parser XML no ambiente Node; não comprovam o comportamento dos navegadores. Os testes antigos de catálogo exercitam `TerraData.list`; o novo adaptador é coberto por `marketplace.test.cjs`, mas a execução real da RPC ainda depende das migrações.
+Os testes JavaScript usam respostas controladas; os testes KML adaptam o parser XML no Node. **Não houve teste visual/funcional em navegador desktop ou mobile**, nem login social real. O ambiente Sites desta sessão não oferece preview compatível com o projeto estático. A validação com duas contas ocorreu no SQL, não no formulário do site. Não descrever esses testes como cobertura completa de ponta a ponta.
 
-**Ainda não executados:** as propostas SQL, o roteiro transacional `docs/proposed/verify-marketplace.sql`, o fluxo completo com duas contas na nova versão, a função no Supabase e a validação visual/funcional em desktop e mobile. O ambiente Sites desta sessão não oferece preview de navegador compatível com este projeto estático. A adaptação mobile está no código, sem validação visual nesta entrega.
+As migrações em `supabase/migrations` usam versões retornadas pelo serviço do Supabase. O teste real identificou e corrigiu o operador PostGIS `&&`, agora qualificado como `operator(public.&&)` para manter `search_path` vazio. Não foi criada uma segunda base nem apagado o esquema existente. Detalhes em [DATABASE.md](DATABASE.md).
 
-## Bloqueio de ativação
+## Pendências para lançamento comercial
 
-A revisão automática de aprovação recusou a migração ampla de produção por reunir mudanças de situações, RLS, Storage, perfis, favoritos, denúncias, métricas, contatos e funções com privilégios elevados.
+- Configurar SMTP próprio e credenciais sociais. Os botões sociais só aparecem para provedores habilitados; alertas de buscas são internos, sem e-mail.
+- Testar em navegador login/logout, cadastro/edição/fotos, links, favoritos, compartilhamento, contato, filtros, alertas, comparação, importação e desenho. No mobile, conferir teclado, rolagem, lista arrastável, lightbox e botão inferior de contato.
+- Configurar `OVERPASS_URL` de fonte própria/contratada para serviços próximos e vias. Sem isso, a interface informa a ausência da fonte.
+- Photon e Open Topo Data públicos não oferecem SLA. Cache/limites são por instância. Medir demanda antes de escalar; notificações percorrem buscas com alerta, limitadas a 50 por conta.
+- SRTM tem resolução aproximada de 90 m; variações amostradas não equivalem a levantamento topográfico. Distâncias são em linha reta; infraestrutura e documentação são declarações do anunciante.
+- Definir retenção dos eventos e proteção adicional contra abuso antes de grande volume. Métricas por sessão não equivalem a visitantes ou contatos verificados.
 
-Depois de uma consulta de precondições, uma proposta restrita às situações e suas leituras públicas também foi recusada: faltava autorização explícita para disponibilizar anúncios reservados e vendidos e suas fotos ao público. A consulta encontrou três anúncios publicados, nenhum valor incompatível com a nova restrição, políticas de propriedade preservadas e bucket de fotos privado. Nenhuma das duas migrações recusadas foi aplicada.
+## Apontamentos do Supabase
 
-As propostas estão em `docs/proposed`, separadas do histórico de migrações aplicadas. A próxima ação depende da aprovação específica do proprietário para o escopo e as permissões descritos aqui. Não se deve contornar o bloqueio executando o mesmo SQL por outro canal.
+RLS sem políticas nas tabelas de eventos, contatos recebidos e visualizações é intencional: não há acesso direto de `anon`/`authenticated`; funções restritas registram e agregam esses dados.
 
-## Sequência após aprovação
+Permanecem apontamentos anteriores: [spatial_ref_sys sem RLS](https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public), [PostGIS em public](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public), [st_estimatedextent acessível pela API](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable) e [proteção contra senhas vazadas desativada](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Não mover a extensão sem uma migração específica de compatibilidade. A execução pública de `rls_auto_enable` foi revogada nesta entrega.
 
-1. Validar as propostas em um projeto de teste com o esquema atual, incluindo `verify-marketplace.sql`, sem apagar os anúncios existentes. Não há projeto de teste nem nova branch de banco provisionados nesta entrega.
-2. Registrar as migrações com versões alocadas pelo Supabase, aplicar por etapas e conferir as políticas e permissões após cada etapa. Preservar PostGIS em `public` no projeto atual.
-3. Publicar a função `terra-rayx`, configurar seus provedores e testar acessos anônimo, proprietário e outra conta.
-4. Conferir em navegador: login/logout, CRUD e fotos, favoritos, links, WhatsApp, filtros e ordenação, alertas, comparação, importações e desenhos. No mobile, verificar teclado, rolagem, arraste da lista, lightbox e botão de contato.
-5. Incorporar a proposta no GitHub e publicar a versão completa. Confirmar os mesmos fluxos no site público.
+A versão anterior do site permanece disponível para recuperação. Um retorno do front-end não desfaz a visibilidade autorizada de reservados/vendidos e perfis. Não apagar tabelas nem executar scripts históricos novamente como reversão.
 
-Para recuperação, a versão 12 permanece disponível. As novas tabelas e colunas são aditivas, porém a visibilidade de reservados/vendidos e perfis é uma mudança de permissão: deve ser revisada separadamente de um retorno do front-end. Não apagar dados nem tentar desfazer migrações de forma destrutiva.
-
-## Dependências para lançamento comercial
-
-- SMTP próprio e credenciais dos provedores de login social ainda não foram fornecidos; o código mantém os botões sociais condicionados aos provedores habilitados. Consulte `LOGIN_SOCIAL.md`.
-- Photon e Open Topo Data públicos atendem uso moderado e não têm SLA para esta aplicação. Cache e limite de concorrência da função são por instância; não substituem quotas globais e controle de abuso no crescimento do serviço.
-- A consulta de serviços próximos exige `OVERPASS_URL` de uma instância operada para o projeto ou de um provedor contratado. Sem essa configuração, a interface informa que a fonte não está ativa.
-- Altitudes SRTM de resolução aproximada de 90 m e variações entre amostras não equivalem a levantamento topográfico. Distâncias são aproximadas e em linha reta. Documentação e infraestrutura são declarações do anunciante.
-- O gerador de notificações é transacional e percorre buscas com alerta habilitado, com limite de 50 buscas por conta. Antes de grande volume, medir o custo de publicação e migrar esse processamento para uma fila.
-- Métricas por sessão reduzem duplicidades, mas não equivalem a visitantes únicos nem a contatos verificados. Política de retenção dos eventos e proteção adicional contra abuso permanecem decisões de operação antes da abertura comercial.
-
-Fontes dos serviços: [Photon](https://github.com/komoot/photon), [ViaCEP](https://viacep.com.br/), [Open Topo Data](https://www.opentopodata.org/), [SRTM](https://www.opentopodata.org/datasets/srtm/), [OpenStreetMap](https://www.openstreetmap.org/copyright).
+Fontes: [Photon](https://github.com/komoot/photon), [ViaCEP](https://viacep.com.br/), [Open Topo Data / SRTM](https://www.opentopodata.org/datasets/srtm/), [OpenStreetMap](https://www.openstreetmap.org/copyright).
