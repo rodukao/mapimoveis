@@ -6,11 +6,11 @@ function closeDetail() {
 function showDetail(plot) {
   if (!plot || drawing) return closeDetail();
   detailPlot = plot;
-  $('detail-title').textContent = plot.title;
+  $('detail-title').textContent = plot.title || 'Rascunho sem título';
   $('detail-category').textContent = plot.tag;
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
-  $('detail-unit').textContent = unitMoney(plot.price / plot.area) + ' / m²';
+  $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / plot.area) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
   const facts = [['Área estimada', num(plot.area) + ' m²']];

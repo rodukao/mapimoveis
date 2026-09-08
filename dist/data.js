@@ -66,15 +66,16 @@
   function payload(form) {
     const clean = {
       title: form.title.trim(), description: form.description.trim(), city: form.city.trim(), state: form.state,
-      neighborhood: form.neighborhood.trim(), category: form.category, price_brl: Number(form.price_brl),
+      neighborhood: form.neighborhood.trim(), category: form.category, price_brl: form.status==='draft' && String(form.price_brl).trim()==='' ? null : Number(form.price_brl),
       status: form.status, boundary_geojson: form.boundary_geojson,
       terrain_context: form.terrain_context || 'urban', topography: form.topography || '',
       infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: form.details || {}
     };
-    if (clean.title.length < 3 || clean.title.length > 90) throw new Error('Use entre 3 e 90 caracteres no título.');
-    if (clean.description.length > 4000 || clean.city.length < 2 || clean.city.length > 100 || clean.neighborhood.length > 100) throw new Error('Revise a descrição e a localização do terreno.');
-    if (!Number.isFinite(clean.price_brl) || clean.price_brl <= 0 || clean.price_brl > 999999999999.99) throw new Error('Informe um preço de venda válido.');
+    if ((clean.title.length < 3 && !(clean.status==='draft' && !clean.title)) || clean.title.length > 90) throw new Error('Use entre 3 e 90 caracteres no título.');
+    if (clean.description.length > 4000 || (clean.city.length < 2 && !(clean.status==='draft' && !clean.city)) || clean.city.length > 100 || clean.neighborhood.length > 100) throw new Error('Revise a descrição e a localização do terreno.');
+    if (!(clean.status==='draft' && clean.price_brl===null) && (!Number.isFinite(clean.price_brl) || clean.price_brl <= 0 || clean.price_brl > 999999999999.99)) throw new Error('Informe um preço de venda válido.');
     if (!['draft', 'published', 'reserved', 'sold', 'paused'].includes(clean.status)) throw new Error('Selecione uma situação válida.');
+    if (!(clean.status==='draft' && !clean.state) && !'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').includes(clean.state)) throw new Error('Selecione a UF do terreno.');
     return clean;
   }
 

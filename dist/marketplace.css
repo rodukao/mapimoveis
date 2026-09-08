@@ -60,7 +60,7 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .compare-table button { padding:0; text-align:left; border:0; background:none; color:var(--green); }
 .compare-map { height:320px; border-radius:12px; margin-top:20px; }
 .compare-map .leaflet-control-zoom { margin:10px!important; }
-.map-search-actions { position:absolute; top:83px; left:24px; right:65px; z-index:450; display:flex; gap:7px; flex-wrap:wrap; pointer-events:none; }
+.map-search-actions { position:absolute; top:24px; left:200px; right:24px; justify-content:flex-end; z-index:450; display:flex; gap:7px; flex-wrap:wrap; pointer-events:none; }
 .map-search-actions button { pointer-events:auto; font-size:13px; box-shadow:0 2px 12px #153e2526; padding:10px 12px; }
 .boundary-tools { margin:15px 0; border:1px solid var(--line); border-radius:10px; padding:12px; }
 .boundary-tools>label { font-size:14px; margin:0; }
@@ -95,7 +95,6 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
   .editing #mobile-sheet-handle { display:none; }
   .show-list .list-heading { padding:16px 20px; }
   .show-list .list-heading h1 { font-size:22px; margin-bottom:16px; }
-  .map-search-actions { top:70px; left:12px; right:62px; gap:6px; }
   .map-search-actions button { font-size:12px; padding:9px; }
   .terra-panel,.terra-panel.panel-wide { width:100%; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; border:0; border-radius:0; }
   .panel-header { padding-top:calc(12px + env(safe-area-inset-top)); }
@@ -114,3 +113,34 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 }
 
 .editing #compare-bar { display:none; }
+
+/* Package 3: shared filters, contrasting map selection and compact touch controls. */
+.card.map-highlight { border-color:#EA580C; background:#FFF7ED; }
+.card.selected { border:2px solid #C2410C; background:#FFF7ED; }
+.price-pin.chosen { background:#C2410C; color:#fff; }
+.legend i { background:#F59E0B; }
+#filter-chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 16px 12px; }
+#filter-chips:empty { display:none; }
+#filter-chips button { background:#f0f6ee; color:#245941; font-size:13px; padding:8px 10px; text-align:left; }
+#catalog-update { margin:12px 20px; color:#475e52; }
+.interest-mobile { display:none; }
+.toolbar { flex-wrap:wrap; gap:8px; }
+.toolbar>button { white-space:nowrap; }
+.editing #quick-price,.editing #quick-area,.editing #quick-type,.editing #reset { display:none; }
+.map-search-actions button { min-height:44px; }
+@media(max-width:720px) {
+  .map-search-actions { top:15px; left:150px; right:12px; gap:5px; }
+  .interest-mobile { display:inline; }
+  .interest-desktop { display:none; }
+  .toolbar #quick-price,.toolbar #quick-area,.toolbar #quick-type,.toolbar #advanced-filters { flex:1; padding:9px 8px; }
+  .toolbar #reset,.toolbar #save-search { flex:none; font-size:12px; }
+  .map-search-actions button { font-size:12px; padding:8px; }
+  #editor input,#editor select { font-size:16px; }
+}
+
+.leaflet-bottom .leaflet-control-zoom { margin:0 24px 80px 0!important; }
+.map-search-actions.interest-drawing { left:200px; }
+@media(max-width:720px) {
+  .map-search-actions.interest-drawing { top:70px; left:12px; right:12px; justify-content:flex-start; }
+  .leaflet-bottom .leaflet-control-zoom { margin:0 12px 85px 0!important; }
+}

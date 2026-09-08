@@ -30,7 +30,7 @@ Abra http://localhost:8000. Para autenticação local, inclua esse endereço nos
 - `docs/photo-upload-fix.sql`: correções posteriores já aplicadas ao projeto atual.
 - `docs/DATABASE.md`: permissões e migrações aplicadas, incluindo a configuração do Raio-X.
 - `supabase/functions/terra-rayx/index.ts`: análise geográfica implantada, restrita a anúncios públicos.
-- `tests/`: 42 testes, executáveis com `node --test tests/*.test.cjs`.
+- `tests/`: 54 testes, executáveis com `node --test tests/*.test.cjs`.
 - `.openai/hosting.json`: identidade do site na hospedagem Sites. Preserve para atualizar este site; não reutilize sua identidade para criar outro.
 
 As chaves presentes em config.js são públicas por definição. Nunca coloque senha do banco, service_role, secret key, segredo OAuth ou token GitHub no front-end. A autorização é aplicada pelo banco com RLS, não pelo botão de edição.
@@ -57,7 +57,7 @@ O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist
 
 ## Limites de produção e validação
 
-42 testes automatizados e verificações de sintaxe/referências passaram. O roteiro transacional `tests/verify-marketplace.sql` passou com duas contas temporárias no banco atual, sem persistir os registros de teste. A API real foi verificada para catálogo, ordenação, interseção de perímetros, perfil público, assinatura das fotos e Raio-X. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
+54 testes automatizados e verificações de sintaxe/referências passaram. O roteiro transacional `tests/verify-marketplace.sql` passou com duas contas temporárias no banco atual, sem persistir os registros de teste. A API real foi verificada para catálogo, ordenação, interseção de perímetros, perfil público, assinatura das fotos e Raio-X. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
 
 O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança registrados em `docs/ROADMAP_STATUS.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. O bucket de fotos dos terrenos está privado desde a publicação da versão 12; apenas fotos de anúncios públicos ou do próprio proprietário recebem uma URL assinada.
 
@@ -67,7 +67,7 @@ O mapa de ruas usa OpenStreetMap sem chave de API; respeita atribuição e cache
 
 Busque por cidade, endereço ou CEP no topo e selecione uma localização. Cidades filtram o catálogo pelo nome do município e UF cadastrados. Endereços e CEPs filtram os terrenos cujo perímetro intersecta uma janela aproximada de 3 × 3 km ao redor do local encontrado. CEP sem rua mapeada pode retornar a cidade, com aviso explícito. Os resultados não representam limites de lotes: o anunciante deve conferir o ponto e desenhar o terreno.
 
-A seleção de área utiliza interseção do perímetro com a região no PostGIS; inclui “Buscar nesta área” e áreas de interesse desenhadas ou salvas. As buscas podem ter filtros avançados e alertas internos para novos anúncios correspondentes.
+A seleção de área utiliza interseção do perímetro com a região no PostGIS. Ao terminar de mover ou ampliar o mapa, a busca atualiza após 400 ms; filtros de preço, tamanho, cidade e demais atributos são preservados. Movimentos feitos pela aplicação não disparam novas buscas. Áreas de interesse desenhadas ou salvas têm prioridade sobre a janela do mapa. As buscas podem ter filtros avançados e alertas internos para novos anúncios correspondentes.
 
 Durante o cadastro, a busca move o mapa sem apagar vértices; cidade, UF e bairro são preenchidos somente para um cadastro novo que ainda não tenha desenho. A ordenação por preço, área e data é feita pelo Supabase antes da paginação.
 
@@ -76,3 +76,15 @@ O módulo `dist/location.js` consulta ViaCEP para CEP e Photon para posições. 
 Fontes: https://github.com/komoot/photon e https://viacep.com.br/
 
 A consulta real de Juiz de Fora retornou o município e seus limites. Os testes automatizados cobrem validação de CEP, normalização, cache, filtros e ordenação. Não houve teste visual no navegador nesta atualização.
+
+## Pacote 3 — mapa, filtros e cadastro
+
+Cards e polígonos compartilham seleção e destaque. Passar o mouse ou focar um card pelo teclado destaca o polígono existente; clicar abre os detalhes. Polígonos usam laranja com estados normal, foco e seleção. A busca automática mantém os resultados durante carregamento ou falha e descarta respostas atrasadas.
+
+Preço, área (m²/ha), tipo, filtros avançados e buscas salvas utilizam o mesmo estado. Filtros ativos podem ser removidos separadamente ou por “Limpar tudo”. A área de interesse está no canto superior direito do mapa; enquanto ativa, a navegação não substitui seu polígono de busca.
+
+O cadastro usa um formulário único, com instruções específicas para desenho, coordenadas e importação. Aceita todas as 27 UFs, sem município/UF fixos no formulário. Informações disponíveis no resultado de localização preenchem um novo cadastro; confira-as antes de salvar. Rascunhos podem deixar título, preço, cidade e UF pendentes, mas precisam de um perímetro válido. Para ativar o anúncio, os quatro campos devem estar completos.
+
+Tipo de anunciante é informação declarada. Os indicadores independentes de e-mail, telefone, identidade e registro profissional só podem ser atualizados por processos autorizados no servidor. Novos indicadores começam como falsos; este pacote prepara os campos e a exibição, sem implementar serviços de verificação.
+
+Testes: `node --test tests/*.test.cjs`; roteiros transacionais `tests/verify-marketplace.sql` e `tests/verify-package3.sql`. Os testes do mapa e dos formulários usam objetos simulados de DOM/Leaflet; não substituem a conferência visual em navegador e celular reais.

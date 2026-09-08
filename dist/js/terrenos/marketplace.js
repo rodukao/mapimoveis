@@ -57,12 +57,13 @@ window.TerraMarketplace = (() => {
   }
   function openPlot(plot) {
     routeSequence++;
-    if(drawing)return toast('Conclua ou cancele a edição antes de abrir outro terreno.');
+    if(drawing || window.TerraMapTools?.interestActive)return toast('Conclua ou cancele o desenho antes de abrir outro terreno.');
     showDetail(plot);
-    selected=plots.findIndex(item=>item.id===plot.id);render();
+    selected=plots.findIndex(item=>item.id===plot.id);catalogMap.selectListing(plot.id);
     if(detailOutline)detailOutline.remove();
-    detailOutline=L.polygon(plot.points,{color:'#186244',weight:3,fillOpacity:.2}).addTo(map);
-    map.fitBounds(plot.points,{padding:[30,30],maxZoom:18});
+    detailOutline=null;
+    if(!catalogMap.layers.has(plot.id))detailOutline=L.polygon(plot.points,catalogMap.styles.selected).addTo(map);
+    moveMapProgrammatically('fitBounds',plot.points,{padding:[30,30],maxZoom:18});
     document.body.classList.remove('show-list');
   }
   async function openById(id) {
@@ -113,8 +114,8 @@ window.TerraMarketplace = (() => {
   function profileCard(profile,onclick) {
     const card=el('button',{class:'advertiser-card',onclick});
     if(profile.avatar_path)card.append(el('img',{src:api.avatar(profile.avatar_path),alt:'',class:'avatar'}));
-    card.append(el('span',{},el('strong',{},profile.display_name || 'Anunciante Terra'),el('small',{},types[profile.account_type] || 'Anunciante'),el('small',{},`${profile.active_count} anúncio(s) ativo(s) · desde ${new Date(profile.created_at).getFullYear()}`)));
-    if(profile.phone_verified)card.append(el('span',{class:'verified'},'✓ Telefone verificado'));
+    card.append(el('span',{},el('strong',{},profile.display_name || 'Anunciante Terra'),el('small',{},(types[profile.account_type] || 'Anunciante')+' — informação declarada'),el('small',{},`${profile.active_count} anúncio(s) ativo(s) · desde ${new Date(profile.created_at).getFullYear()}`)));
+    for(const [flag,label] of [['email_verified','E-mail verificado'],['phone_verified','Telefone verificado'],['identity_verified','Identidade verificada'],['professional_verified','Registro profissional verificado']])if(profile[flag]===true)card.append(el('span',{class:'verified'},'✓ '+label));
     return card;
   }
   async function publicProfile(ownerId) {
@@ -132,7 +133,7 @@ window.TerraMarketplace = (() => {
   function miniCard(plot,onclick) {
     const button=el('button',{class:'mini-card',onclick});
     if(plot.photos?.[0]?.url)button.append(el('img',{src:plot.photos[0].url,alt:'',loading:'lazy'}));
-    button.append(el('strong',{},plot.title),el('span',{},money(plot.price)+' · '+num(plot.area)+' m²'),el('small',{},plot.address));return button;
+    button.append(el('strong',{},plot.title || 'Rascunho sem título'),el('span',{},money(plot.price)+' · '+num(plot.area)+' m²'),el('small',{},plot.address));return button;
   }
   document.addEventListener('terra:detail',async event=>{
     const plot=event.detail, url=new URL(location.href);url.searchParams.set('terreno',plot.id);

@@ -82,3 +82,12 @@ test('city search filters city/state without restricting the catalog to the logg
 test('address searches bound both latitude and longitude on the server',async()=>{
  const s=setup();await s.api.list({location:{bounds:{south:-22,north:-21,west:-44,east:-43}}});for(const [op,field,value] of [['gte','latitude',-22],['lte','latitude',-21],['gte','longitude',-44],['lte','longitude',-43]])assert.ok(s.calls.some(x=>x[0]===op&&x[1]===field&&x[2]===value));
 });
+
+test('incomplete drafts save without invented title, price, city or UF; publishing requires all four',async()=>{
+ const draft={...valid,title:'',price_brl:'',city:'',state:''};const s=setup();await s.api.save(draft,{id:'new'});assert.equal(s.inserted.title,'');assert.equal(s.inserted.price_brl,null);assert.equal(s.inserted.city,'');assert.equal(s.inserted.state,'');
+ for(const key of ['title','price_brl','city','state']){const x=setup();await assert.rejects(x.api.save({...valid,status:'published',[key]:''},{id:'new'}));assert.equal(x.inserted,undefined);}
+});
+test('all Brazilian UFs are accepted and unknown states are rejected',async()=>{
+ for(const state of 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ')){const s=setup();await s.api.save({...valid,state,status:'published'},{id:'new'});assert.equal(s.inserted.state,state);}
+ const s=setup();await assert.rejects(s.api.save({...valid,state:'XX'},{id:'new'}),/UF/);
+});

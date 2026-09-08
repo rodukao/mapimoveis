@@ -16,7 +16,7 @@ function chooseLocation(place) {
   $('location-panel').hidden = true;
   $('location-query').value = place.postalCode ? place.postalCode + ' · ' + place.label : place.label;
   const b = place.bounds;
-  map.fitBounds([[b.south,b.west],[b.north,b.east]], {padding:[25,25],maxZoom:place.cityLevel ? 13 : 17});
+  moveMapProgrammatically('fitBounds',[[b.south,b.west],[b.north,b.east]], {padding:[25,25],maxZoom:place.cityLevel ? 13 : 17});
   if (searchMarker) searchMarker.remove();
   const label = document.createElement('span'); label.textContent = place.label;
   searchMarker = L.circleMarker([place.lat,place.lng],{radius:8,color:'#245da0',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(map).bindTooltip(label);
@@ -28,10 +28,10 @@ function chooseLocation(place) {
     }
     toast(place.cityFallback ? 'CEP localizado apenas pela cidade. Ajuste o mapa até o terreno.' : points.length ? 'Mapa posicionado. O desenho foi mantido.' : 'Confira a posição e marque os limites do terreno.');
   } else {
-    window.TerraFilters?.clearSpatial();
+    TerraFilters.setLocation(place);
     searchLocation = place;
     $('catalog-location-label').textContent = place.cityLevel ? 'Cidade: ' + place.city + (place.state ? ', ' + place.state : '') : 'Área próxima: ' + place.label;
-    $('catalog-location').hidden = false;
+    $('catalog-location').hidden = true;
     loadListings();
     if (place.cityFallback) toast('Não encontramos a rua no mapa. Mostrando os terrenos da cidade do CEP.');
   }
