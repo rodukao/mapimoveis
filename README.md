@@ -57,7 +57,7 @@ O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist
 
 ## Limites de produção e validação
 
-54 testes automatizados e verificações de sintaxe/referências passaram. O roteiro transacional `tests/verify-marketplace.sql` passou com duas contas temporárias no banco atual, sem persistir os registros de teste. A API real foi verificada para catálogo, ordenação, interseção de perímetros, perfil público, assinatura das fotos e Raio-X. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual no navegador nesta entrega.
+Na entrega anterior, 54 testes automatizados e verificações de sintaxe/referências passaram. O roteiro transacional `tests/verify-marketplace.sql` passou com duas contas temporárias no banco atual, sem persistir os registros de teste. A API real foi verificada para catálogo, ordenação, interseção de perímetros, perfil público, assinatura das fotos e Raio-X. Não houve teste de login social real, pois faltam as credenciais dos provedores, nem teste visual naquela entrega. A cobertura visual do pacote 4 está descrita abaixo.
 
 O SMTP próprio ainda precisa ser configurado. Consulte os apontamentos de segurança registrados em `docs/ROADMAP_STATUS.md` antes do lançamento comercial. A interface usa URLs de fotos assinadas com duração de uma hora. O acesso é autorizado pelo Storage conforme a situação e propriedade do anúncio. O bucket de fotos dos terrenos está privado desde a publicação da versão 12; apenas fotos de anúncios públicos ou do próprio proprietário recebem uma URL assinada.
 
@@ -75,7 +75,7 @@ O módulo `dist/location.js` consulta ViaCEP para CEP e Photon para posições. 
 
 Fontes: https://github.com/komoot/photon e https://viacep.com.br/
 
-A consulta real de Juiz de Fora retornou o município e seus limites. Os testes automatizados cobrem validação de CEP, normalização, cache, filtros e ordenação. Não houve teste visual no navegador nesta atualização.
+A consulta real de Juiz de Fora retornou o município e seus limites. Os testes automatizados cobrem validação de CEP, normalização, cache, filtros e ordenação. Essa etapa antecedeu a conferência visual do pacote 4.
 
 ## Pacote 3 — mapa, filtros e cadastro
 
@@ -88,3 +88,12 @@ O cadastro usa um formulário único, com instruções específicas para desenho
 Tipo de anunciante é informação declarada. Os indicadores independentes de e-mail, telefone, identidade e registro profissional só podem ser atualizados por processos autorizados no servidor. Novos indicadores começam como falsos; este pacote prepara os campos e a exibição, sem implementar serviços de verificação.
 
 Testes: `node --test tests/*.test.cjs`; roteiros transacionais `tests/verify-marketplace.sql` e `tests/verify-package3.sql`. Os testes do mapa e dos formulários usam objetos simulados de DOM/Leaflet; não substituem a conferência visual em navegador e celular reais.
+
+
+## Pacote 4 — QA em navegador
+
+Foram adicionados Playwright, cenários de visitante e cenários autenticados protegidos para staging. A matriz contém desktop Chromium, 360×800, 390×844, 412×915, paisagem 844×390 e WebKit 390×844. A coleta lista 132 combinações; não significa que foram executadas. Cenários destrutivos e importações de arquivos rodam somente no projeto desktop; conta e coordenadas também têm projetos responsivos.
+
+A inspeção manual em Chrome real usou a prévia local com catálogo público e, para telas pequenas, iframes nas dimensões indicadas. Isso verifica layout CSS, mas não emula teclado do sistema, notch, toque ou Safari. Foram corrigidos UUID indisponível em HTTP local, controles Leaflet sobre a lista mobile e sobreposição do zoom com ações do mapa em paisagem.
+
+55 testes JavaScript passaram. A execução completa do runner E2E e os fluxos autenticados permanecem pendentes. Não foram criados anúncios, denúncias ou contatos de QA em produção. Veja [como executar e concluir a validação](docs/QA.md).

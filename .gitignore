@@ -4,3 +4,8 @@
 supabase/.temp/
 node_modules/
 *.log
+
+# QA artifacts and authenticated browser sessions
+playwright-report/
+test-results/
+playwright/.auth/

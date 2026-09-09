@@ -144,3 +144,10 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
   .map-search-actions.interest-drawing { top:70px; left:12px; right:12px; justify-content:flex-start; }
   .leaflet-bottom .leaflet-control-zoom { margin:0 12px 85px 0!important; }
 }
+
+/* Keep Leaflet's high-z-index controls beneath the mobile list/dialog surfaces. */
+.map-wrap { z-index:0; isolation:isolate; }
+/* Short landscape viewports need zoom below the top map actions. */
+@media (min-width:721px) and (max-height:500px) {
+  #map .leaflet-bottom .leaflet-control-zoom { margin:0 24px 24px 0!important; }
+}
