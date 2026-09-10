@@ -1,11 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-function setup({missingElevation=false,publishableKey=false}={}){
+function setup({missingElevation=false,publishableKey=false,budget=true}={}){
  const id='11111111-1111-4111-8111-111111111111';let handler,allowed=true,dbCalls=0,sourceCalls=0;
  const plot={id,city:'Juiz de Fora',state:'MG',latitude:-21.762,longitude:-43.348,revision:1,boundary_geojson:{type:'Polygon',coordinates:[[[-43.349,-21.762],[-43.348,-21.762],[-43.348,-21.761],[-43.349,-21.762]]]}};
- const env={SUPABASE_URL:'https://database.example.invalid',SUPABASE_ANON_KEY:'public-test'};
+ const env={SUPABASE_URL:'https://database.example.invalid',SUPABASE_ANON_KEY:'public-test',SUPABASE_SECRET_KEYS:JSON.stringify({default:'sb_secret_server_only'})};
  if(publishableKey)env.SUPABASE_PUBLISHABLE_KEYS=JSON.stringify({default:'sb_publishable_test'});
  const context={Request,Response,URL,URLSearchParams,AbortSignal,TextDecoder,fetch:async(url,options)=>{
-  const u=new URL(url);if(u.hostname==='database.example.invalid'){dbCalls++;assert.equal(options.headers.apikey,publishableKey?'sb_publishable_test':'public-test');assert.equal(options.headers.Authorization,undefined);assert.equal(u.searchParams.get('status'),'in.(published,reserved,sold)');return Response.json(allowed?[plot]:[]);}sourceCalls++;
+  const u=new URL(url);if(u.pathname==='/rest/v1/rpc/terra_rayx_budget'){assert.equal(options.headers.apikey,'sb_secret_server_only');return Response.json(budget);}if(u.hostname==='database.example.invalid'){dbCalls++;assert.equal(options.headers.apikey,publishableKey?'sb_publishable_test':'public-test');assert.equal(options.headers.Authorization,undefined);assert.equal(u.searchParams.get('status'),'in.(published,reserved,sold)');return Response.json(allowed?[plot]:[]);}sourceCalls++;
   if(u.hostname==='photon.komoot.io')return Response.json({features:[{properties:{name:'Juiz de Fora',state:'Minas Gerais',countrycode:'BR',osm_value:'municipality',type:'city'},geometry:{coordinates:[-43.347,-21.761]}}]});
   if(u.hostname==='api.opentopodata.org')return Response.json({status:'OK',results:u.searchParams.get('locations').split('|').map((_,i)=>({elevation:missingElevation?null:700+i}))});
   throw new Error('Unexpected source');
@@ -22,3 +22,5 @@ test('an owner JWT cannot authorize forwarding a private listing to geographic p
 test('missing elevation and POI providers produce explicit unavailability, never zero placeholders',async()=>{
  const s=setup({missingElevation:true}),result=await (await s.call()).json();assert.equal(result.elevation,null);assert.ok(result.unavailable.some(x=>x.includes('altitude')));assert.ok(result.unavailable.some(x=>x.includes('fonte de dados ativa')));assert.equal('score' in result,false);
 });
+
+test('Raio-X refuses external lookups when the shared server budget is exhausted',async()=>{const s=setup({budget:false});assert.equal((await s.call()).status,503);assert.equal(s.sourceCalls,0)});

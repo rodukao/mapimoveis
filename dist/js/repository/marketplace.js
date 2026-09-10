@@ -14,10 +14,12 @@ window.TerraMarketData = (() => {
   }
   async function status(plot, status) {
     if (!['draft','published','reserved','sold','paused'].includes(status)) throw new Error('Situação inválida.');
+    return TerraOperations.withChallenge('sensitive',async()=>{
     const account = await R.user();
     const row = unwrap(await table('terra_listings').update({status}).eq('id',plot.id).eq('owner_id',account.id).eq('revision',plot.revision).select('id,revision,status').maybeSingle());
     if (!row) throw new Error('O anúncio mudou em outra sessão. Atualize para continuar.');
     return row;
+    });
   }
   async function favorites() { return unwrap(await table('terra_favorites').select('id,listing_id,created_at').eq('user_id',(await R.user()).id).order('created_at',{ascending:false}).limit(1000)); }
   async function favorite(id, active) {
@@ -65,8 +67,10 @@ window.TerraMarketData = (() => {
     if (previousAvatar) await storage.remove([previousAvatar]);
     // Report partial success explicitly; profile and contact are independent private records.
     try {
-      const changed=unwrap(await table('terra_contact_settings').update({phone:normalized,enabled:form.enabled}).eq('user_id',id).select('user_id'));
-      if(!changed.length)unwrap(await table('terra_contact_settings').insert({phone:normalized,enabled:form.enabled}));
+      await TerraOperations.withChallenge('sensitive',async()=>{
+        const changed=unwrap(await table('terra_contact_settings').update({phone:normalized,enabled:form.enabled}).eq('user_id',id).select('user_id'));
+        if(!changed.length)unwrap(await table('terra_contact_settings').insert({phone:normalized,enabled:form.enabled}));
+      });
     }
     catch (error) { throw new Error('Perfil salvo, mas o WhatsApp não foi atualizado. Reabra o perfil e tente novamente.'); }
   }
@@ -76,10 +80,10 @@ window.TerraMarketData = (() => {
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
     advertiser: id => rpc('terra_advertiser',{p_owner:id}),
     stats: ids => rpc('terra_listing_stats',{p_ids:ids}),
-    event: (event,listing,session) => rpc('terra_record_event',{p_event:event,p_listing:listing || null,p_session:session}),
-    report: async (id,reason,description) => unwrap(await table('terra_reports').insert({listing_id:id,reason,description})),
+    event: (event,listing,session) => {const send=()=>rpc('terra_record_event',{p_event:event,p_listing:listing || null,p_session:session});return event==='whatsapp_click'?TerraOperations.withChallenge('contact',send):send();},
+    report: async (id,reason,description) => TerraOperations.withChallenge('report',async()=>unwrap(await table('terra_reports').insert({listing_id:id,reason,description}))),
     savedSearches: async () => unwrap(await table('terra_saved_searches').select('id,name,filters,sort_order,alerts_enabled,created_at').eq('user_id',(await R.user()).id).order('created_at',{ascending:false})),
-    saveSearch: async (name,filters,sort,alerts) => unwrap(await table('terra_saved_searches').insert({name,filters,sort_order:sort,alerts_enabled:alerts})),
+    saveSearch: async (name,filters,sort,alerts) => TerraOperations.withChallenge('sensitive',async()=>unwrap(await table('terra_saved_searches').insert({name,filters,sort_order:sort,alerts_enabled:alerts}))),
     editSearch: async (id,patch) => unwrap(await table('terra_saved_searches').update(patch).eq('id',id).eq('user_id',(await R.user()).id)),
     deleteSearch: async id => unwrap(await table('terra_saved_searches').delete().eq('id',id).eq('user_id',(await R.user()).id)),
     unreadCount: async () => {const result=await table('terra_notifications').select('id',{head:true,count:'exact'}).eq('user_id',(await R.user()).id).eq('is_read',false);unwrap(result);return result.count;},

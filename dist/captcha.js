@@ -8,6 +8,7 @@
   function message(text){el('captcha-message').textContent=text;el('captcha-message').hidden=!text;}
   function clear(){token='';if(config.enabled)el('auth-submit').disabled=true;}
   function load(){
+    if(api()?.render)return Promise.resolve();
     if(loading)return loading;
     loading=new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(new Error('A verificação demorou para carregar. Recarregue a página.')),20000);
@@ -36,7 +37,7 @@
       });message('');
     }catch(error){message(error.message);}
   }
-  window.TerraCaptcha={show,
+  window.TerraCaptcha={show,load,
     value:mode=>{if(!config.enabled||mode==='change')return undefined;if(!token)throw new Error('Conclua a verificação de segurança antes de continuar.');return token;},
     reset:()=>{clear();if(widget!==null)api().reset(widget);},
     close:()=>{++sequence;clear();if(widget!==null){api().remove(widget);widget=null;}}

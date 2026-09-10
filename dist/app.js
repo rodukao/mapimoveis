@@ -283,7 +283,7 @@ $('form').onsubmit = async event => {
   $('undo').disabled = true;
   $('clear').disabled = true;
   try {
-    await DATA.save(form, { id: editId, revision: editRevision, files: filesToUpload, keepPhotoIds, photosChanged });
+    await TerraOperations.withChallenge(editId?'sensitive':'listing',()=>DATA.save(form, { id: editId, revision: editRevision, files: filesToUpload, keepPhotoIds, photosChanged }));
     saving = false;
     stop();
     await loadListings();

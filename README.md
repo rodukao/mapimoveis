@@ -30,7 +30,7 @@ Abra http://localhost:8000. Para autenticação local, inclua esse endereço nos
 - `docs/photo-upload-fix.sql`: correções posteriores já aplicadas ao projeto atual.
 - `docs/DATABASE.md`: permissões e migrações aplicadas, incluindo a configuração do Raio-X.
 - `supabase/functions/terra-rayx/index.ts`: análise geográfica implantada, restrita a anúncios públicos.
-- `tests/`: 54 testes, executáveis com `node --test tests/*.test.cjs`.
+- `tests/`: 64 testes, executáveis com `node --test tests/*.test.cjs`.
 - `.openai/hosting.json`: identidade do site na hospedagem Sites. Preserve para atualizar este site; não reutilize sua identidade para criar outro.
 
 As chaves presentes em config.js são públicas por definição. Nunca coloque senha do banco, service_role, secret key, segredo OAuth ou token GitHub no front-end. A autorização é aplicada pelo banco com RLS, não pelo botão de edição.
@@ -97,3 +97,9 @@ Foram adicionados Playwright, cenários de visitante e cenários autenticados pr
 A inspeção manual em Chrome real usou a prévia local com catálogo público e, para telas pequenas, iframes nas dimensões indicadas. Isso verifica layout CSS, mas não emula teclado do sistema, notch, toque ou Safari. Foram corrigidos UUID indisponível em HTTP local, controles Leaflet sobre a lista mobile e sobreposição do zoom com ações do mapa em paisagem.
 
 55 testes JavaScript passaram. A execução completa do runner E2E e os fluxos autenticados permanecem pendentes. Não foram criados anúncios, denúncias ou contatos de QA em produção. Veja [como executar e concluir a validação](docs/QA.md).
+
+## Pacote 5 — operação, moderação e privacidade
+
+Painel de denúncias protegido por tabela administrativa privada, histórico de ações, pausa administrativa, limites por conta e desafio adicional para uso intenso. A liberação de WhatsApp agora exige login; a navegação do catálogo continua pública. Exclusão de conta exige confirmação forte e é executada no servidor, removendo fotos antes do Auth. Privacidade e termos têm páginas próprias e permanecem em revisão jurídica.
+
+64 testes JavaScript e três roteiros SQL passaram. Configurar o administrador, o segredo adicional do Turnstile, SMTP e Google conforme [o guia operacional](docs/OPERATIONS.md). Os testes reais de e-mail, Google e exclusão integral em staging ainda estão pendentes. O procedimento de retenção foi implementado, mas seu agendamento depende da aprovação dos prazos.

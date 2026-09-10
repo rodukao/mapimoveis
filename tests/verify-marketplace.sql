@@ -5,7 +5,8 @@ begin;
 select set_config('terra_test.a',gen_random_uuid()::text,true),set_config('terra_test.b',gen_random_uuid()::text,true),set_config('terra_test.listing_a',gen_random_uuid()::text,true),set_config('terra_test.listing_b',gen_random_uuid()::text,true),set_config('terra_test.session',gen_random_uuid()::text,true);
 insert into auth.users(id,aud,role,email,raw_user_meta_data,created_at,updated_at)
 select current_setting('terra_test.'||who)::uuid,'authenticated','authenticated',current_setting('terra_test.'||who)||'@example.invalid',jsonb_build_object('display_name','Terra QA '||who),now(),now() from unnest(array['a','b']) as t(who);
-select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.a'),'role','authenticated')::text,true);
+insert into auth.sessions(id,user_id,created_at,updated_at) values(current_setting('terra_test.a')::uuid,current_setting('terra_test.a')::uuid,now(),now());
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.a'),'role','authenticated','session_id',current_setting('terra_test.a'))::text,true);
 set local role authenticated;
 insert into public.terra_listings(id,title,city,state,category,price_brl,status,boundary_geojson)
 values(current_setting('terra_test.listing_a')::uuid,'QA terreno A','QA cidade','MG','residencial',100000,'draft','{"type":"Polygon","coordinates":[[[-43,-21],[-42.999,-21],[-42.999,-20.999],[-43,-21]]]}');
@@ -29,7 +30,7 @@ do $$declare n integer;begin
  if public.terra_listing_stats(array[current_setting('terra_test.listing_a')::uuid])<>'{}'::jsonb then raise exception 'FAIL: private metrics leaked';end if;
 end$$;
 reset role;
-select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.a'),'role','authenticated')::text,true);
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.a'),'role','authenticated','session_id',current_setting('terra_test.a'))::text,true);
 set local role authenticated;
 do $$begin
  if not exists(select 1 from public.terra_listings where id=current_setting('terra_test.listing_b')::uuid) then raise exception 'FAIL: public listing invisible after login';end if;
@@ -54,13 +55,16 @@ do $$declare result jsonb;begin
  if (result->>'total')::integer<>1 then raise exception 'FAIL: sold listing included in default search';end if;
  perform public.terra_record_event('view_terreno',current_setting('terra_test.listing_b')::uuid,current_setting('terra_test.session')::uuid);
  perform public.terra_record_event('view_terreno',current_setting('terra_test.listing_b')::uuid,current_setting('terra_test.session')::uuid);
- result:=public.terra_record_event('whatsapp_click',current_setting('terra_test.listing_b')::uuid,current_setting('terra_test.session')::uuid);
- if result->>'phone' is null then raise exception 'FAIL: opted-in contact unavailable';end if;
+ begin perform public.terra_record_event('whatsapp_click',current_setting('terra_test.listing_b')::uuid,current_setting('terra_test.session')::uuid);raise exception 'FAIL: anonymous contact exposed';exception when insufficient_privilege then null;end;
  begin
   perform count(*) from public.terra_views;
   raise exception 'FAIL: raw visitor identifiers exposed';
  exception when insufficient_privilege then null;end;
 end$$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.a'),'role','authenticated','session_id',current_setting('terra_test.a'))::text,true);
+set local role authenticated;
+select public.terra_record_event('whatsapp_click',current_setting('terra_test.listing_b')::uuid,current_setting('terra_test.session')::uuid);
 reset role;
 select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('terra_test.b'),'role','authenticated')::text,true);
 set local role authenticated;

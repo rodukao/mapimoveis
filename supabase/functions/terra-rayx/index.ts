@@ -73,7 +73,13 @@ Deno.serve(async req=>{
   const plot=rows[0],cacheKey=plot.id+':'+plot.revision,cached=cache.get(cacheKey);
   if(cached&&cached.until>Date.now())return response(200,cached.data);
   if(inFlight.size>=3&&!inFlight.has(cacheKey))return response(429,{error:'Aguarde alguns segundos antes de consultar.'});
-  if(!inFlight.has(cacheKey))inFlight.set(cacheKey,analyze(plot).finally(()=>inFlight.delete(cacheKey)));
+  if(!inFlight.has(cacheKey))inFlight.set(cacheKey,(async()=>{
+   const secretKeys=Deno.env.get('SUPABASE_SECRET_KEYS'),secret=(secretKeys?JSON.parse(secretKeys).default:null)||Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+   if(!secret)throw new Error('Limite de consulta indisponível.');
+   const permitted=await json(project+'/rest/v1/rpc/terra_rayx_budget',{method:'POST',headers:{apikey:secret,'Content-Type':'application/json',...(secret.startsWith('eyJ')?{Authorization:'Bearer '+secret}:{})},body:JSON.stringify({p_listing:plot.id})});
+   if(permitted!==true)throw new Error('Limite temporário de consultas.');
+   return analyze(plot);
+  })().finally(()=>inFlight.delete(cacheKey)));
   const data=await inFlight.get(cacheKey);cache.set(cacheKey,{until:Date.now()+6*3600000,data});if(cache.size>100)cache.delete(cache.keys().next().value);return response(200,data);
  }catch(_){return response(503,{error:'Não foi possível consultar os dados geográficos. Tente novamente.'});}
 });

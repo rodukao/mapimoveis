@@ -92,7 +92,7 @@ window.TerraMarketplace = (() => {
     panel.content.append(el('p',{},plot.title),copy,whatsapp);
   }
   async function contact(plot,button) {
-    if(button.disabled)return;
+    if(button.disabled||!requireLogin('Entre na sua conta para falar com o anunciante.'))return;
     const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
     button.disabled=true;const label=button.textContent;button.textContent='Abrindo contato…';
     try {
