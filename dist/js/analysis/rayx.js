@@ -1,7 +1,7 @@
 window.TerraRayX = (() => {
   const {el,error,busy}=TerraUI,cache=new Map();
   const distance=n=>n>=1000?(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' km':Math.round(n)+' m';
-  function summary(id,revision){const result=cache.get(id+':'+revision);return result?.distances?.length?result.distances.map(item=>item.label+': '+distance(item.meters)).join(' · '):'Ainda não consultadas';}
+  function summary(id,revision){const entry=cache.get(id+':'+revision),result=entry?.until>Date.now()?entry.data:null;return result?.distances?.length?result.distances.map(item=>item.label+': '+distance(item.meters)).join(' · '):'Ainda não consultadas';}
   function attach(plot,parent){
     if(!['published','reserved','sold'].includes(plot.status)){
       parent.append(el('section',{class:'rayx'},el('h3',{},'Raio-X Terra'),el('p',{},'Disponível após publicar o anúncio. A localização de rascunhos e anúncios pausados não é enviada aos serviços de análise geográfica.')));return;
@@ -21,8 +21,8 @@ window.TerraRayX = (() => {
       content.append(el('p',{class:'small'},'Distâncias em linha reta a partir do ponto de referência do terreno; não representam percurso de carro nem acesso legal. Altitude e inclinação são estimativas, sem substituir levantamento topográfico.'));
       const sources=el('p',{class:'small'},'Fontes: ');for(const source of result.sources || []){try{const url=new URL(source.url);if(url.protocol==='https:')sources.append(el('a',{href:url.href,target:'_blank',rel:'noopener'},source.name),' ');}catch(_){}}content.append(sources);
     }
-    button.onclick=()=>busy(button,async()=>{const result=cache.get(plot.id+':'+plot.revision) || await TerraMarketData.rayx(plot.id);cache.set(plot.id+':'+plot.revision,result);if(cache.size>50)cache.delete(cache.keys().next().value);display(result);},section);
-    if(cache.has(plot.id+':'+plot.revision))display(cache.get(plot.id+':'+plot.revision));
+    button.onclick=()=>busy(button,async()=>{const key=plot.id+':'+plot.revision,entry=cache.get(key),result=entry?.until>Date.now()?entry.data:await TerraMarketData.rayx(plot.id);cache.set(key,{data:result,until:Date.now()+(result.unavailable?.length?60000:6*3600000)});if(cache.size>50)cache.delete(cache.keys().next().value);display(result);},section);
+    const cached=cache.get(plot.id+':'+plot.revision);if(cached?.until>Date.now())display(cached.data);
     // Price intelligence and scoring intentionally stay absent until enough real comparables exist.
   }
   return {attach,summary};

@@ -151,3 +151,7 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 @media (min-width:721px) and (max-height:500px) {
   #map .leaflet-bottom .leaflet-control-zoom { margin:0 24px 24px 0!important; }
 }
+
+.photo-tile{overflow:visible;aspect-ratio:auto}.photo-tile>img{height:130px;object-fit:cover}.photo-order{display:flex;flex-wrap:wrap;gap:4px;padding:5px}.photo-order button{font-size:14px;padding:7px;min-height:36px}.photo-tile>strong{display:block;padding:4px 8px}.photo-order button:last-child{width:100%}
+
+.version-label{position:fixed;bottom:2px;left:8px;z-index:500;font-size:11px;color:#355549;background:#fff;padding:1px 5px;border-radius:3px}@media(max-width:700px){.version-label{display:none}}

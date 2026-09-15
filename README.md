@@ -8,7 +8,7 @@ Esta versão inclui favoritos, painel da conta, filtros avançados, comparação
 
 ## Código e execução local
 
-Este repositório contém o código-fonte editável. A pasta `dist` contém HTML, CSS e JavaScript escritos diretamente; não há compilação de framework.
+Este repositório contém o código-fonte editável. A pasta `dist` contém HTML, CSS e JavaScript escritos diretamente; não há compilação de framework. Um build empacota esses assets com o Worker HTTP responsável pelo SEO; veja o pacote 6 abaixo.
 
 ```sh
 python3 -m http.server 8000 --directory dist
@@ -30,7 +30,7 @@ Abra http://localhost:8000. Para autenticação local, inclua esse endereço nos
 - `docs/photo-upload-fix.sql`: correções posteriores já aplicadas ao projeto atual.
 - `docs/DATABASE.md`: permissões e migrações aplicadas, incluindo a configuração do Raio-X.
 - `supabase/functions/terra-rayx/index.ts`: análise geográfica implantada, restrita a anúncios públicos.
-- `tests/`: 64 testes, executáveis com `node --test tests/*.test.cjs`.
+- `tests/`: 77 testes, executáveis com `node --test tests/*.test.cjs`.
 - `.openai/hosting.json`: identidade do site na hospedagem Sites. Preserve para atualizar este site; não reutilize sua identidade para criar outro.
 
 As chaves presentes em config.js são públicas por definição. Nunca coloque senha do banco, service_role, secret key, segredo OAuth ou token GitHub no front-end. A autorização é aplicada pelo banco com RLS, não pelo botão de edição.
@@ -53,7 +53,7 @@ Essa sequência histórica exige revisão das referências ao schema PostGIS e d
 
 ## Hospedagem e GitHub
 
-O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist` é a aplicação publicada. Mudanças são verificadas e sincronizadas com `main` antes da publicação. Para outra hospedagem estática, publique `dist` e atualize URLs autorizadas no Supabase e Turnstile.
+O repositório principal é https://github.com/rodukao/mapimoveis. A pasta `dist` é a aplicação publicada. Mudanças são verificadas e sincronizadas com `main` antes da publicação. Para outra hospedagem, mantenha o Worker HTTP e atualize as URLs autorizadas no Supabase e Turnstile; publicar somente os arquivos estáticos perde as proteções de preview do pacote 6.
 
 ## Limites de produção e validação
 
@@ -103,3 +103,9 @@ A inspeção manual em Chrome real usou a prévia local com catálogo público e
 Painel de denúncias protegido por tabela administrativa privada, histórico de ações, pausa administrativa, limites por conta e desafio adicional para uso intenso. A liberação de WhatsApp agora exige login; a navegação do catálogo continua pública. Exclusão de conta exige confirmação forte e é executada no servidor, removendo fotos antes do Auth. Privacidade e termos têm páginas próprias e permanecem em revisão jurídica.
 
 64 testes JavaScript e três roteiros SQL passaram. Configurar o administrador, o segredo adicional do Turnstile, SMTP e Google conforme [o guia operacional](docs/OPERATIONS.md). Os testes reais de e-mail, Google e exclusão integral em staging ainda estão pendentes. O procedimento de retenção foi implementado, mas seu agendamento depende da aprovação dos prazos.
+
+## Pacote 6 — imagens, compartilhamento e Raio-X
+
+Uploads com redimensionamento e remoção de EXIF/GPS, ordem de fotos e capa, renovação única de links de fotos, rotina protegida para órfãos com mais de 48 horas, previews institucionais somente para conteúdo público, ícones/manifest e SEO básico. `/version.json` identifica a versão publicada. Raio-X preserva estimativas geográficas e cache por anúncio/revisão, sem pontuação artificial.
+
+A hospedagem agora usa o Worker gerado por `node scripts/build-site.cjs` para conferir previews privados no servidor; a instrução histórica de publicar apenas `dist` como site estático não se aplica mais. O frontend continua editável em `dist`, e o servidor está em `server/site-worker.mjs`. O agendamento da limpeza e o provedor contratado de proximidade dependem das configurações descritas em [PACKAGE6.md](docs/PACKAGE6.md).

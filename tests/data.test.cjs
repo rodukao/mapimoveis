@@ -38,7 +38,7 @@ function photoSetup({failUpload=false,failCommit=false}={}) {
  const client={auth:{getUser:async()=>({data:{user:{id:'11111111-1111-4111-8111-111111111111'}}})},storage:{from:()=>storage},rpc:async(name,args)=>{events.push(['commit',args]);return failCommit?{error:{code:'42501'}}:{data:null}},from(name){
   const q={select(){return q},eq(){return q},insert(){return q},single:async()=>({data:{id:'22222222-2222-4222-8222-222222222222',revision:1}}),then(resolve){return Promise.resolve({data:existing}).then(resolve)}};return q;
  }};
- const ctx={URL,console,crypto:require('node:crypto').webcrypto,window:{TERRA_CONFIG:{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:'sb_publishable_test'},supabase:{createClient:()=>client}}};
+ const ctx={TerraPhotos:{optimize:async file=>file},URL,console,crypto:require('node:crypto').webcrypto,window:{TERRA_CONFIG:{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:'sb_publishable_test'},supabase:{createClient:()=>client}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {api:ctx.window.TerraData,events};
 }
 const photoFile={type:'image/jpeg',size:1024,name:'terreno.jpg'};

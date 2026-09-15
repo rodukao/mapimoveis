@@ -94,9 +94,8 @@
   async function hydratePhotos(rows) {
     const paths = [...new Set(rows.flatMap(row => (row.terra_listing_photos || []).map(photo => photo.storage_path)))];
     if (!paths.length) return rows;
-    const signed = unwrap(await db().storage.from(PHOTO_BUCKET).createSignedUrls(paths, 3600));
+    let signed=[];try{signed=unwrap(await db().storage.from(PHOTO_BUCKET).createSignedUrls(paths,3600))||[];}catch(_){/* A photo service failure must not hide the listing. */}
     const urls = new Map(signed.map(item => [item.path, item.signedUrl || '']));
-    if (signed.some(item => item.error || !item.signedUrl)) throw new Error('Não foi possível carregar as fotos. Atualize a lista para tentar novamente.');
     return rows.map(row => ({...row, terra_listing_photos:(row.terra_listing_photos || []).map(photo => ({...photo,url:urls.get(photo.storage_path)}))}));
   }
 
@@ -114,12 +113,12 @@
     });
   }
 
-  async function syncPhotos(listingId, files = [], keepPhotoIds = []) {
+  async function syncPhotos(listingId, files = [], keepPhotoIds = [], photoOrder = null) {
     const account = await user();
     const existing = await ownedPhotoRows(listingId, account.id);
     const keep = new Set(keepPhotoIds);
     const removed = existing.filter(photo => !keep.has(photo.id));
-    const retained = existing.filter(photo => keep.has(photo.id));
+    const retained = keepPhotoIds.map(id=>existing.find(photo=>photo.id===id)).filter(Boolean);
     const additions = Array.from(files || []);
     if (retained.length + additions.length > MAX_PHOTOS) throw new Error(`Um anúncio pode ter no máximo ${MAX_PHOTOS} fotos.`);
     additions.forEach(validatePhoto);
@@ -128,18 +127,20 @@
     const uploadedPaths = [];
     let committing = false;
     try {
-      for (const file of additions) {
+      for (const original of additions) {
+        const file=await TerraPhotos.optimize(original);
         const path = `${account.id}/${listingId}/${randomId()}.${PHOTO_EXTENSIONS[file.type]}`;
         const uploaded = await storage.upload(path, file, { cacheControl: '31536000', upsert: false, contentType: file.type });
         if (uploaded.error) throw uploaded.error;
         uploadedPaths.push(path);
       }
       committing = true;
-      const result = await db().rpc('terra_sync_listing_photos', {
+      const result = await db().rpc(photoOrder?'terra_sync_listing_photos_ordered':'terra_sync_listing_photos', {
         p_listing_id: listingId,
         p_keep_ids: retained.map(photo => photo.id),
         p_expected_ids: existing.map(photo => photo.id),
-        p_paths: uploadedPaths
+        p_paths: uploadedPaths,
+        ...(photoOrder?{p_order:photoOrder.map(key=>key.startsWith('new:')?uploadedPaths[Number(key.slice(4))]:existing.find(photo=>photo.id===key)?.storage_path)}:{})
       });
       if (result.error) throw photoError(result.error);
     } catch (error) {
@@ -157,7 +158,7 @@
     }
   }
 
-  async function save(form, { id, revision, files = [], keepPhotoIds = [], photosChanged = false } = {}) {
+  async function save(form, { id, revision, files = [], keepPhotoIds = [], photosChanged = false, photoOrder = null } = {}) {
     const account = await user();
     const clean = payload(form);
     if (photosChanged) {
@@ -174,7 +175,7 @@
       row = unwrap(result);
     }
     if (photosChanged) {
-      try { await syncPhotos(row.id, files, keepPhotoIds); }
+      try { await syncPhotos(row.id, files, keepPhotoIds, photoOrder); }
       catch (cause) {
         const error = new Error('O terreno foi salvo, mas não foi possível concluir as fotos. Abra-o em Meus terrenos para conferir e tentar novamente.');
         error.savedListing = row;

@@ -13,7 +13,7 @@ function roadDistance(origin,geometry){
  return nearest;
 }
 async function analyze(plot){
- const origin=[plot.latitude,plot.longitude],result={distances:[],elevation:null,unavailable:[],sources:[]};
+ const origin=[plot.latitude,plot.longitude],result={listingId:plot.id,revision:plot.revision,generatedAt:new Date().toISOString(),distances:[],elevation:null,unavailable:[],sources:[]};
  const cityURL=new URL(Deno.env.get('PHOTON_URL') || 'https://photon.komoot.io/api/');cityURL.searchParams.set('q',plot.city+', '+plot.state+', Brasil');cityURL.searchParams.set('limit','5');cityURL.searchParams.set('lang','default');
  const vertices=plot.boundary_geojson.coordinates[0].slice(0,-1),step=Math.max(1,Math.ceil(vertices.length/8)),samples=vertices.filter((_,i)=>i%step===0).map(([lng,lat])=>[lat,lng]);samples.push(origin);
  const elevationURL=new URL(Deno.env.get('ELEVATION_URL') || 'https://api.opentopodata.org/v1/srtm90m');elevationURL.searchParams.set('locations',samples.map(p=>p.map(v=>v.toFixed(6)).join(',')).join('|'));
@@ -24,7 +24,7 @@ async function analyze(plot){
   const point=sources[0].value.features?.find(f=>f.properties?.countrycode==='BR'&&['city','town','village','municipality'].includes(f.properties?.osm_value)&&normalize(f.properties?.name)===normalize(plot.city)&&[normalize(states[plot.state]),normalize(plot.state)].includes(normalize(f.properties?.state)));
   if(point?.geometry?.coordinates){const c=point.geometry.coordinates,meters=distance(origin,[c[1],c[0]]);if(meters<200000){result.distances.push({label:'Referência central da cidade',meters});result.sources.push({name:'Photon / OpenStreetMap',url:'https://www.openstreetmap.org/copyright'});}}
  }
- if(!result.distances.length)result.unavailable.push('Referência central da cidade indisponível.');
+ if(!result.distances.length)result.unavailable.push('Referência central da cidade: Informação temporariamente indisponível.');
  if(sources[1].status==='fulfilled'){
   const data=sources[1].value,values=data.results;
   if(data.status==='OK'&&Array.isArray(values)&&values.length===samples.length&&values.every(v=>Number.isFinite(v.elevation))){
@@ -34,7 +34,7 @@ async function analyze(plot){
    result.elevation={min:Math.min(...heights),max:Math.max(...heights),slopePercent:length>0?variation/length*100:null,samples:heights.length};result.sources.push({name:'Open Topo Data / SRTM',url:'https://www.opentopodata.org/datasets/srtm/'});
   }
  }
- if(!result.elevation)result.unavailable.push('Dados de altitude indisponíveis.');
+ if(!result.elevation)result.unavailable.push('Altitude: Informação temporariamente indisponível.');
  // A public Overpass community instance must not become the backend of a commercial app.
  // Configure an instance operated for this project or a contracted compatible provider.
  const overpass=Deno.env.get('OVERPASS_URL');
@@ -43,7 +43,8 @@ async function analyze(plot){
    const url=new URL(overpass);if(url.protocol!=='https:')throw new Error('Use HTTPS.');
    const location=origin.map(n=>Number(n).toFixed(6)).join(',');
    const query=`[out:json][timeout:12][maxsize:16777216];(nwr(around:5000,${location})[amenity~"^(hospital|school)$"];nwr(around:5000,${location})[shop=supermarket];way(around:5000,${location})[highway~"^(motorway|trunk|primary)$"];way(around:300,${location})[highway];);out center geom 1000;`;
-   const data=await json(url,{method:'POST',body:new URLSearchParams({data:query})});
+   const providerKey=Deno.env.get('OVERPASS_API_KEY');
+   const data=await json(url,{method:'POST',headers:providerKey?{Authorization:'Bearer '+providerKey}:{},body:new URLSearchParams({data:query})});
    if(data.remark||!Array.isArray(data.elements)||data.elements.length>=1000)throw new Error('Resultado geográfico incompleto.');
    for(const [label,filter] of [['Hospital',e=>e.tags?.amenity==='hospital'],['Escola',e=>e.tags?.amenity==='school'],['Supermercado',e=>e.tags?.shop==='supermarket'],['Rodovia principal',e=>['motorway','trunk','primary'].includes(e.tags?.highway)],['Via mais próxima',e=>!!e.tags?.highway]]){
     let nearest=Infinity,roadType='';
@@ -55,8 +56,8 @@ async function analyze(plot){
     if(Number.isFinite(nearest)&&nearest<=radius)result.distances.push({label,meters:nearest,...(label==='Via mais próxima'?{surface:roadType}:{})});else result.unavailable.push(label+': não encontrado na área consultada.');
    }
    result.sources.push({name:'OpenStreetMap',url:'https://www.openstreetmap.org/copyright'});
-  }catch(_){result.unavailable.push('Serviços próximos e vias: fonte indisponível.');}
- }else result.unavailable.push('Serviços próximos e vias ainda sem fonte de dados ativa.');
+  }catch(_){result.unavailable.push('Serviços próximos e vias: Informação temporariamente indisponível.');}
+ }else result.unavailable.push('Serviços próximos e vias: Informação temporariamente indisponível.');
  return result;
 }
 Deno.serve(async req=>{
@@ -80,6 +81,6 @@ Deno.serve(async req=>{
    if(permitted!==true)throw new Error('Limite temporário de consultas.');
    return analyze(plot);
   })().finally(()=>inFlight.delete(cacheKey)));
-  const data=await inFlight.get(cacheKey);cache.set(cacheKey,{until:Date.now()+6*3600000,data});if(cache.size>100)cache.delete(cache.keys().next().value);return response(200,data);
- }catch(_){return response(503,{error:'Não foi possível consultar os dados geográficos. Tente novamente.'});}
+  const data=await inFlight.get(cacheKey);cache.set(cacheKey,{until:Date.now()+(data.unavailable.length?60000:6*3600000),data});if(cache.size>100)cache.delete(cache.keys().next().value);return response(200,data);
+ }catch(_){return response(503,{error:'Informação temporariamente indisponível.'});}
 });

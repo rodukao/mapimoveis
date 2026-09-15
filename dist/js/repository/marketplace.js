@@ -54,6 +54,7 @@ window.TerraMarketData = (() => {
     let avatarPath, previousAvatar = null;
     const storage = R.db().storage.from('terra-profile-photos');
     if (photo) {
+      photo=await TerraPhotos.optimize(photo,{maxSide:640});
       const ext = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[photo.type];
       if (!ext || photo.size>5*1024*1024) throw new Error('Use foto JPG, PNG ou WebP com até 5 MB.');
       previousAvatar = unwrap(await table('terra_profiles').select('avatar_path').eq('id',id).single()).avatar_path;
@@ -75,7 +76,7 @@ window.TerraMarketData = (() => {
     catch (error) { throw new Error('Perfil salvo, mas o WhatsApp não foi atualizado. Reabra o perfil e tente novamente.'); }
   }
   return {
-    rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Não foi possível consultar os dados geográficos. Tente novamente mais tarde.');return result.data;},
+    rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Informação temporariamente indisponível.');return result.data;},
     get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
     advertiser: id => rpc('terra_advertiser',{p_owner:id}),

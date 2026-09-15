@@ -8,7 +8,7 @@ let searchLocation = null, searchMarker = null, locationSearchSequence = 0;
 let currentSession = null, mine = false, loading = false, loadFailed = false, totalListings = 0, loadSequence = 0;
 let editId = null, editRevision = null, saving = false, selected = -1, drawing = false, points = [];
 let drawn = null, ghost = null, markers = [], plotLayers = [], vertices = [], currentArea = 0;
-let retainedPhotos = [], selectedPhotoFiles = [], photosChanged = false, previewUrls = [];
+let retainedPhotos = [], selectedPhotoFiles = [], photosChanged = false, previewUrls = [], photoOrder = [], photoGeneration=0;
 
 const map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([-21.782, -43.392], 14);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -58,10 +58,10 @@ function render() {
     card.addEventListener('focusout', event => { if(!card.contains(event.relatedTarget)) catalogMap.unhighlightListing(plot.id,'focus'); });
     card.innerHTML = '<button type="button" class="card-open"><div class="card-media" hidden><img alt=""></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div></button><div class="card-actions"></div>';
     const firstPhoto = plot.photos?.[0];
-    if (firstPhoto?.url) {
+    if (firstPhoto) {
       const media = card.querySelector('.card-media');
       media.hidden = false;
-      media.querySelector('img').src = firstPhoto.url;
+      TerraPhotos.bind(media.querySelector('img'),firstPhoto);
       media.querySelector('img').alt = `Foto de ${plot.title}`;
     }
     card.querySelector('.tag').textContent = plot.tag + (mine ? ' · ' + ({ draft: 'Rascunho', published: 'Ativo', reserved: 'Reservado', sold: 'Vendido', paused: 'Pausado' }[plot.status] || '') : '');
@@ -132,8 +132,10 @@ function updateUnit() { $('unit').textContent = currentArea && +$('value').value
 $('value').oninput = updateUnit;
 
 function clearPhotoDraft() {
+  photoGeneration++;
   previewUrls.forEach(url => URL.revokeObjectURL(url));
   previewUrls = [];
+  photoOrder = [];
   retainedPhotos = [];
   selectedPhotoFiles = [];
   photosChanged = false;
@@ -145,7 +147,7 @@ function photoTile(src, alt, onRemove) {
   const tile = document.createElement('div');
   tile.className = 'photo-tile';
   const image = document.createElement('img');
-  image.src = src;
+  if(src)image.src = src;
   image.alt = alt;
   const remove = document.createElement('button');
   remove.type = 'button';
@@ -162,14 +164,15 @@ function renderPhotoPreview() {
   previewUrls.forEach(url => URL.revokeObjectURL(url));
   previewUrls = [];
   $('photo-preview').replaceChildren();
-  retainedPhotos.forEach((photo, index) => {
-    if (!photo.url) return;
-    $('photo-preview').append(photoTile(photo.url, 'Foto já salva do terreno', () => { retainedPhotos.splice(index, 1); photosChanged = true; renderPhotoPreview(); }));
-  });
-  selectedPhotoFiles.forEach((file, index) => {
-    const url = URL.createObjectURL(file);
-    previewUrls.push(url);
-    $('photo-preview').append(photoTile(url, `Nova foto selecionada: ${file.name}`, () => { selectedPhotoFiles.splice(index, 1); photosChanged = true; renderPhotoPreview(); }));
+  if(!photoOrder.length)photoOrder=[...retainedPhotos,...selectedPhotoFiles];
+  photoOrder.forEach((item,index)=>{
+    const saved=Boolean(item.id),url=saved?item.url:URL.createObjectURL(item);if(!saved)previewUrls.push(url);
+    const tile=photoTile(url,'Foto '+(index+1),()=>{photoOrder.splice(index,1);retainedPhotos=retainedPhotos.filter(p=>p!==item);selectedPhotoFiles=selectedPhotoFiles.filter(p=>p!==item);photosChanged=true;renderPhotoPreview();});
+    if(saved)TerraPhotos.bind(tile.querySelector('img'),item);
+    const controls=document.createElement('div');controls.className='photo-order';
+    const move=to=>{photoOrder.splice(index,1);photoOrder.splice(to,0,item);photosChanged=true;renderPhotoPreview();};
+    for(const [label,target,disabled] of [['←',index-1,index===0],['→',index+1,index===photoOrder.length-1],['Definir como capa',0,index===0]]){const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',label==='←'?'Mover foto para a esquerda':label==='→'?'Mover foto para a direita':label);button.onclick=()=>move(target);controls.append(button);}
+    const caption=document.createElement('strong');caption.textContent=index===0?'Capa':'Foto '+(index+1);tile.append(caption,controls);$('photo-preview').append(tile);
   });
 }
 
@@ -253,12 +256,15 @@ function toast(message) {
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.style.display='none',5000);
 }
 
-if ($('photos')) $('photos').onchange = event => {
+if ($('photos')) $('photos').onchange = async event => {
   const incoming = Array.from(event.target.files || []);
   const room = DATA.maxPhotos - retainedPhotos.length - selectedPhotoFiles.length;
   if (room <= 0) { toast(`Um anúncio pode ter no máximo ${DATA.maxPhotos} fotos.`); event.target.value = ''; return; }
   if (incoming.length > room) toast(`Você pode adicionar mais ${room} foto${room === 1 ? '' : 's'}.`);
-  selectedPhotoFiles.push(...incoming.slice(0, room));
+  const input=event.target,generation=photoGeneration;
+  input.disabled=true;const saveButton=document.querySelector('#listing-form button[type=submit]')||$('save-listing');
+  if(saveButton)saveButton.disabled=true;
+  try{for(const file of incoming.slice(0,room)){const optimized=await TerraPhotos.optimize(file);if(generation!==photoGeneration)return;selectedPhotoFiles.push(optimized);photoOrder.push(optimized);}}catch(error){toast(error.message);}finally{input.disabled=false;if(saveButton)saveButton.disabled=false;}
   photosChanged = true;
   event.target.value = '';
   renderPhotoPreview();
@@ -266,6 +272,7 @@ if ($('photos')) $('photos').onchange = event => {
 
 $('form').onsubmit = async event => {
   event.preventDefault();
+  if($('photos').disabled)return toast('Aguarde o processamento das fotos.');
   if (saving) return;
   try { window.TerraMapTools?.validateEditor(); } catch (error) { return toast(error.message); }
   if (points.length < 3 || currentArea < 1) return toast('Marque pelo menos 3 pontos para formar o terreno.');
@@ -283,7 +290,7 @@ $('form').onsubmit = async event => {
   $('undo').disabled = true;
   $('clear').disabled = true;
   try {
-    await TerraOperations.withChallenge(editId?'sensitive':'listing',()=>DATA.save(form, { id: editId, revision: editRevision, files: filesToUpload, keepPhotoIds, photosChanged }));
+    await TerraOperations.withChallenge(editId?'sensitive':'listing',()=>DATA.save(form, { id: editId, revision: editRevision, files: filesToUpload, keepPhotoIds, photosChanged, photoOrder:photoOrder.map(item=>item.id||'new:'+selectedPhotoFiles.indexOf(item)) }));
     saving = false;
     stop();
     await loadListings();
@@ -327,6 +334,7 @@ function fillEditor(plot) {
   $('listing-error').hidden = true;
   retainedPhotos = (plot?.photos || []).map(photo => ({ ...photo }));
   selectedPhotoFiles = [];
+  photoOrder=retainedPhotos.slice();
   photosChanged = false;
   $('title').value = plot?.title || '';
   $('value').value = plot?.price || '';

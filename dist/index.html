@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="leaflet.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="marketplace.css">
-</head>
+<!-- TERRA_METADATA --><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#156448"></head>
 <body>
   <header>
     <a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 10 16 3l12 7v13l-12 7-12-7Z M4 10l12 7 12-7M16 17v13"/></svg>terra<span>terrenos no mapa</span></a>
@@ -39,7 +39,7 @@
             <label>Bairro<input id="neighborhood" maxlength="100"></label>
             <label>Tipo de terreno<select id="category"><option value="residencial">Residencial</option><option value="condominio">Condomínio</option><option value="chacara">Chácara</option><option value="rural">Rural</option><option value="comercial">Comercial</option></select></label>
             <label>Situação<select id="listing-status"><option value="draft">Rascunho — só você pode ver</option><option value="published">Ativo — visível no catálogo</option><option value="reserved">Reservado — visível com aviso</option><option value="sold">Vendido — acessível pelo link</option><option value="paused">Pausado — fora do catálogo</option></select></label>
-            <div class="photo-upload"><label for="photos">Fotos do terreno</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="small">Até 12 fotos, JPG, PNG ou WebP. Cada arquivo pode ter até 10 MB.</p><div id="photo-preview" class="photo-grid" aria-live="polite"></div></div>
+            <div class="photo-upload"><label for="photos">Fotos do terreno</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="small">Até 12 fotos, JPG, PNG ou WebP. As fotos são redimensionadas e comprimidas antes do envio, sem os metadados EXIF/GPS. A primeira foto é a capa. Originais de até 30 MB.</p><div id="photo-preview" class="photo-grid" aria-live="polite"></div></div>
           </div>
           <div class="price-m2">Valor por m² <strong id="unit">—</strong></div><p class="small">A área é uma estimativa pelo desenho no mapa e não substitui o levantamento topográfico.</p><p id="listing-error" role="alert" hidden></p><button id="save-listing" class="primary full" type="submit">Salvar terreno</button><p class="small" id="save-note">Rascunhos e anúncios pausados ficam visíveis somente para você.</p>
         </fieldset></form>
@@ -70,6 +70,6 @@
     <div id="lightbox-viewport"><img id="lightbox-photo" alt=""></div><p id="lightbox-error" hidden role="status">Não foi possível carregar esta foto.</p>
     <button id="lightbox-prev" class="gallery-arrow previous" aria-label="Foto anterior">‹</button><button id="lightbox-next" class="gallery-arrow next" aria-label="Próxima foto">›</button>
   </dialog>
-  <script src="ids.js"></script><script src="config.js"></script><script src="supabase.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="js/ui/dialogs.js"></script><script src="js/repository/marketplace.js"></script><script src="js/account/operations.js"></script><script src="js/map/catalog.js"></script><script src="app.js"></script><script src="location-ui.js"></script><script src="detail.js"></script><script src="auth.js"></script><script src="js/search/filters.js"></script><script src="js/terrenos/marketplace.js"></script><script src="js/account/panel.js"></script><script src="js/account/admin.js"></script><script src="js/map/geometry.js"></script><script src="js/map/tools.js"></script><script src="js/analysis/rayx.js"></script><script src="boot.js"></script>
-</body>
+  <script src="ids.js"></script><script src="config.js"></script><script src="supabase.js"></script><script src="js/photos.js"></script><script src="data.js"></script><script src="captcha.js"></script><script src="leaflet.js"></script><script src="location.js"></script><script src="js/ui/dialogs.js"></script><script src="js/repository/marketplace.js"></script><script src="js/account/operations.js"></script><script src="js/map/catalog.js"></script><script src="app.js"></script><script src="location-ui.js"></script><script src="detail.js"></script><script src="auth.js"></script><script src="js/search/filters.js"></script><script src="js/terrenos/marketplace.js"></script><script src="js/account/panel.js"></script><script src="js/account/admin.js"></script><script src="js/map/geometry.js"></script><script src="js/map/tools.js"></script><script src="js/analysis/rayx.js"></script><script src="boot.js"></script>
+<a class="version-label" href="/version.json" target="_blank" rel="noopener">Terra 1.0.6</a></body>
 </html>

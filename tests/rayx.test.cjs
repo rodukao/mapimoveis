@@ -11,7 +11,7 @@ function setup({missingElevation=false,publishableKey=false,budget=true}={}){
   throw new Error('Unexpected source');
  },Deno:{env:{get:key=>env[key]},serve:fn=>{handler=fn;}}};
  vm.createContext(context);vm.runInContext(fs.readFileSync('supabase/functions/terra-rayx/index.ts','utf8'),context);
- return {call:(value=id,authorization)=>handler(new Request('https://edge.example.invalid',{method:'POST',headers:authorization?{authorization}:{},body:JSON.stringify({listingId:value})})),deny:()=>{allowed=false;},get dbCalls(){return dbCalls},get sourceCalls(){return sourceCalls}};
+ return {call:(value=id,authorization)=>handler(new Request('https://edge.example.invalid',{method:'POST',headers:authorization?{authorization}:{},body:JSON.stringify({listingId:value})})),revise:()=>{plot.revision++;},deny:()=>{allowed=false;},get dbCalls(){return dbCalls},get sourceCalls(){return sourceCalls}};
 }
 test('Raio-X validates the id before any database or external request',async()=>{const s=setup();assert.equal((await s.call('invalid')).status,400);assert.equal(s.dbCalls,0);assert.equal(s.sourceCalls,0)});
 test('Raio-X prefers the platform publishable key over the legacy anonymous key',async()=>{const s=setup({publishableKey:true});assert.equal((await s.call()).status,200);assert.equal(s.dbCalls,1);});
@@ -20,7 +20,9 @@ test('cached geographic data becomes inaccessible when the listing is no longer 
 });
 test('an owner JWT cannot authorize forwarding a private listing to geographic providers',async()=>{const s=setup();s.deny();assert.equal((await s.call(undefined,'Bearer eyJowner-test')).status,404);assert.equal(s.sourceCalls,0);});
 test('missing elevation and POI providers produce explicit unavailability, never zero placeholders',async()=>{
- const s=setup({missingElevation:true}),result=await (await s.call()).json();assert.equal(result.elevation,null);assert.ok(result.unavailable.some(x=>x.includes('altitude')));assert.ok(result.unavailable.some(x=>x.includes('fonte de dados ativa')));assert.equal('score' in result,false);
+ const s=setup({missingElevation:true}),result=await (await s.call()).json();assert.equal(result.elevation,null);assert.ok(result.unavailable.some(x=>x.toLowerCase().includes('altitude')));assert.ok(result.unavailable.some(x=>x.includes('Serviços próximos e vias: Informação temporariamente indisponível.')));assert.equal('score' in result,false);
 });
 
 test('Raio-X refuses external lookups when the shared server budget is exhausted',async()=>{const s=setup({budget:false});assert.equal((await s.call()).status,503);assert.equal(s.sourceCalls,0)});
+
+test("Raio-X cache is invalidated by listing revision",async()=>{const s=setup();await s.call();assert.equal(s.sourceCalls,2);s.revise();const r=await(await s.call()).json();assert.equal(r.revision,2);assert.equal(s.sourceCalls,4);});

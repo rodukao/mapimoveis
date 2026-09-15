@@ -25,7 +25,7 @@ function showDetail(plot) {
     const item = document.createElement('div'), term = document.createElement('dt'), definition = document.createElement('dd');
     term.textContent = label; definition.textContent = value; item.append(term,definition); $('detail-facts').append(item);
   }
-  detailPhotos = (plot.photos || []).filter(photo => photo.url);
+  detailPhotos = (plot.photos || []);
   detailPhotoIndex = 0;
   $('detail-gallery').hidden = !detailPhotos.length;
   $('no-photos').hidden = Boolean(detailPhotos.length);
@@ -33,7 +33,7 @@ function showDetail(plot) {
   detailPhotos.forEach((photo,index) => {
     const button = document.createElement('button'), img = document.createElement('img');
     button.type = 'button'; button.setAttribute('aria-label', 'Ver foto ' + (index + 1));
-    img.src = photo.url; img.alt = ''; img.loading = 'lazy'; button.append(img);
+    TerraPhotos.bind(img,photo); img.alt = ''; img.loading = 'lazy'; button.append(img);
     button.onclick = () => displayPhoto(index); $('photo-thumbnails').append(button);
   });
   if (detailPhotos.length) displayPhoto(0);
@@ -54,7 +54,7 @@ function displayPhoto(index) {
   const caption = `Foto ${detailPhotoIndex + 1} de ${detailPhotos.length}`;
   $('photo-error').hidden = true; $('lightbox-error').hidden = true;
   for (const id of ['detail-photo','lightbox-photo']) {
-    $(id).src = photo.url;
+    TerraPhotos.bind($(id),photo,()=>{$(id==='detail-photo'?'photo-error':'lightbox-error').hidden=false;});
     $(id).alt = photo.alt_text || `${detailPlot.title} — ${caption}`;
   }
   $('photo-counter').textContent = caption; $('lightbox-counter').textContent = caption;
@@ -71,8 +71,7 @@ $('photo-zoom').onclick = () => {
   $('photo-zoom').setAttribute('aria-pressed',String(zoomed));
   $('photo-zoom').textContent = zoomed ? 'Ajustar à tela' : 'Ampliar 2×';
 };
-$('detail-photo').onerror = () => { $('photo-error').hidden = false; };
-$('lightbox-photo').onerror = () => { $('lightbox-error').hidden = false; };
+
 for (const id of ['photo-prev','lightbox-prev']) $(id).onclick = () => displayPhoto(detailPhotoIndex - 1);
 for (const id of ['photo-next','lightbox-next']) $(id).onclick = () => displayPhoto(detailPhotoIndex + 1);
 for (const id of ['listing-detail','photo-lightbox']) {

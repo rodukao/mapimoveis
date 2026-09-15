@@ -132,7 +132,7 @@ window.TerraMarketplace = (() => {
   }
   function miniCard(plot,onclick) {
     const button=el('button',{class:'mini-card',onclick});
-    if(plot.photos?.[0]?.url)button.append(el('img',{src:plot.photos[0].url,alt:'',loading:'lazy'}));
+    if(plot.photos?.[0]){const image=el('img',{alt:'',loading:'lazy'});TerraPhotos.bind(image,plot.photos[0]);button.append(image);}
     button.append(el('strong',{},plot.title || 'Rascunho sem título'),el('span',{},money(plot.price)+' · '+num(plot.area)+' m²'),el('small',{},plot.address));return button;
   }
   document.addEventListener('terra:detail',async event=>{
