@@ -112,8 +112,8 @@ function updateDraw() {
   vertices.forEach(vertex => vertex.remove());
   vertices = [];
   if (points.length) {
-    drawn = (points.length >= 3 ? L.polygon(points, { color: '#156448', weight: 3, fillOpacity: .23 }) : L.polyline(points, { color: '#156448', weight: 3 })).addTo(map);
-    points.forEach((point, index) => vertices.push(L.circleMarker(point, { radius: 6, color: '#156448', weight: 3, fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindTooltip('Ponto ' + (index + 1))));
+    drawn = (points.length >= 3 ? L.polygon(points, { color: '#D97706', weight: 3, fillOpacity: .23 }) : L.polyline(points, { color: '#D97706', weight: 3 })).addTo(map);
+    points.forEach((point, index) => vertices.push(L.circleMarker(point, { radius: 6, color: '#D97706', weight: 3, fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindTooltip('Ponto ' + (index + 1))));
   }
   currentArea = measure(points);
   $('draw-area').innerHTML = num(currentArea) + ' <small>m²</small>';
@@ -232,7 +232,7 @@ map.on('click', event => {
 map.on('mousemove', event => {
   if (!drawing || !points.length || !window.TerraMapTools?.canMapDraw()) return;
   if (ghost) ghost.remove();
-  ghost = L.polyline([points.at(-1), event.latlng], { color: '#156448', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
+  ghost = L.polyline([points.at(-1), event.latlng], { color: '#D97706', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
   $('distance').hidden = false;
   $('distance').textContent = num(map.distance(points.at(-1), event.latlng)) + ' m até o próximo ponto';
 });

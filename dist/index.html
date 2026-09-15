@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="leaflet.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="marketplace.css">
-<!-- TERRA_METADATA --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="{{brand.themeColor}}"><script src="/brand.js"></script></head>
+<!-- TERRA_METADATA --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="{{brand.themeColor}}"><script src="/brand.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap"></head>
 <body>
   <header>
-    <a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 10 16 3l12 7v13l-12 7-12-7Z M4 10l12 7 12-7M16 17v13"/></svg>{{brand.name}}<span>terrenos no mapa</span></a>
+    <a class="brand" href="/" aria-label="TerraMapa — explorar terrenos"><img class="brand-symbol" src="/favicon.svg" width="34" height="34" alt=""><strong class="brand-name">{{brand.name}}</strong><span>{{brand.shortTagline}}</span></a>
     <nav><a href="/profissionais" class="professionals-link">Para profissionais</a><button class="nav-active" id="explore">Explorar terrenos</button></nav>
     <div class="header-actions"><button id="account">Entrar</button><button class="primary" id="announce">＋ Anunciar terreno</button></div>
   </header>
@@ -20,7 +20,7 @@
   <main>
     <aside id="sidebar">
       <div id="browse">
-        <div class="list-heading"><div class="list-tabs" id="listing-tabs" hidden><button class="active" id="all-listings">Todos os terrenos</button><button id="my-listings">Meus terrenos</button></div><div class="eyebrow">ENCONTRE SEU LUGAR</div><h1>Um terreno.<br>Novas possibilidades.</h1><div class="result-line"><span id="count"></span><span class="small" id="list-meta">Anúncios no mapa</span></div></div>
+        <div class="list-heading"><div class="list-tabs" id="listing-tabs" hidden><button class="active" id="all-listings">Todos os terrenos</button><button id="my-listings">Meus terrenos</button></div><div class="eyebrow">ENCONTRE SEU TERRENO</div><h1>Veja os limites.<br>Entenda a localização.</h1><div class="result-line"><span id="count"></span><span class="small" id="list-meta">Anúncios no mapa</span></div></div>
         <div class="catalog-location" id="catalog-location" hidden><span id="catalog-location-label"></span><button id="clear-location" aria-label="Remover filtro de localização">×</button></div><label class="sort-control" for="sort-order">Ordenar por<select id="sort-order"><option value="recent">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="area_asc">Menor área</option><option value="area_desc">Maior área</option><option value="unit_asc">Menor preço por m²</option></select></label><div id="filter-chips" aria-label="Filtros ativos"></div><p id="catalog-update" role="status" hidden></p><div id="cards"></div>
         <button id="more-listings" class="full" hidden>Carregar mais terrenos</button><button id="retry-listings" class="full" hidden>Tentar novamente</button>
 

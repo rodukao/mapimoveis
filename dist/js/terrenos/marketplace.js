@@ -8,7 +8,7 @@ window.TerraMarketplace = (() => {
   try { sessionId = sessionStorage.getItem('terra-visit-session'); if (!/^[0-9a-f-]{36}$/.test(sessionId || '')) { sessionId=crypto.randomUUID(); sessionStorage.setItem('terra-visit-session',sessionId); } }
   catch (_) { sessionId = crypto.randomUUID(); }
   const track = (name,listing) => api.event(name,listing,sessionId).catch(() => { /* Analytics cannot replace or block catalog data. Contact uses the strict recorder below. */ });
-  function link(id) { const url=new URL(location.pathname,location.origin);url.searchParams.set('terreno',id);return url.href; }
+  function link(id) { const url=new URL('/',APP_BRAND.origin);url.searchParams.set('terreno',id);return url.href; }
   function requireLogin(message = 'Entre na sua conta para continuar.') {
     if (currentSession) return true;
     toast(message); openAuth('login'); return false;
