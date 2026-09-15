@@ -8,6 +8,6 @@
   shortTagline:'terrenos no mapa',
   tagline,title:name+' — terrenos no mapa',
   description:tagline+' Explore limites, fotos e informações de terrenos em um só lugar.',
-  version:'1.1.2',themeColor:'#145A46'
+  version:'1.2.0',themeColor:'#145A46'
  });
 })();

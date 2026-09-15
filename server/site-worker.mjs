@@ -13,9 +13,22 @@ export function metadata(url,indexable=true){
 export function createWorker(assets,version){
  const decoded=new Map();
  const bytes=key=>{if(!decoded.has(key))decoded.set(key,Uint8Array.from(atob(assets[key].data),c=>c.charCodeAt(0)));return decoded.get(key);};
- return {async fetch(request){
+ return {async fetch(request,env={}){
   const url=new URL(request.url),path=url.pathname.replace(/\/$/,'')||'/';
   const reply=(body,status=200,type='text/html; charset=utf-8',extra={})=>new Response(request.method==='HEAD'?null:body,{status,headers:{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store',...extra}});
+  if(path==='/api/contact'){
+   if(request.method!=='POST')return reply('Use POST.',405,'text/plain');
+   if(request.headers.get('Origin')!==url.origin)return reply(JSON.stringify({error:'Origem não autorizada.'}),403,'application/json');
+   const ip=request.headers.get('CF-Connecting-IP');
+   if(!env.TERRA_CONTACT_PROXY_KEY||!request.cf||!ip)return reply(JSON.stringify({error:'Contato temporariamente indisponível.'}),503,'application/json');
+   try{
+    const reader=request.body?.getReader();if(!reader)throw Error();let raw='',size=0;const decoder=new TextDecoder();while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>4096){await reader.cancel();throw Error();}raw+=decoder.decode(part.value,{stream:true});}raw+=decoder.decode();const b=JSON.parse(raw);
+    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TERRA_CONTACT_PROXY_KEY+':'+new Date().toISOString().slice(0,10)+':'+ip));
+    const ipHash=Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
+    const response=await fetch(PROJECT+'/functions/v1/terra-contact',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json','x-terra-proxy':env.TERRA_CONTACT_PROXY_KEY,...(request.headers.get('authorization')?{Authorization:request.headers.get('authorization')}:{})},body:JSON.stringify({session:b.session,listing:b.listing,owner:b.owner,token:b.token,ip:ipHash,origin:url.origin}),signal:AbortSignal.timeout(20000)});
+    return reply(await response.text(),response.status,'application/json');
+   }catch(_){return reply(JSON.stringify({error:'Não foi possível abrir o contato agora.'}),503,'application/json');}
+  }
   if(!['GET','HEAD'].includes(request.method))return reply('Method not allowed',405,'text/plain');
   if(APP_BRAND.redirectLegacy&&ORIGIN===APP_BRAND.targetOrigin&&url.origin===APP_BRAND.legacyOrigin&&!url.searchParams.has('code')&&!url.searchParams.has('recovery'))return new Response(null,{status:308,headers:{Location:ORIGIN+url.pathname+url.search,'Cache-Control':'public, max-age=300'}});
   if(path==='/version.json')return reply(JSON.stringify(version),200,'application/json');

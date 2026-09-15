@@ -40,7 +40,7 @@ window.TerraMarketData = (() => {
   async function profile() {
     const id = (await R.user()).id;
     const [profile,contact] = await Promise.all([
-      table('terra_profiles').select('id,display_name,city,account_type,avatar_path,phone_verified,created_at').eq('id',id).single(),
+      table('terra_profiles').select('id,display_name,city,state,description,creci,website,instagram,account_type,avatar_path,phone_verified,created_at').eq('id',id).single(),
       table('terra_contact_settings').select('phone,enabled').eq('user_id',id).maybeSingle()
     ]);
     return {...unwrap(profile),contact:unwrap(contact) || {phone:'',enabled:false}};
@@ -51,6 +51,9 @@ window.TerraMarketData = (() => {
     const normalized = phone && [10,11].includes(phone.length) ? '55'+phone : phone;
     if (normalized && !/^55[1-9]\d{9,10}$/.test(normalized)) throw new Error('Informe WhatsApp brasileiro com DDD, por exemplo 32 99999-9999.');
     if (form.enabled && !normalized) throw new Error('Informe seu WhatsApp para disponibilizar contato.');
+    let website=(form.website||'').trim();if(website){let u;try{u=new URL(website);}catch(_){throw Error('Informe o site completo, começando com https://.');}if(u.protocol!=='https:'||u.username||u.password)throw Error('Use um site HTTPS válido.');website=u.href;}
+    const instagram=(form.instagram||'').trim().replace(/^@/,'');if(instagram&&!/^[A-Za-z0-9_.]{1,30}$/.test(instagram))throw Error('Informe apenas o usuário do Instagram.');
+    const patch = {display_name:form.display_name.trim(),city:form.city.trim(),account_type:form.account_type,state:(form.state||'').trim().toUpperCase(),description:(form.description||'').trim(),creci:(form.creci||'').trim(),website,instagram};
     let avatarPath, previousAvatar = null;
     const storage = R.db().storage.from('terra-profile-photos');
     if (photo) {
@@ -61,7 +64,6 @@ window.TerraMarketData = (() => {
       avatarPath = id+'/'+crypto.randomUUID()+'.'+ext;
       unwrap(await storage.upload(avatarPath,photo,{contentType:photo.type,upsert:false}));
     }
-    const patch = {display_name:form.display_name.trim(),city:form.city.trim(),account_type:form.account_type};
     if (avatarPath) patch.avatar_path = avatarPath;
     try { unwrap(await table('terra_profiles').update(patch).eq('id',id)); }
     catch (error) { if (avatarPath && error.code) await storage.remove([avatarPath]); throw error; }
@@ -77,6 +79,8 @@ window.TerraMarketData = (() => {
   }
   return {
     rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Informação temporariamente indisponível.');return result.data;},
+    dashboard:()=>rpc('terra_professional_dashboard',{}),
+    ownListings:async(query,status,offset=0)=>{let q=table('terra_listings').select(R.listFields,{count:'exact'}).eq('owner_id',(await R.user()).id).order('created_at',{ascending:false}).order('id',{ascending:false});if(status)q=q.eq('status',status);if(query)q=q.ilike('title','%'+query.replace(/[\\%_]/g,'\\$&')+'%');const result=await q.range(offset,offset+49);return {rows:await R.hydratePhotos(unwrap(result)),total:result.count};},
     get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
     advertiser: id => rpc('terra_advertiser',{p_owner:id}),

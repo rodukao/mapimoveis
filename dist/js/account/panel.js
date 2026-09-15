@@ -1,6 +1,6 @@
 window.TerraAccount = (() => {
   const {el,dialog,error,busy,field,options}=TerraUI,api=TerraMarketData;
-  const tabs={listings:'Meus anúncios',favorites:'Favoritos',searches:'Buscas salvas',alerts:'Alertas',profile:'Perfil'};
+  const tabs={overview:'Visão geral',listings:'Meus anúncios',favorites:'Favoritos',searches:'Buscas salvas',alerts:'Alertas',profile:'Perfil'};
   const accountLinks=el('div',{class:'account-links'});
   for(const [key,label] of Object.entries(tabs))accountLinks.append(el('button',{class:'full',onclick:()=>{$('auth-dialog').close();open(key);}},label));
   $('account-listings').replaceWith(accountLinks);
@@ -15,7 +15,7 @@ window.TerraAccount = (() => {
   }
   document.addEventListener('terra:session',()=>{if(activePanel&&panelOwner!==currentSession?.user.id)activePanel.close();updateBadge();});
   setInterval(()=>{if(!document.hidden)updateBadge();},60000);
-  async function open(initial='listings'){
+  async function open(initial='overview'){
     if(!TerraMarketplace.requireLogin())return;
     const panel=dialog('Minha conta',{wide:true}),nav=el('nav',{class:'account-tabs'}),body=el('div');panel.content.append(nav,body);
     activePanel=panel.node;panelOwner=currentSession.user.id;panel.node.addEventListener('close',()=>{if(activePanel===panel.node)activePanel=null;},{once:true});
@@ -23,26 +23,28 @@ window.TerraAccount = (() => {
     async function show(key){
       const current=++sequence;body.replaceChildren(el('p',{},'Carregando…'));nav.querySelectorAll('button').forEach(button=>button.setAttribute('aria-current',String(button.dataset.tab===key)));
       const target=el('section');
-      try{await ({listings:ownListings,favorites:favoriteListings,searches:savedSearches,alerts:notifications,profile:profileForm})[key](target,panel);if(current===sequence&&panel.node.open)body.replaceChildren(target);}catch(exception){if(current===sequence){body.replaceChildren();error(body,exception);}}
+      try{await ({overview:overview,listings:ownListings,favorites:favoriteListings,searches:savedSearches,alerts:notifications,profile:profileForm})[key](target,panel);if(current===sequence&&panel.node.open)body.replaceChildren(target);}catch(exception){if(current===sequence){body.replaceChildren();error(body,exception);}}
     }
     for(const [key,label] of Object.entries(tabs))nav.append(el('button',{'data-tab':key,onclick:()=>show(key)},label));
+    nav.append(el('button',{onclick:()=>{panel.node.close();openAuth();}},'Conta e sair'));
     await show(initial);
   }
+  async function overview(target,panel){
+    const data=await api.dashboard();target.append(el('h3',{},'Visão geral'),el('p',{class:'small'},'Interesse nos últimos 30 dias. Anúncios ativos: situação atual, incluindo reservados.'));
+    const grid=el('div',{class:'dashboard-metrics'});for(const [key,label] of [['active','Anúncios ativos'],['views','Visualizações'],['favorites','Favoritos'],['contacts','Contatos iniciados']])grid.append(el('div',{},el('strong',{},num(Number(data[key]))),el('span',{},label)));target.append(grid,el('p',{class:'small'},'Contatos são cliques liberados para o WhatsApp, não conversas confirmadas. Favoritos: salvos no período e ainda mantidos.'),el('h3',{},'Anúncios com maior interesse'));
+    if(!data.top.length)target.append(el('p',{},'Ainda não há interações no período.'));
+    for(const row of data.top){const button=el('button',{class:'mini-card',onclick:()=>{panel.node.close();TerraMarketplace.openById(row.id);}},el('strong',{},row.title||'Anúncio sem título'),el('span',{},`${row.contacts} contatos · ${row.favorites} favoritos · ${row.views} visualizações`));target.append(button);}
+  }
   async function ownListings(target,panel){
-    let offset=0;const more=el('button',{class:'full'},'Carregar mais anúncios');
-    async function load(){
-      const result=await api.search({},'recent',offset,true),plots=result.rows.map(fromRow);offset+=plots.length;
-      let stats={},statsFailed=false;try{stats=await api.stats(plots.map(p=>p.id));}catch(_){statsFailed=true;}
-      for(const plot of plots){
-        const stat=stats[plot.id],item=el('article',{class:'account-item'},TerraMarketplace.miniCard(plot,()=>{panel.node.close();TerraMarketplace.openById(plot.id);}),el('p',{class:'status-label'},TerraMarketplace.statuses[plot.status]),el('p',{class:'owner-metrics'},stat?`${stat.views} visualizações · ${stat.favorites} favoritos · ${stat.leads} contatos recebidos`:statsFailed?'Métricas indisponíveis. Tente novamente.':'Carregando métricas…'));
-        const actions=el('div',{class:'row-actions'}),status=el('select',{'aria-label':'Situação de '+plot.title},options(TerraMarketplace.statuses,plot.status)),save=el('button',{},'Alterar situação');
-        save.onclick=()=>busy(save,async()=>{const result=await api.status(plot,status.value);plot.revision=result.revision;plot.status=result.status;item.querySelector('.status-label').textContent=TerraMarketplace.statuses[result.status];await loadListings();toast('Situação atualizada.');},item);
-        actions.append(el('button',{onclick:()=>{panel.node.close();start(plot);moveMapProgrammatically('fitBounds',plot.points,{padding:[25,25],maxZoom:18});}},'Editar'),status,save);item.append(actions);target.insertBefore(item,more.parentElement?more:null);
+    let offset=0,sequence=0,timer;const query=el('input',{type:'search',placeholder:'Buscar anúncio…','aria-label':'Buscar anúncio',maxLength:100}),filter=el('select',{'aria-label':'Filtrar situação'},options({'':'Todos',published:'Ativos',reserved:'Reservados',sold:'Vendidos',paused:'Pausados',draft:'Rascunhos'})),list=el('div'),more=el('button',{class:'full'},'Carregar mais anúncios');target.append(el('div',{class:'management-filters'},query,filter),list,more);
+    async function load(reset=false){const run=++sequence;if(reset)offset=0;const startOffset=offset,result=await api.ownListings(query.value.trim(),filter.value,startOffset);if(run!==sequence)return;const plots=result.rows.map(fromRow);if(reset)list.replaceChildren();offset=startOffset+plots.length;
+      for(const plot of plots){const item=el('article',{class:'account-item'},TerraMarketplace.miniCard(plot,()=>{panel.node.close();TerraMarketplace.openById(plot.id);}),el('p',{class:'status-label'},TerraMarketplace.statuses[plot.status])),actions=el('div',{class:'row-actions'});
+        actions.append(el('button',{onclick:()=>{panel.node.close();start(plot);if(plot.points.length)moveMapProgrammatically('fitBounds',plot.points,{padding:[25,25],maxZoom:18});}},'Editar'),el('button',{onclick:()=>TerraMarketplace.share(plot)},'Compartilhar'));
+        for(const [status,label] of [['reserved','Reservar'],['paused','Pausar'],['sold','Marcar vendido'],['published','Publicar']]){if(status===plot.status)continue;const button=el('button',{},label);button.onclick=()=>busy(button,async()=>{const changed=await api.status(plot,status);plot.revision=changed.revision;plot.status=changed.status;await load(true);await loadListings();toast('Situação atualizada.');},item);actions.append(button);}item.append(actions);list.append(item);
       }
-      if(!offset&&!target.querySelector('.empty-message'))target.append(el('p',{class:'empty-message'},'Você ainda não cadastrou terrenos.'));
-      more.hidden=offset>=result.total;
+      if(!offset)list.append(el('p',{class:'empty-message'},'Nenhum anúncio encontrado com esses filtros.'));more.hidden=offset>=result.total;
     }
-    await load();more.onclick=()=>busy(more,load,target);target.append(more);
+    const refresh=()=>load(true).catch(e=>error(list,e));query.oninput=()=>{sequence++;clearTimeout(timer);timer=setTimeout(refresh,350);};filter.onchange=()=>{sequence++;clearTimeout(timer);refresh();};panel.node.addEventListener('close',()=>{clearTimeout(timer);sequence++;},{once:true});more.onclick=()=>busy(more,()=>load(false),target);await load(true);
   }
   async function favoriteListings(target,panel){
     const saved=await api.favorites();let offset=0;const more=el('button',{class:'full'},'Carregar mais favoritos');
@@ -79,9 +81,12 @@ window.TerraAccount = (() => {
   }
   async function profileForm(target){
     const profile=await api.profile(),form=el('form'),name=el('input',{required:true,maxLength:100,value:profile.display_name,autocomplete:'name'}),city=el('input',{maxLength:100,value:profile.city}),type=el('select',{},options(TerraMarketplace.types,profile.account_type)),phone=el('input',{type:'tel',inputMode:'tel',maxLength:20,value:profile.contact.phone,placeholder:'32 99999-9999',autocomplete:'tel'}),enabled=el('input',{type:'checkbox',checked:profile.contact.enabled}),photo=el('input',{type:'file',accept:'image/jpeg,image/png,image/webp'}),submit=el('button',{type:'submit',class:'primary'},'Salvar perfil');
+    const description=el('textarea',{maxLength:2000,value:profile.description||'',rows:4}),state=el('input',{maxLength:2,value:profile.state||'',placeholder:'MG'}),creci=el('input',{maxLength:40,value:profile.creci||'',placeholder:'12345-J'}),website=el('input',{type:'url',maxLength:500,value:profile.website||'',placeholder:'https://...'}),instagram=el('input',{maxLength:31,value:profile.instagram||'',placeholder:'@imobiliaria'});
+    const nameField=field('Nome público',name),photoField=field('Foto pública do perfil (até 5 MB)',photo);
+    const labels=()=>{nameField.firstChild.textContent=type.value==='imobiliaria'?'Nome da imobiliária':'Nome público';photoField.firstChild.textContent=type.value==='imobiliaria'?'Logo da imobiliária (até 5 MB)':'Foto pública do perfil (até 5 MB)';};type.onchange=labels;labels();
     if(profile.avatar_path)form.append(el('img',{class:'profile-avatar',src:api.avatar(profile.avatar_path),alt:'Sua foto pública'}));
-    form.append(field('Nome público',name),field('Cidade',city),field('Tipo de conta — informação declarada',type),field('Foto pública do perfil (até 5 MB)',photo),field('WhatsApp com DDD',phone),field('Disponibilizar WhatsApp nos meus anúncios ativos',enabled),el('p',{class:'small'},'Seu número será disponibilizado a quem escolher entrar em contato. Ele não aparece no perfil público.'),el('p',{class:'small'},profile.phone_verified?'Telefone verificado.':'Não exibimos selo de telefone verificado sem validação.'),submit);
-    form.onsubmit=event=>{event.preventDefault();busy(submit,async()=>{await api.saveProfile({display_name:name.value,city:city.value,account_type:type.value,phone:phone.value,enabled:enabled.checked},photo.files[0]);toast('Perfil salvo.');photo.value='';},form);};target.append(form,el('hr'),el('h3',{},'Exclusão de conta'),el('p',{},'Você pode excluir sua conta e os dados associados. Confira os efeitos antes de confirmar.'),el('button',{type:'button',class:'danger full',onclick:()=>TerraOperations.deleteAccount()},'Excluir minha conta'));
+    form.append(nameField,field('Cidade',city),field('UF',state),field('Tipo de conta — informação declarada',type),photoField,field('Descrição pública',description),field('CRECI declarado',creci),el('p',{class:'small'},'Informação fornecida pelo anunciante. O preenchimento não cria selo de verificação.'),field('Site (HTTPS)',website),field('Instagram (usuário)',instagram),field('WhatsApp com DDD',phone),field('Disponibilizar WhatsApp nos meus anúncios ativos',enabled),el('p',{class:'small'},'Seu número será disponibilizado a quem escolher entrar em contato. Ele não aparece no perfil público.'),el('p',{class:'small'},profile.phone_verified?'Telefone verificado.':'Não exibimos selo de telefone verificado sem validação.'),submit);
+    form.onsubmit=event=>{event.preventDefault();busy(submit,async()=>{await api.saveProfile({display_name:name.value,city:city.value,account_type:type.value,state:state.value,description:description.value,creci:creci.value,website:website.value,instagram:instagram.value,phone:phone.value,enabled:enabled.checked},photo.files[0]);toast('Perfil salvo.');photo.value='';},form);};target.append(form,el('hr'),el('h3',{},'Exclusão de conta'),el('p',{},'Você pode excluir sua conta e os dados associados. Confira os efeitos antes de confirmar.'),el('button',{type:'button',class:'danger full',onclick:()=>TerraOperations.deleteAccount()},'Excluir minha conta'));
   }
   return {open,updateBadge};
 })();

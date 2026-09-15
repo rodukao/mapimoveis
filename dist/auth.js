@@ -69,7 +69,7 @@ function openAuth(mode = 'login') {
   if (!$('auth-dialog').open) $('auth-dialog').showModal();
   if (!currentSession && ['login','signup'].includes(mode)) loadSocialProviders();
 }
-$('account').onclick = () => openAuth();
+$('account').onclick = () => currentSession ? TerraAccount.open() : openAuth();
 $('close-auth').onclick = () => { if (!authBusy) { $('auth-dialog').close(); window.TerraCaptcha.close(); pendingAnnounce = false; $('auth-password').value = ''; } };
 $('auth-dialog').addEventListener('cancel', event => { if (authBusy) event.preventDefault(); else { window.TerraCaptcha.close(); pendingAnnounce = false; $('auth-password').value = ''; } });
 $('switch-auth').onclick = () => authModeUI(authMode === 'login' ? 'signup' : 'login');

@@ -74,8 +74,8 @@ window.TerraMarketplace = (() => {
       openPlot(fromRow(row));
     }catch(exception){toast(DATA.explain(exception));}
   }
-  window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('terreno');if(id)openById(id);else {routeSequence++;closeDetail();}});
-  document.addEventListener('terra:ready',()=>{const id=new URL(location.href).searchParams.get('terreno');if(id)openById(id);});
+  window.addEventListener('popstate',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);else {publicPanel?.close();routeSequence++;closeDetail();}});
+  document.addEventListener('terra:ready',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);});
   document.addEventListener('terra:session',()=>{if(favoriteAccount!==currentSession?.user.id)refreshFavorites();});
   for(const name of ['terra:catalog','terra:editstart'])document.addEventListener(name,()=>{routeSequence++;detailOutline?.remove();detailOutline=null;});
   $('listing-detail').addEventListener('close',()=>{
@@ -92,14 +92,14 @@ window.TerraMarketplace = (() => {
     panel.content.append(el('p',{},plot.title),copy,whatsapp);
   }
   async function contact(plot,button) {
-    if(button.disabled||!requireLogin('Entre na sua conta para falar com o anunciante.'))return;
+    if(button.disabled)return;
     const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
     button.disabled=true;const label=button.textContent;button.textContent='Abrindo contato…';
     try {
-      const result=await api.event('whatsapp_click',plot.id,sessionId);
-      if(!/^55\d{10,11}$/.test(result.phone || ''))throw new Error('WhatsApp indisponível.');
-      const url='https://wa.me/'+result.phone+'?text='+encodeURIComponent(`Olá! Vi seu anúncio “${plot.title}” no ${APP_BRAND.name} e gostaria de mais informações.\n${link(plot.id)}`);
-      if(tab)tab.location.href=url;else window.location.assign(url);
+      const result=await TerraOperations.contact({listing:plot.id||null,owner:plot.contactOwner||null,session:sessionId},()=>tab?.close());
+      if(!/^https:\/\/wa\.me\/55\d{10,11}$/.test(result.url || ''))throw new Error('WhatsApp indisponível.');
+      const url=result.url+'?text='+encodeURIComponent(plot.contactOwner?`Olá! Vi o perfil da sua imobiliária no ${APP_BRAND.name} e gostaria de informações.`:`Olá! Vi seu anúncio “${plot.title}” no ${APP_BRAND.name} e gostaria de mais informações.\n${link(plot.id)}`);
+      if(tab&&!tab.closed)tab.location.href=url;else window.location.assign(url);
     }catch(exception){tab?.close();toast(DATA.explain(exception));}
     finally{button.disabled=false;button.textContent=label;}
   }
@@ -114,21 +114,34 @@ window.TerraMarketplace = (() => {
   function profileCard(profile,onclick) {
     const card=el('button',{class:'advertiser-card',onclick});
     if(profile.avatar_path)card.append(el('img',{src:api.avatar(profile.avatar_path),alt:'',class:'avatar'}));
-    card.append(el('span',{},el('strong',{},profile.display_name || `Anunciante ${APP_BRAND.name}`),el('small',{},(types[profile.account_type] || 'Anunciante')+' — informação declarada'),el('small',{},`${profile.active_count} anúncio(s) ativo(s) · desde ${new Date(profile.created_at).getFullYear()}`)));
+    card.append(el('span',{},el('strong',{},profile.display_name || `Anunciante ${APP_BRAND.name}`),el('small',{},(types[profile.account_type] || 'Anunciante')+' — informação declarada'),el('small',{},`${profile.active_count} anúncios ativos`),el('small',{class:'profile-link-label'},'Ver perfil')));
     for(const [flag,label] of [['email_verified','E-mail verificado'],['phone_verified','Telefone verificado'],['identity_verified','Identidade verificada'],['professional_verified','Registro profissional verificado']])if(profile[flag]===true)card.append(el('span',{class:'verified'},'✓ '+label));
     return card;
   }
+  let publicPanel=null;
   async function publicProfile(ownerId) {
-    const panel=dialog('Perfil do anunciante'),loading=el('p',{},'Carregando perfil…');panel.content.append(loading);
+    if(!/^[0-9a-f-]{36}$/.test(ownerId||''))return;
+    publicPanel?.close();const panel=dialog('Perfil do anunciante',{wide:true}),loading=el('p',{},'Carregando perfil…');publicPanel=panel.node;panel.content.append(loading);
+    const route=new URL(location.href);route.searchParams.delete('terreno');route.searchParams.set('imobiliaria',ownerId);if(route.href!==location.href)history.pushState(null,'',route);
+    let profileMap;
+    panel.node.addEventListener('close',()=>{profileMap?.remove();if(publicPanel===panel.node)publicPanel=null;const u=new URL(location.href);if(u.searchParams.get('imobiliaria')===ownerId){u.searchParams.delete('imobiliaria');history.replaceState(null,'',u);}},{once:true});
     try{
-      const [profile,rows]=await Promise.all([api.advertiser(ownerId),api.advertiserListings(ownerId)]);loading.remove();
+      const [profile,rows]=await Promise.all([api.advertiser(ownerId),api.advertiserListings(ownerId)]);if(!panel.node.open)return;loading.remove();
       if(!profile)throw new Error('Este perfil não está disponível.');
-      panel.content.append(profileCard(profile,()=>{}),el('p',{},profile.city || ''),el('h3',{},'Anúncios ativos'));
-      const listing=el('div',{class:'mini-list'});panel.content.append(listing);
-      const append=rows=>rows.forEach(row=>listing.append(miniCard(fromRow(row),()=>{panel.node.close();openById(row.id);})));append(rows);
-      let offset=rows.length;
-      if(rows.length===50){const more=el('button',{},'Carregar mais');more.onclick=()=>busy(more,async()=>{const next=await api.advertiserListings(ownerId,offset);offset+=next.length;append(next);more.hidden=next.length<50;},panel.content);panel.content.append(more);}
-    }catch(exception){loading.remove();error(panel.content,exception);}
+      const heading=el('section',{class:'public-agency'});if(profile.avatar_path)heading.append(el('img',{src:api.avatar(profile.avatar_path),alt:'Logo de '+profile.display_name,class:'agency-logo'}));
+      heading.append(el('h2',{},profile.display_name),el('p',{},[profile.city,profile.state].filter(Boolean).join(' · ')));
+      if(profile.creci)heading.append(el('p',{},'CRECI '+profile.creci),el('p',{class:'small'},'Informação fornecida pelo anunciante.'));
+      if(profile.description)heading.append(el('p',{class:'agency-description'},profile.description));heading.append(el('strong',{},`${profile.active_count} anúncios ativos`));
+      const links=el('div',{class:'row-actions'});if(profile.website){try{const u=new URL(profile.website);if(u.protocol==='https:'&&!u.username&&!u.password)links.append(el('a',{class:'action-link',href:u.href,target:'_blank',rel:'noopener noreferrer'},'Site'));}catch(_){}}
+      if(/^[A-Za-z0-9_.]{1,30}$/.test(profile.instagram||''))links.append(el('a',{class:'action-link',href:'https://www.instagram.com/'+profile.instagram+'/',target:'_blank',rel:'noopener noreferrer'},'Instagram'));
+      if(profile.has_whatsapp&&profile.active_count>0){const button=el('button',{class:'primary'},'Falar pelo WhatsApp');button.onclick=()=>contact({contactOwner:ownerId},button);links.append(button);}
+      links.append(el('button',{onclick:async()=>{try{await navigator.clipboard.writeText(APP_BRAND.origin+'/?imobiliaria='+ownerId);toast('Link do perfil copiado.');}catch(_){toast('Não foi possível copiar o link.');}}},'Copiar link do perfil'));heading.append(links);panel.content.append(heading,el('h3',{},'Anúncios da imobiliária'));
+      const listing=el('div',{class:'mini-list'}),mapContainer=el('div',{class:'agency-map','aria-label':'Mapa dos anúncios'});panel.content.append(el('div',{class:'agency-catalog'},listing,mapContainer));
+      profileMap=L.map(mapContainer,{scrollWheelZoom:false}).setView([-21.76,-43.35],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(profileMap);
+      const polygons=[];const append=rows=>rows.forEach(row=>{const plot=fromRow(row),open=()=>{panel.node.close();openById(plot.id);};listing.append(miniCard(plot,open));if(plot.points.length>=3){const layer=L.polygon(plot.points,{color:'#F59E0B',weight:3,fillOpacity:.12}).addTo(profileMap).on('click',open);polygons.push(layer);}});append(rows);requestAnimationFrame(()=>{if(panel.node.open){profileMap.invalidateSize();if(polygons.length)profileMap.fitBounds(L.featureGroup(polygons).getBounds(),{padding:[20,20],maxZoom:16});}});
+      if(!rows.length)listing.append(el('p',{},'Nenhum anúncio ativo no momento.'));
+      let offset=rows.length;if(rows.length===50){const more=el('button',{},'Carregar mais');more.onclick=()=>busy(more,async()=>{const next=await api.advertiserListings(ownerId,offset);if(!panel.node.open)return;offset+=next.length;append(next);more.hidden=next.length<50;},panel.content);panel.content.append(more);}
+    }catch(exception){loading.remove();if(panel.node.open)error(panel.content,exception);}
   }
   function miniCard(plot,onclick) {
     const button=el('button',{class:'mini-card',onclick});
@@ -136,7 +149,7 @@ window.TerraMarketplace = (() => {
     button.append(el('strong',{},plot.title || 'Rascunho sem título'),el('span',{},money(plot.price)+' · '+num(plot.area)+' m²'),el('small',{},plot.address));return button;
   }
   document.addEventListener('terra:detail',async event=>{
-    const plot=event.detail, url=new URL(location.href);url.searchParams.set('terreno',plot.id);
+    const plot=event.detail, url=new URL(location.href);url.searchParams.delete('imobiliaria');url.searchParams.set('terreno',plot.id);
     if(url.href!==location.href)history.pushState(null,'',url);
     document.title=plot.title+' — '+APP_BRAND.name;track('view_terreno',plot.id);
     $('market-detail')?.remove();$('contact-footer')?.remove();
@@ -158,7 +171,7 @@ window.TerraMarketplace = (() => {
     const advertiser=el('div',{class:'advertiser-section'},el('p',{},'Carregando anunciante…'));section.append(advertiser);
     try{
       const profile=await api.advertiser(plot.owner_id);if(!section.isConnected)return;advertiser.replaceChildren();
-      if(profile){advertiser.append(el('h3',{},'Anunciante'),profileCard(profile,()=>publicProfile(plot.owner_id)));
+      if(profile){advertiser.append(el('h3',{},'Anunciado por'),profileCard(profile,()=>publicProfile(plot.owner_id)));
         const footer=el('div',{id:'contact-footer'});
         if(profile.has_whatsapp && ['published','reserved'].includes(plot.status)){
           const button=el('button',{class:'primary full'},'Falar pelo WhatsApp');button.onclick=()=>contact(plot,button);footer.append(button);
