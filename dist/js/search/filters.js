@@ -106,7 +106,7 @@ window.TerraFilters = (() => {
     return {terrain_context:context.value,topography:topography.value,details,...Object.fromEntries(Object.keys(groups).map(group=>[group,readChecks(extra,group,'editor')]))};
   }
   const describe=values=>(values || []).map(key=>labels[key] || key).join(', ') || 'Não informado';
-  document.addEventListener('terra:detail',event=>{const p=event.detail;const list=$('detail-facts');
+  document.addEventListener('terra:detail',event=>{const p=event.detail;const list=$('detail-features');list.replaceChildren();
     const details=p.details||{};const extra=[];
     if(p.terrain_context==='rural')extra.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
     for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')extra.push([label,String(details[key])]);

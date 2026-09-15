@@ -16,7 +16,7 @@ window.TerraMarketplace = (() => {
   function syncHearts() {
     document.querySelectorAll('[data-favorite]').forEach(button => {
       const active=favorites.has(button.dataset.favorite);
-      button.textContent=active?'♥ Salvo':'♡ Favoritar';button.setAttribute('aria-pressed',String(active));button.disabled=favoriteBusy.has(button.dataset.favorite);
+      button.textContent=button.classList.contains('card-heart')?(active?'♥':'♡'):(active?'♥ Salvo':'♡ Favoritar');button.setAttribute('aria-label',active?'Remover dos favoritos':'Salvar nos favoritos');button.setAttribute('aria-pressed',String(active));button.disabled=favoriteBusy.has(button.dataset.favorite);
     });
   }
   async function refreshFavorites() {
@@ -39,7 +39,7 @@ window.TerraMarketplace = (() => {
       else toast(DATA.explain(exception));
     } finally {favoriteBusy.delete(id);syncHearts();}
   }
-  function favoriteButton(plot) {const button=el('button',{type:'button','data-favorite':plot.id,'aria-pressed':'false',onclick:()=>toggleFavorite(plot.id)},'♡ Favoritar');return button;}
+  function favoriteButton(plot) {const button=el('button',{type:'button','data-favorite':plot.id,'aria-pressed':'false','aria-label':'Salvar nos favoritos',onclick:()=>toggleFavorite(plot.id)},'♡ Favoritar');return button;}
   const compareBar=el('div',{id:'compare-bar',hidden:true},el('button',{id:'open-comparison',class:'primary',onclick:()=>comparison()},'Comparar'),el('button',{'aria-label':'Limpar comparação',onclick:()=>{compared.clear();syncCompare();}},'×'));
   document.body.append(compareBar);
   function syncCompare() {
@@ -52,7 +52,7 @@ window.TerraMarketplace = (() => {
     const actions=card.querySelector('.card-actions');if(!actions)return;
     const checkbox=el('input',{type:'checkbox','data-compare':plot.id,checked:compared.has(plot.id)});
     checkbox.onchange=()=>{if(checkbox.checked){if(compared.size>=4){checkbox.checked=false;return toast('Compare até 4 terrenos por vez.');}compared.set(plot.id,plot);}else compared.delete(plot.id);syncCompare();};
-    actions.append(favoriteButton(plot),field('Comparar',checkbox));syncHearts();
+    const heart=favoriteButton(plot);heart.classList.add('card-heart');card.append(heart);actions.append(field('+ Comparar',checkbox));syncHearts();
     if(plot.status==='reserved'||plot.status==='sold')card.querySelector('.tag').textContent+=' · '+statuses[plot.status];
   }
   function openPlot(plot) {
@@ -142,6 +142,7 @@ window.TerraMarketplace = (() => {
     $('market-detail')?.remove();$('contact-footer')?.remove();
     const section=el('section',{id:'market-detail'}),actions=el('div',{class:'detail-quick-actions'},favoriteButton(plot),el('button',{onclick:()=>share(plot)},'Compartilhar'),el('button',{onclick:()=>report(plot)},'Denunciar'));
     section.append(actions);document.querySelector('.detail-info').append(section);syncHearts();
+    window.TerraRayX?.attach(plot,section);
     if(currentSession?.user.id===plot.owner_id){
       const statusSelect=el('select',{},options(statuses,plot.status)),button=el('button',{},'Atualizar situação');
       button.onclick=()=>busy(button,async()=>{
@@ -160,14 +161,13 @@ window.TerraMarketplace = (() => {
       if(profile){advertiser.append(el('h3',{},'Anunciante'),profileCard(profile,()=>publicProfile(plot.owner_id)));
         const footer=el('div',{id:'contact-footer'});
         if(profile.has_whatsapp && ['published','reserved'].includes(plot.status)){
-          const button=el('button',{class:'primary full'},'Falar no WhatsApp');button.onclick=()=>contact(plot,button);footer.append(button);
+          const button=el('button',{class:'primary full'},'Falar pelo WhatsApp');button.onclick=()=>contact(plot,button);footer.append(button);
         }else footer.append(el('p',{},plot.status==='sold'?'Este terreno foi vendido.':'O anunciante ainda não disponibilizou contato por WhatsApp.'));
-        $('listing-detail').append(footer);
+        advertiser.append(footer);
       }
     }catch(exception){advertiser.replaceChildren();error(advertiser,exception);}
     const similar=el('section',{},el('h3',{},'Terrenos semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
     try{const rows=await api.similar(plot);if(!similar.isConnected)return;similar.lastChild.remove();if(!rows.length)similar.append(el('p',{},'Ainda não há anúncios semelhantes disponíveis.'));else rows.forEach(row=>similar.append(miniCard(fromRow(row),()=>openById(row.id))));}catch(exception){similar.lastChild?.remove();error(similar,exception);}
-    window.TerraRayX?.attach(plot,section);
   });
   async function comparison() {
     if(compared.size<2)return;

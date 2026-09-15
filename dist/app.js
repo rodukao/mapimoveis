@@ -56,11 +56,12 @@ function render() {
     card.addEventListener('mouseleave', () => catalogMap.unhighlightListing(plot.id,'card'));
     card.addEventListener('focusin', () => catalogMap.highlightListing(plot.id,'focus'));
     card.addEventListener('focusout', event => { if(!card.contains(event.relatedTarget)) catalogMap.unhighlightListing(plot.id,'focus'); });
-    card.innerHTML = '<button type="button" class="card-open"><div class="card-media" hidden><img alt=""></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div></button><div class="card-actions"></div>';
+    card.innerHTML = '<button type="button" class="card-open"><div class="card-media"><img alt="" hidden><span class="card-no-photo">Fotos não disponíveis</span></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div></button><div class="card-actions"></div>';
     const firstPhoto = plot.photos?.[0];
     if (firstPhoto) {
       const media = card.querySelector('.card-media');
-      media.hidden = false;
+      media.querySelector('img').hidden = false;
+      media.querySelector('.card-no-photo').hidden = true;
       TerraPhotos.bind(media.querySelector('img'),firstPhoto);
       media.querySelector('img').alt = `Foto de ${plot.title}`;
     }
@@ -68,7 +69,7 @@ function render() {
     card.querySelector('h2').textContent = plot.title || 'Rascunho sem título';
     card.querySelector('.address').textContent = plot.address;
     card.querySelector('.amount').textContent = money(plot.price);
-    card.querySelector('.sqm').textContent = plot.price == null ? 'Informe o preço para publicar' : unitMoney(plot.price / plot.area) + ' / m²';
+    card.querySelector('.sqm').textContent = plot.price == null ? 'Informe o preço para publicar' : num(plot.area) + ' m² · ' + (plot.area > 0 ? unitMoney(plot.price / plot.area) + '/m²' : 'Área pendente');
     card.querySelector('.plot-area strong').textContent = num(plot.area) + ' m²';
     card.querySelector('.card-open').onclick = () => select(index);
     window.TerraMarketplace?.decorateCard(card,plot);

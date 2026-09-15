@@ -10,6 +10,7 @@ function showDetail(plot) {
   $('detail-category').textContent = plot.tag;
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
+  $('detail-area').textContent = num(plot.area) + ' m²';
   $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / plot.area) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
