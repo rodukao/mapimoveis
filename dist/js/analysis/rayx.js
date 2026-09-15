@@ -4,9 +4,9 @@ window.TerraRayX = (() => {
   function summary(id,revision){const entry=cache.get(id+':'+revision),result=entry?.until>Date.now()?entry.data:null;return result?.distances?.length?result.distances.map(item=>item.label+': '+distance(item.meters)).join(' · '):'Ainda não consultadas';}
   function attach(plot,parent){
     if(!['published','reserved','sold'].includes(plot.status)){
-      parent.append(el('section',{class:'rayx'},el('h3',{},'Raio-X Terra'),el('p',{},'Disponível após publicar o anúncio. A localização de rascunhos e anúncios pausados não é enviada aos serviços de análise geográfica.')));return;
+      parent.append(el('section',{class:'rayx'},el('h3',{},`Raio-X ${APP_BRAND.name}`),el('p',{},'Disponível após publicar o anúncio. A localização de rascunhos e anúncios pausados não é enviada aos serviços de análise geográfica.')));return;
     }
-    const section=el('section',{class:'rayx'},el('h3',{},'Raio-X Terra'),el('p',{},'Consulte distâncias e altitude a partir das fontes geográficas disponíveis.')),content=el('div'),button=el('button',{},'Consultar dados geográficos');section.append(button,content);parent.append(section);
+    const section=el('section',{class:'rayx'},el('h3',{},`Raio-X ${APP_BRAND.name}`),el('p',{},'Consulte distâncias e altitude a partir das fontes geográficas disponíveis.')),content=el('div'),button=el('button',{},'Consultar dados geográficos');section.append(button,content);parent.append(section);
     function display(result){
       content.replaceChildren();
       if(result.distances?.length)content.append(el('dl',{class:'rayx-facts'},result.distances.map(item=>el('div',{},el('dt',{},item.label),el('dd',{},distance(item.meters))))));

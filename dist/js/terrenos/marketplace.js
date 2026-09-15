@@ -80,10 +80,10 @@ window.TerraMarketplace = (() => {
   for(const name of ['terra:catalog','terra:editstart'])document.addEventListener(name,()=>{routeSequence++;detailOutline?.remove();detailOutline=null;});
   $('listing-detail').addEventListener('close',()=>{
     const url=new URL(location.href);url.searchParams.delete('terreno');history.replaceState(null,'',url);
-    document.title='Terra — seu próximo terreno está no mapa';
+    document.title=APP_BRAND.title;
   });
   async function share(plot) {
-    const url=link(plot.id), text=`${plot.title} — ${num(plot.area)} m² — ${money(plot.price)}. Veja no Terra:`;
+    const url=link(plot.id), text=`${plot.title} — ${num(plot.area)} m² — ${money(plot.price)}. Veja no ${APP_BRAND.name}:`;
     if(navigator.share){try{await navigator.share({title:plot.title,text,url});track('share_terreno',plot.id);return;}catch(exception){if(exception.name==='AbortError')return;}}
     const panel=dialog('Compartilhar terreno');
     const copy=el('button',{class:'full'},'Copiar link');
@@ -98,7 +98,7 @@ window.TerraMarketplace = (() => {
     try {
       const result=await api.event('whatsapp_click',plot.id,sessionId);
       if(!/^55\d{10,11}$/.test(result.phone || ''))throw new Error('WhatsApp indisponível.');
-      const url='https://wa.me/'+result.phone+'?text='+encodeURIComponent(`Olá! Vi seu anúncio “${plot.title}” no Terra e gostaria de mais informações.\n${link(plot.id)}`);
+      const url='https://wa.me/'+result.phone+'?text='+encodeURIComponent(`Olá! Vi seu anúncio “${plot.title}” no ${APP_BRAND.name} e gostaria de mais informações.\n${link(plot.id)}`);
       if(tab)tab.location.href=url;else window.location.assign(url);
     }catch(exception){tab?.close();toast(DATA.explain(exception));}
     finally{button.disabled=false;button.textContent=label;}
@@ -114,7 +114,7 @@ window.TerraMarketplace = (() => {
   function profileCard(profile,onclick) {
     const card=el('button',{class:'advertiser-card',onclick});
     if(profile.avatar_path)card.append(el('img',{src:api.avatar(profile.avatar_path),alt:'',class:'avatar'}));
-    card.append(el('span',{},el('strong',{},profile.display_name || 'Anunciante Terra'),el('small',{},(types[profile.account_type] || 'Anunciante')+' — informação declarada'),el('small',{},`${profile.active_count} anúncio(s) ativo(s) · desde ${new Date(profile.created_at).getFullYear()}`)));
+    card.append(el('span',{},el('strong',{},profile.display_name || `Anunciante ${APP_BRAND.name}`),el('small',{},(types[profile.account_type] || 'Anunciante')+' — informação declarada'),el('small',{},`${profile.active_count} anúncio(s) ativo(s) · desde ${new Date(profile.created_at).getFullYear()}`)));
     for(const [flag,label] of [['email_verified','E-mail verificado'],['phone_verified','Telefone verificado'],['identity_verified','Identidade verificada'],['professional_verified','Registro profissional verificado']])if(profile[flag]===true)card.append(el('span',{class:'verified'},'✓ '+label));
     return card;
   }
@@ -138,7 +138,7 @@ window.TerraMarketplace = (() => {
   document.addEventListener('terra:detail',async event=>{
     const plot=event.detail, url=new URL(location.href);url.searchParams.set('terreno',plot.id);
     if(url.href!==location.href)history.pushState(null,'',url);
-    document.title=plot.title+' — Terra';track('view_terreno',plot.id);
+    document.title=plot.title+' — '+APP_BRAND.name;track('view_terreno',plot.id);
     $('market-detail')?.remove();$('contact-footer')?.remove();
     const section=el('section',{id:'market-detail'}),actions=el('div',{class:'detail-quick-actions'},favoriteButton(plot),el('button',{onclick:()=>share(plot)},'Compartilhar'),el('button',{onclick:()=>report(plot)},'Denunciar'));
     section.append(actions);document.querySelector('.detail-info').append(section);syncHearts();

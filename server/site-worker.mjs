@@ -1,12 +1,14 @@
 // HTTP metadata is decided from an anonymous public-status read, never a viewer JWT.
-export const ORIGIN='https://terramapa.danielleczfranco.chatgpt.site';
+import '../dist/brand.js';
+const APP_BRAND=globalThis.APP_BRAND;
+export const ORIGIN=APP_BRAND.origin;
 const PROJECT='https://pkofzhlcbqupanzydyyf.supabase.co',KEY='sb_publishable_r7y-sZnL-6Bkp_FzCJORLw__adpfc_f';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const title='Terra — seu próximo terreno está no mapa',description='Explore terrenos no mapa, compare preços e encontre seu próximo terreno.';
+const title=APP_BRAND.title,description=APP_BRAND.description;
 export function metadata(url,indexable=true){
  if(!indexable)return '<meta name="robots" content="noindex,nofollow,noarchive">';
- return `<link rel="canonical" href="${escape(url)}"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:image" content="${ORIGIN}/og.png"><meta property="og:type" content="website"><meta property="og:url" content="${escape(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${ORIGIN}/og.png"><meta name="robots" content="index,follow">`;
+ return `<link rel="canonical" href="${escape(url)}"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:image" content="${ORIGIN}/og.png?v=${APP_BRAND.version}"><meta property="og:type" content="website"><meta property="og:url" content="${escape(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${ORIGIN}/og.png?v=${APP_BRAND.version}"><meta name="robots" content="index,follow">`;
 }
 export function createWorker(assets,version){
  const decoded=new Map();
@@ -17,9 +19,9 @@ export function createWorker(assets,version){
   if(!['GET','HEAD'].includes(request.method))return reply('Method not allowed',405,'text/plain');
   if(path==='/version.json')return reply(JSON.stringify(version),200,'application/json');
   if(path==='/robots.txt')return reply(`User-agent: *\nAllow: /\nDisallow: /*?recovery=\nDisallow: /*?code=\nSitemap: ${ORIGIN}/sitemap.xml\n`,200,'text/plain');
-  if(path==='/sitemap.xml')return reply('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/privacidade','/termos'].map(p=>`<url><loc>${ORIGIN}${p}</loc></url>`).join('')+'</urlset>',200,'application/xml');
+  if(path==='/sitemap.xml')return reply('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/privacidade','/termos','/profissionais'].map(p=>`<url><loc>${ORIGIN}${p}</loc></url>`).join('')+'</urlset>',200,'application/xml');
   let asset=path==='/'?'/index.html':path;
-  if(['/privacidade','/termos'].includes(path))asset=path+'/index.html';
+  if(['/privacidade','/termos','/profissionais'].includes(path))asset=path+'/index.html';
   if(!assets[asset])return reply('Página não encontrada.',404,'text/plain',{'X-Robots-Tag':'noindex'});
   if(!asset.endsWith('.html'))return reply(bytes(asset),200,assets[asset].type,{'Cache-Control':url.searchParams.get('v')===version.version?'public, max-age=31536000, immutable':'public, max-age=3600'});
   let indexable=true,canonical=ORIGIN+(path==='/index.html'?'/':path);

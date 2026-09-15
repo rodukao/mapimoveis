@@ -61,7 +61,7 @@ window.TerraAccount = (() => {
     const rows=await api.savedSearches();
     if(!rows.length)target.append(el('p',{},'Use “Salvar busca” depois de escolher a localização e os filtros.'));
     for(const row of rows){
-      const name=el('input',{value:row.name,maxLength:100,'aria-label':'Nome da busca'}),alerts=el('input',{type:'checkbox',checked:row.alerts_enabled}),item=el('article',{class:'account-item'},name,field('Receber alertas no Terra',alerts));
+      const name=el('input',{value:row.name,maxLength:100,'aria-label':'Nome da busca'}),alerts=el('input',{type:'checkbox',checked:row.alerts_enabled}),item=el('article',{class:'account-item'},name,field(`Receber alertas no ${APP_BRAND.name}`,alerts));
       const rename=el('button',{},'Salvar alterações'),remove=el('button',{class:'danger'},'Excluir busca');
       rename.onclick=()=>busy(rename,async()=>{if(!name.value.trim())throw new Error('Dê um nome para a busca.');await api.editSearch(row.id,{name:name.value.trim(),alerts_enabled:alerts.checked});toast('Busca atualizada.');},item);
       remove.onclick=()=>busy(remove,async()=>{await api.deleteSearch(row.id);item.remove();updateBadge();},item);

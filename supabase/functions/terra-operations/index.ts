@@ -43,7 +43,7 @@ Deno.serve(async req=>{
    if((await rpc('terra_deletion_objects',{p_user:user.id})).length)return reply(202,{pending:true,error:'Ainda há fotos pendentes. Confirme novamente para continuar a exclusão.'});
    await rpc('terra_finish_deletion',{p_user:user.id});
    const removed=await request(project+'/auth/v1/admin/users/'+user.id,{method:'DELETE',headers:adminHeaders,body:JSON.stringify({should_soft_delete:false})});
-   if(!removed.ok)return reply(503,{pending:true,error:'As fotos foram removidas, mas a exclusão da conta não terminou. Tente novamente ou procure o responsável pelo Terra.'});
+   if(!removed.ok)return reply(503,{pending:true,error:'As fotos foram removidas, mas a exclusão da conta não terminou. Tente novamente ou procure o suporte da plataforma.'});
    return reply(200,{deleted:true});
   }
   return reply(400,{error:'Operação inválida.'});

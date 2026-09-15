@@ -79,7 +79,7 @@ window.TerraFilters = (() => {
     if(!TerraMarketplace.requireLogin('Entre na sua conta para salvar uma busca.'))return;
     const snapshot=get(),sort=$('sort-order').value,panel=dialog('Salvar esta busca');
     const name=el('input',{required:true,maxLength:100,value:(snapshot.city?'Terrenos em '+snapshot.city:snapshot.polygon?'Minha área de interesse':'Minha busca').slice(0,100)}),alerts=el('input',{type:'checkbox',checked:true}),submit=el('button',{class:'primary full',type:'submit'},'Salvar busca');
-    const form=el('form',{},field('Nome da busca',name),field('Receber alertas no Terra',alerts),el('p',{class:'small'},'Você verá os novos anúncios correspondentes em Minha conta → Alertas.'),submit);
+    const form=el('form',{},field('Nome da busca',name),field(`Receber alertas no ${APP_BRAND.name}`,alerts),el('p',{class:'small'},'Você verá os novos anúncios correspondentes em Minha conta → Alertas.'),submit);
     form.onsubmit=event=>{event.preventDefault();busy(submit,async()=>{try{await TerraMarketData.saveSearch(name.value.trim(),snapshot,sort,alerts.checked);}catch(exception){if(exception.code==='23505')throw new Error('Você já tem uma busca com esse nome. Escolha outro.');throw exception;}TerraMarketplace.track('save_search');panel.node.close();toast('Busca salva.');},form);};panel.content.append(form);
   }
   // Optional attributes are shared by editor, details, filters, and comparison.
@@ -90,7 +90,7 @@ window.TerraFilters = (() => {
   const rural=el('div',{id:'rural-attributes',hidden:true},el('p',{id:'rural-area'}),field('Tipo de acesso',el('select',{id:'rural-access'},options({'':'Não informado',asfalto:'Asfalto',terra:'Estrada de terra',cascalho:'Cascalho',trilha:'Trilha'}))),field('Reserva legal (informação declarada)',el('input',{id:'legal-reserve',maxLength:200,placeholder:'Opcional'})));
   extra.append(field('Topografia declarada',topography),urban,rural);
   for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])extra.append(el('details',{},el('summary',{},title),checks(group,[],'editor')));
-  extra.append(el('p',{class:'small'},'Informe apenas características que você conhece. A declaração não representa validação documental pela Terra.'));
+  extra.append(el('p',{class:'small'},`Informe apenas características que você conhece. A declaração não representa validação documental pelo ${APP_BRAND.name}.`));
   $('category').closest('label').after(extra);
   $('category').replaceChildren(...options(Object.fromEntries(Object.entries(categories).filter(([k])=>k))));
   context.onchange=()=>{urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';if(context.value==='rural'&&!['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='rural';if(context.value==='urban'&&['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='residencial';updateArea();};
