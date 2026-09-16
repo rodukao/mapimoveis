@@ -21,12 +21,13 @@ window.TerraAccount = (() => {
     activePanel=panel.node;panelOwner=currentSession.user.id;panel.node.addEventListener('close',()=>{if(activePanel===panel.node)activePanel=null;},{once:true});
     let sequence=0;
     async function show(key){
-      const current=++sequence;body.replaceChildren(el('p',{},'Carregando…'));nav.querySelectorAll('button').forEach(button=>button.setAttribute('aria-current',String(button.dataset.tab===key)));
+      const current=++sequence;body.replaceChildren(TerraUI.skeleton());nav.querySelectorAll('button').forEach(button=>button.setAttribute('aria-current',String(button.dataset.tab===key)));
       const target=el('section');
       try{await ({overview:overview,listings:ownListings,favorites:favoriteListings,searches:savedSearches,alerts:notifications,profile:profileForm})[key](target,panel);if(current===sequence&&panel.node.open)body.replaceChildren(target);}catch(exception){if(current===sequence){body.replaceChildren();error(body,exception);}}
     }
     for(const [key,label] of Object.entries(tabs))nav.append(el('button',{'data-tab':key,onclick:()=>show(key)},label));
-    nav.append(el('button',{onclick:()=>{panel.node.close();openAuth();}},'Conta e sair'));
+    nav.append(el('button',{onclick:()=>TerraLazy.load('feedback').then(()=>TerraFeedback.open()).catch(e=>error(body,e))},'Enviar feedback'),el('button',{onclick:()=>{panel.node.close();openAuth();}},'Conta e sair'));
+    TerraRepository.db().rpc('terra_is_admin').then(({data})=>{if(data&&panel.node.open)nav.append(el('button',{onclick:()=>TerraLazy.load('feedback').then(()=>TerraFeedback.admin()).catch(e=>error(body,e))},'Feedback do piloto'),el('button',{onclick:()=>TerraLazy.load('admin').then(()=>TerraAdmin.open()).catch(e=>error(body,e))},'Moderação'));});
     await show(initial);
   }
   async function overview(target,panel){

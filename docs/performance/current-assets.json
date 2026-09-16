@@ -1,0 +1,27 @@
+{
+  "version": "1.3.0",
+  "scripts": [
+    {
+      "file": "brand.js",
+      "bytes": 679,
+      "gzip": 425
+    },
+    {
+      "file": "supabase.js",
+      "bytes": 186617,
+      "gzip": 48228
+    },
+    {
+      "file": "leaflet.js",
+      "bytes": 147552,
+      "gzip": 42706
+    },
+    {
+      "file": "assets/core.js",
+      "bytes": 128391,
+      "gzip": 38365
+    }
+  ],
+  "total_bytes": 463239,
+  "total_gzip": 129724
+}

@@ -34,5 +34,6 @@ window.TerraUI = (() => {
   }
   function field(label, node) { return el('label',{},label,node); }
   function options(values, value = '') { return Object.entries(values).map(([key,label]) => new Option(label,key,false,key === value)); }
-  return {el,dialog,error,busy,field,options};
+  function skeleton(label='Carregando…'){return el('div',{class:'skeleton',role:'status','aria-label':label},...[1,2,3].map(()=>el('span',{'aria-hidden':'true'})));}
+  return {el,dialog,error,busy,field,options,skeleton};
 })();

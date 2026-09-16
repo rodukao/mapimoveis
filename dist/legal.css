@@ -2,3 +2,5 @@
 .professional-cta{display:inline-block;background:#145A46;color:white;padding:13px 20px;border-radius:8px;text-decoration:none;font-weight:700}header>a:first-child{font-weight:800;letter-spacing:-.5px}
 
 h1,h2,header>a:first-child{font-family:Manrope,system-ui,sans-serif}
+
+.professional-page{max-width:1040px}.professional-hero{padding:32px 0 48px;max-width:780px}.professional-hero h1{font-size:clamp(2.5rem,6vw,4.5rem);line-height:1.08;letter-spacing:-.045em}.professional-intro{font-size:1.25rem;max-width:560px}.professional-benefits{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:48px}.professional-benefits article{padding:28px;border:1px solid #E2E8E3;border-radius:16px;background:#fff}.professional-benefits h2{margin-top:12px;font-size:1.4rem}.professional-cta{display:inline-block;transition:background 150ms,transform 150ms}.professional-cta:hover{background:#0D4737;transform:translateY(-1px)}@media(max-width:600px){.professional-benefits{grid-template-columns:1fr;gap:14px}.professional-hero{padding-top:8px}.professional-benefits article{padding:22px}}

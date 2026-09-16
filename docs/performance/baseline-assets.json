@@ -1,0 +1,137 @@
+{
+  "version": "1.2.0",
+  "scripts": [
+    {
+      "file": "/brand.js",
+      "bytes": 679,
+      "gzip": 425
+    },
+    {
+      "file": "brand-ui.js",
+      "bytes": 697,
+      "gzip": 427
+    },
+    {
+      "file": "ids.js",
+      "bytes": 546,
+      "gzip": 347
+    },
+    {
+      "file": "config.js",
+      "bytes": 558,
+      "gzip": 406
+    },
+    {
+      "file": "supabase.js",
+      "bytes": 186617,
+      "gzip": 48012
+    },
+    {
+      "file": "js/photos.js",
+      "bytes": 3031,
+      "gzip": 1385
+    },
+    {
+      "file": "data.js",
+      "bytes": 15339,
+      "gzip": 5256
+    },
+    {
+      "file": "captcha.js",
+      "bytes": 3029,
+      "gzip": 1272
+    },
+    {
+      "file": "leaflet.js",
+      "bytes": 147552,
+      "gzip": 42434
+    },
+    {
+      "file": "location.js",
+      "bytes": 4907,
+      "gzip": 2141
+    },
+    {
+      "file": "js/ui/dialogs.js",
+      "bytes": 2166,
+      "gzip": 993
+    },
+    {
+      "file": "js/repository/marketplace.js",
+      "bytes": 8727,
+      "gzip": 2957
+    },
+    {
+      "file": "js/account/operations.js",
+      "bytes": 4056,
+      "gzip": 1820
+    },
+    {
+      "file": "js/map/catalog.js",
+      "bytes": 3987,
+      "gzip": 1649
+    },
+    {
+      "file": "app.js",
+      "bytes": 23339,
+      "gzip": 7516
+    },
+    {
+      "file": "location-ui.js",
+      "bytes": 3817,
+      "gzip": 1458
+    },
+    {
+      "file": "detail.js",
+      "bytes": 5967,
+      "gzip": 1997
+    },
+    {
+      "file": "auth.js",
+      "bytes": 9276,
+      "gzip": 2796
+    },
+    {
+      "file": "js/search/filters.js",
+      "bytes": 13177,
+      "gzip": 4596
+    },
+    {
+      "file": "js/terrenos/marketplace.js",
+      "bytes": 20343,
+      "gzip": 6825
+    },
+    {
+      "file": "js/account/panel.js",
+      "bytes": 12497,
+      "gzip": 4424
+    },
+    {
+      "file": "js/account/admin.js",
+      "bytes": 4429,
+      "gzip": 1923
+    },
+    {
+      "file": "js/map/geometry.js",
+      "bytes": 7793,
+      "gzip": 3044
+    },
+    {
+      "file": "js/map/tools.js",
+      "bytes": 10633,
+      "gzip": 3780
+    },
+    {
+      "file": "js/analysis/rayx.js",
+      "bytes": 3425,
+      "gzip": 1515
+    },
+    {
+      "file": "boot.js",
+      "bytes": 28,
+      "gzip": 46
+    }
+  ],
+  "total_bytes": 496615,
+  "total_gzip": 149444
+}

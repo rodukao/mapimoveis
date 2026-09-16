@@ -9,7 +9,8 @@ module.exports=defineConfig({
   use:{baseURL,locale:'pt-BR',timezoneId:'America/Sao_Paulo',screenshot:'only-on-failure',trace:'off',actionTimeout:12000},
   webServer:remote?undefined:{command:'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',url:baseURL,reuseExistingServer:!process.env.CI},
   projects:[
-    {name:'desktop-chromium',use:{browserName:'chromium',viewport:{width:1440,height:900}}},
+    {name:'desktop-chromium',use:{browserName:'chromium',viewport:{width:1366,height:768}}},
+    {name:'desktop-1920x1080',use:{browserName:'chromium',viewport:{width:1920,height:1080}}},
     ...[[360,800],[390,844],[412,915],[844,390]].map(([width,height])=>({name:`mobile-${width}x${height}`,use:{browserName:'chromium',viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:1}})),
     {name:'mobile-webkit-390x844',use:{browserName:'webkit',viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1}}
   ]

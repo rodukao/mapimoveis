@@ -1,0 +1,38 @@
+begin;
+select set_config('qa.a',gen_random_uuid()::text,true),set_config('qa.b',gen_random_uuid()::text,true);
+insert into auth.users(id,aud,role,email,raw_user_meta_data,created_at,updated_at) select current_setting('qa.'||w)::uuid,'authenticated','authenticated',current_setting('qa.'||w)||'@example.invalid','{}',now(),now() from unnest(array['a','b'])t(w);
+insert into auth.sessions(id,user_id,created_at,updated_at) select current_setting('qa.'||w)::uuid,current_setting('qa.'||w)::uuid,now(),now() from unnest(array['a','b'])t(w);
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('qa.a'),'role','authenticated','session_id',current_setting('qa.a'),'user_metadata',jsonb_build_object('admin',true))::text,true);
+set local role authenticated;
+insert into public.terra_pilot_feedback(rating,category,message,page) values(5,'map','Teste transacional de feedback','/');
+do $$begin
+ begin insert into public.terra_pilot_feedback(rating,category,message,status) values(5,'map','Tentativa de status forjado','done');raise exception 'FAIL status spoof';exception when insufficient_privilege then null;end;
+ begin insert into public.terra_pilot_feedback(rating,category,message) values(6,'map','Nota fora do intervalo válido');raise exception 'FAIL rating';exception when check_violation then null;end;
+ begin insert into public.terra_pilot_feedback(rating,category,message,page) values(5,'map','Não armazenar parâmetros privados','/?token=segredo');raise exception 'FAIL page';exception when check_violation then null;end;
+ update public.terra_pilot_feedback set status='done';if found then raise exception 'FAIL user metadata admin bypass';end if;
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('qa.b'),'role','authenticated','session_id',current_setting('qa.b'))::text,true);
+set local role authenticated;
+do $$begin if exists(select 1 from public.terra_pilot_feedback where user_id=current_setting('qa.a')::uuid) then raise exception 'FAIL cross user read';end if;end $$;
+reset role;
+insert into private_terra.admins(user_id) values(current_setting('qa.b')::uuid);
+set local role authenticated;
+update public.terra_pilot_feedback set status='reviewed',category='dashboard' where user_id=current_setting('qa.a')::uuid;
+update public.terra_pilot_feedback set status='planned' where user_id=current_setting('qa.a')::uuid;
+update public.terra_pilot_feedback set status='done' where user_id=current_setting('qa.a')::uuid;
+do $$begin if not exists(select 1 from public.terra_pilot_feedback where user_id=current_setting('qa.a')::uuid and status='done' and category='dashboard') then raise exception 'FAIL admin transitions';end if;end $$;
+reset role;
+do $$begin if (select count(*) from private_terra.admin_history where actor_id=current_setting('qa.b')::uuid and action='pilot_feedback')<>3 then raise exception 'FAIL audit history';end if;end $$;
+select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('qa.a'),'role','authenticated','session_id',current_setting('qa.a'))::text,true);
+set local role authenticated;
+do $$begin
+ for i in 1..9 loop insert into public.terra_pilot_feedback(rating,category,message) values(4,'other','Feedback de teste de limite');end loop;
+ begin insert into public.terra_pilot_feedback(rating,category,message) values(4,'other','Feedback de teste de limite');raise exception 'FAIL rate limit';exception when others then if sqlerrm not like 'Limite de 10 feedbacks%' then raise;end if;end;
+end $$;
+reset role;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+set local role anon;
+do $$begin begin perform 1 from public.terra_pilot_feedback;raise exception 'FAIL anonymous read';exception when insufficient_privilege then null;end;end $$;
+reset role;
+rollback;

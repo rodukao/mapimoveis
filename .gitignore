@@ -11,3 +11,5 @@ test-results/
 playwright/.auth/
 
 dist/server/
+
+dist/assets/

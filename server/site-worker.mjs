@@ -48,6 +48,6 @@ export function createWorker(assets,version){
    }
   }
   const html=new TextDecoder().decode(bytes(asset)).replace('<!-- TERRA_METADATA -->',metadata(canonical,indexable));
-  return reply(html,200,'text/html; charset=utf-8',indexable?{}:{'X-Robots-Tag':'noindex, nofollow, noarchive'});
+  return reply(html,200,'text/html; charset=utf-8',indexable&&!url.search?{'Cache-Control':'public, max-age=0, must-revalidate'}:{'Cache-Control':'no-store',...(!indexable?{'X-Robots-Tag':'noindex, nofollow, noarchive'}:{})});
  }};
 }

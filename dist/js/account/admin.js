@@ -4,10 +4,8 @@ window.TerraAdmin=(()=>{
  const labels={pending:'Pendentes',reviewing:'Em análise',resolved:'Revisadas',dismissed:'Arquivadas',all:'Todas'};
  const reasons={false_information:'Informação falsa',nonexistent:'Terreno inexistente',wrong_location:'Localização incorreta',scam:'Possível golpe',inappropriate:'Conteúdo impróprio',sold:'Já foi vendido',other:'Outro'};
  const actions={review:'Marcar revisada',archive:'Arquivar',pause:'Pausar anúncio',restore:'Restaurar anúncio'};
- const button=el('button',{class:'full',hidden:true,onclick:()=>{$('auth-dialog').close();open();}},'Moderação');document.querySelector('.account-links').append(button);
- let panel=null,sequence=0;
- async function access(){const seq=++sequence;button.hidden=true;if(panel)panel.close();if(!currentSession)return;try{const allowed=await rpc('terra_is_admin');if(seq===sequence)button.hidden=!allowed;}catch(_){} }
- document.addEventListener('terra:session',access);access();
+ let panel=null;
+ document.addEventListener('terra:session',()=>panel?.close());
  async function open(){
   if(!await rpc('terra_is_admin'))return toast('Acesso administrativo necessário.');
   const view=dialog('Moderação de denúncias',{wide:true});panel=view.node;view.node.addEventListener('close',()=>{if(panel===view.node)panel=null;},{once:true});

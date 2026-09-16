@@ -26,8 +26,8 @@ test('staging: ciclo A/B, rascunho, publicação, fotos, permissões e situaçõ
       // A must opt in to WhatsApp with a QA-owned number in staging.
       // Block external navigation: validate lead creation without sending messages.
       await b.context.route('https://wa.me/**',route=>route.abort('blockedbyclient'));
-      const response=b.page.waitForResponse(r=>r.url().includes('/rpc/terra_record_event')&&r.request().postDataJSON()?.p_event==='whatsapp_click');
-      const popup=b.page.waitForEvent('popup');await b.page.getByRole('button',{name:'Falar no WhatsApp',exact:true}).click();
+      const response=b.page.waitForResponse(r=>r.url().includes('/api/contact')&&r.request().method()==='POST');
+      const popup=b.page.waitForEvent('popup');await b.page.getByRole('button',{name:'Falar pelo WhatsApp',exact:true}).click();
       expect((await response).ok()).toBeTruthy();await (await popup).close();
     }
     await b.page.getByRole('button',{name:'Denunciar',exact:true}).click();const report=b.page.getByRole('dialog',{name:'Denunciar anúncio'});await report.getByLabel('Descreva o problema (opcional)').fill('Registro sintético do teste QA, remover com o anúncio.');await report.getByRole('button',{name:'Enviar denúncia'}).click();await expect(report).toBeHidden();
@@ -38,7 +38,7 @@ test('staging: ciclo A/B, rascunho, publicação, fotos, permissões e situaçõ
       await b.page.goto('/?terreno='+id);if(publiclyVisible)await expect(b.page.locator('#detail-facts')).toContainText(label);else await expect(b.page.getByRole('heading',{name:'Terreno indisponível'})).toBeVisible();
     }
     await a.page.locator('#delete-listing').click();await a.page.locator('#confirm-delete').click();await expect(a.page.locator('#delete-dialog')).toBeHidden();id=null;
-    await a.page.locator('#account').click();await a.page.locator('#signout').click();await expect(a.page.locator('#account')).toHaveText('Entrar');
+    await a.page.locator('#account').click();await a.page.getByRole('button',{name:'Conta e sair',exact:true}).click();await a.page.locator('#signout').click();await expect(a.page.locator('#account')).toHaveText('Entrar');
   }finally{
     // Cleanup after a failed assertion is limited to this test's synthetic ID.
     // A normal run deletes it through the owner UI before logging out.

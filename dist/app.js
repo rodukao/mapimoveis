@@ -60,6 +60,8 @@ function render() {
     const firstPhoto = plot.photos?.[0];
     if (firstPhoto) {
       const media = card.querySelector('.card-media');
+      media.querySelector('img').decoding='async';
+      media.querySelector('img').loading=index<2?'eager':'lazy';
       media.querySelector('img').hidden = false;
       media.querySelector('.card-no-photo').hidden = true;
       TerraPhotos.bind(media.querySelector('img'),firstPhoto);
@@ -86,8 +88,9 @@ function render() {
   if (!count) {
     const empty = document.createElement('p');
     empty.className = 'empty-message';
-    empty.textContent = loading ? 'Buscando terrenos…' : loadFailed ? 'Não foi possível carregar os terrenos. Tente novamente.' : mine ? 'Você ainda não tem terrenos com esses filtros.' : 'Nenhum terreno encontrado com esses filtros.';
-    $('cards').append(empty);
+    empty.textContent = loading ? 'Buscando terrenos…' : loadFailed ? 'Não foi possível carregar os terrenos. Tente novamente.' : mine ? 'Você ainda não tem terrenos com esses filtros.' : 'Nenhum terreno encontrado nesta área. Mova o mapa ou ajuste os filtros.';
+    if(loading && window.TerraUI?.skeleton)$('cards').append(TerraUI.skeleton());else $('cards').append(empty);
+    if(!loading&&!loadFailed&&!mine&&window.TerraUI){const actions=TerraUI.el('div',{class:'empty-actions'},TerraUI.el('button',{onclick:()=>$('reset').click()},'Limpar filtros'),TerraUI.el('button',{onclick:()=>map.zoomOut()},'Ver área maior'));$('cards').append(actions);}
   }
   $('more-listings').hidden = loading || plots.length >= totalListings;
   $('retry-listings').hidden = !loadFailed;
@@ -177,8 +180,10 @@ function renderPhotoPreview() {
   });
 }
 
-function start(record = null) {
+async function start(record = null) {
   if (!currentSession) { pendingAnnounce = true; openAuth('login'); return; }
+  try{await TerraLazy.load('editor');}catch(e){toast(e.message);return;}
+  if(!currentSession)return;
   if (drawing && !record) return;
   if (saving) return;
   editId = record?.id || crypto.randomUUID();
@@ -355,7 +360,7 @@ function updateCatalogStatus(viewport=false) {
   if (!$('catalog-update')) return;
   $('catalog-update').hidden = !loading && !loadFailed;
   $('catalog-update').textContent = loading ? 'Atualizando terrenos…' : loadFailed ? (viewport ? 'Não foi possível atualizar os terrenos desta área. Tente novamente.' : 'Não foi possível atualizar os terrenos. Tente novamente.') : '';
-  $('count').textContent = totalListings + ' terrenos encontrados';
+  $('count').textContent = loading&&!plots.length?'Carregando terrenos…':totalListings + ' terrenos encontrados';
   $('more-listings').hidden = plots.length >= totalListings;
   $('more-listings').disabled = loading;
   $('retry-listings').hidden = !loadFailed;
@@ -365,6 +370,7 @@ async function loadListings(append = false, viewport = false) {
   const sequence = ++loadSequence;
   loading = true; loadFailed = false;
   updateCatalogStatus(viewport);
+  if(!plots.length&&window.TerraUI?.skeleton)$('cards').replaceChildren(TerraUI.skeleton('Buscando terrenos…'));
   $('all-listings').classList.toggle('active', !mine);
   $('my-listings').classList.toggle('active', mine);
   $('list-meta').textContent = mine ? 'Seus anúncios' : 'Anúncios no mapa';
@@ -380,6 +386,7 @@ async function loadListings(append = false, viewport = false) {
   } catch (error) {
     if (sequence !== loadSequence) return false;
     loadFailed = true;
+    loading = false; if(!plots.length)render();
     return false;
   } finally {
     if (sequence === loadSequence) { loading = false; updateCatalogStatus(viewport); }

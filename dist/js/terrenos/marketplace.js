@@ -52,7 +52,7 @@ window.TerraMarketplace = (() => {
     const actions=card.querySelector('.card-actions');if(!actions)return;
     const checkbox=el('input',{type:'checkbox','data-compare':plot.id,checked:compared.has(plot.id)});
     checkbox.onchange=()=>{if(checkbox.checked){if(compared.size>=4){checkbox.checked=false;return toast('Compare até 4 terrenos por vez.');}compared.set(plot.id,plot);}else compared.delete(plot.id);syncCompare();};
-    const heart=favoriteButton(plot);heart.classList.add('card-heart');card.append(heart);actions.append(field('+ Comparar',checkbox));syncHearts();
+    const heart=favoriteButton(plot);heart.classList.add('card-heart');const active=favorites.has(plot.id);heart.textContent=active?'♥':'♡';heart.setAttribute('aria-pressed',String(active));heart.setAttribute('aria-label',active?'Remover dos favoritos':'Salvar nos favoritos');heart.disabled=favoriteBusy.has(plot.id);card.append(heart);actions.append(field('+ Comparar',checkbox));
     if(plot.status==='reserved'||plot.status==='sold')card.querySelector('.tag').textContent+=' · '+statuses[plot.status];
   }
   function openPlot(plot) {
@@ -68,11 +68,12 @@ window.TerraMarketplace = (() => {
   }
   async function openById(id) {
     const sequence=++routeSequence,account=currentSession?.user.id;
+    const pending=dialog('Carregando terreno');pending.content.append(TerraUI.skeleton());
     try {
-      const row=await api.get(id);if(sequence!==routeSequence||account!==currentSession?.user.id)return;
+      const row=await api.get(id);if(sequence!==routeSequence||account!==currentSession?.user.id||!pending.node.open)return;
       if(!row){const panel=dialog('Terreno indisponível');panel.content.append(el('p',{},'Este terreno não está mais disponível.'));return;}
-      openPlot(fromRow(row));
-    }catch(exception){toast(DATA.explain(exception));}
+      pending.node.close();openPlot(fromRow(row));
+    }catch(exception){toast(DATA.explain(exception));}finally{if(pending.node.open)pending.node.close();}
   }
   window.addEventListener('popstate',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);else {publicPanel?.close();routeSequence++;closeDetail();}});
   document.addEventListener('terra:ready',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);});
@@ -121,7 +122,7 @@ window.TerraMarketplace = (() => {
   let publicPanel=null;
   async function publicProfile(ownerId) {
     if(!/^[0-9a-f-]{36}$/.test(ownerId||''))return;
-    publicPanel?.close();const panel=dialog('Perfil do anunciante',{wide:true}),loading=el('p',{},'Carregando perfil…');publicPanel=panel.node;panel.content.append(loading);
+    publicPanel?.close();const panel=dialog('Perfil do anunciante',{wide:true}),loading=TerraUI.skeleton('Carregando perfil…');publicPanel=panel.node;panel.content.append(loading);
     const route=new URL(location.href);route.searchParams.delete('terreno');route.searchParams.set('imobiliaria',ownerId);if(route.href!==location.href)history.pushState(null,'',route);
     let profileMap;
     panel.node.addEventListener('close',()=>{profileMap?.remove();if(publicPanel===panel.node)publicPanel=null;const u=new URL(location.href);if(u.searchParams.get('imobiliaria')===ownerId){u.searchParams.delete('imobiliaria');history.replaceState(null,'',u);}},{once:true});
@@ -145,7 +146,7 @@ window.TerraMarketplace = (() => {
   }
   function miniCard(plot,onclick) {
     const button=el('button',{class:'mini-card',onclick});
-    if(plot.photos?.[0]){const image=el('img',{alt:'',loading:'lazy'});TerraPhotos.bind(image,plot.photos[0]);button.append(image);}
+    if(plot.photos?.[0]){const image=el('img',{alt:'',loading:'lazy',decoding:'async'});TerraPhotos.bind(image,plot.photos[0]);button.append(image);}
     button.append(el('strong',{},plot.title || 'Rascunho sem título'),el('span',{},money(plot.price)+' · '+num(plot.area)+' m²'),el('small',{},plot.address));return button;
   }
   document.addEventListener('terra:detail',async event=>{
@@ -168,7 +169,7 @@ window.TerraMarketplace = (() => {
       section.append(field('Situação do anúncio',statusSelect),button);
       api.stats([plot.id]).then(stats=>{if(section.isConnected){const s=stats[plot.id];if(s)section.append(el('p',{class:'owner-metrics'},`${s.views} visualizações · ${s.favorites} favoritos · ${s.leads} contatos recebidos`));}}).catch(exception=>error(section,exception));
     }
-    const advertiser=el('div',{class:'advertiser-section'},el('p',{},'Carregando anunciante…'));section.append(advertiser);
+    const advertiser=el('div',{class:'advertiser-section'},TerraUI.skeleton('Carregando anunciante…'));section.append(advertiser);
     try{
       const profile=await api.advertiser(plot.owner_id);if(!section.isConnected)return;advertiser.replaceChildren();
       if(profile){advertiser.append(el('h3',{},'Anunciado por'),profileCard(profile,()=>publicProfile(plot.owner_id)));

@@ -18,5 +18,5 @@ async function reachable(locator){
   await locator.click({trial:true});
 }
 function runtimeErrors(page){const errors=[];page.on('pageerror',e=>errors.push(e.message));return errors;}
-async function account(page,section){await page.locator('#account').click();await page.locator('#auth-dialog .account-links').getByRole('button',{name:section,exact:true}).click();await expect(page.getByRole('dialog',{name:'Minha conta',exact:true})).toBeVisible();}
+async function account(page,section){await page.locator('#account').click();await page.getByRole('dialog',{name:'Minha conta',exact:true}).getByRole('button',{name:section,exact:true}).click();await expect(page.getByRole('dialog',{name:'Minha conta',exact:true})).toBeVisible();}
 module.exports={catalog,showList,openFirst,reachable,runtimeErrors,account};
