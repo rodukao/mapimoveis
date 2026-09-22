@@ -7,5 +7,5 @@ test('piloto: formulário e triagem em fixture isolada',async({page})=>{
  await page.getByRole('button',{name:'Feedback do piloto',exact:true}).click();const panel=page.getByRole('dialog',{name:'Feedback do piloto',exact:true});await panel.getByLabel('Situação do feedback').selectOption('planned');await panel.getByRole('button',{name:'Salvar classificação'}).click();await expect(panel.getByLabel('Situação do feedback')).toHaveValue('planned');
 });
 test('profissionais: hero, quatro benefícios e CTA acessível',async({page})=>{
- await page.goto('/profissionais');await expect(page.getByRole('heading',{level:1})).toHaveText('Seus terrenos.Agora no mapa.');await expect(page.locator('.professional-benefits article')).toHaveCount(4);await reachable(page.getByRole('link',{name:'Participar do piloto'}));await expect(page.getByRole('link',{name:'Participar do piloto'})).toHaveAttribute('href','/?piloto=1');
+ await page.goto('/profissionais');await expect(page.getByRole('heading',{level:1})).toHaveText('Seu portfólio.Uma novaperspectiva.');await expect(page.locator('.professional-benefits article')).toHaveCount(4);await reachable(page.getByRole('link',{name:/Conhecer o mapa/}));await expect(page.getByRole('link',{name:/Conhecer o mapa/})).toHaveAttribute('href','/');
 });

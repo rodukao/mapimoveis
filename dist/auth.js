@@ -105,7 +105,7 @@ async function initializeData() {
   $('persisted-fields').hidden = false;
   $('city').required = true;
   $('title').minLength = 3;
-  $('save-listing').textContent = 'Salvar terreno';
+  $('save-listing').textContent = 'Salvar imóvel';
   $('save-note').textContent = 'Rascunhos e anúncios pausados ficam visíveis somente para você.';
   const initialHash = new URLSearchParams(location.hash.slice(1));
   if (initialHash.has('error')) { toast('Este link não está mais disponível. Solicite um novo e-mail.'); history.replaceState(null, '', location.pathname); }

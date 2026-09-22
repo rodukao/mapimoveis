@@ -14,6 +14,7 @@ window.TerraMarketData = (() => {
   }
   async function status(plot, status) {
     if (!['draft','published','reserved','sold','paused'].includes(status)) throw new Error('Situação inválida.');
+    await requirePublishContact(status);
     return TerraOperations.withChallenge('sensitive',async()=>{
     const account = await R.user();
     const row = unwrap(await table('terra_listings').update({status}).eq('id',plot.id).eq('owner_id',account.id).eq('revision',plot.revision).select('id,revision,status').maybeSingle());
@@ -44,6 +45,28 @@ window.TerraMarketData = (() => {
       table('terra_contact_settings').select('phone,enabled').eq('user_id',id).maybeSingle()
     ]);
     return {...unwrap(profile),contact:unwrap(contact) || {phone:'',enabled:false}};
+  }
+  async function requirePublishContact(status) {
+    if (!['published','reserved'].includes(status)) return;
+    const id=(await R.user()).id;
+    const contact=unwrap(await table('terra_contact_settings').select('phone,enabled').eq('user_id',id).maybeSingle());
+    if(contact?.enabled && /^55[1-9]\d{9,10}$/.test(contact.phone||''))return;
+    const {el,field,dialog,busy}=TerraUI,panel=dialog('Cadastre seu WhatsApp para publicar');
+    const phone=el('input',{type:'tel',inputMode:'tel',autocomplete:'tel',required:true,maxLength:20,value:contact?.phone||'',placeholder:'32 99999-9999'});
+    const submit=el('button',{type:'submit',class:'primary full'},'Salvar WhatsApp e continuar');
+    const form=el('form',{},el('p',{},'O WhatsApp é a única forma de contato com anunciantes no TerraMapa. Cadastre um número que possa receber mensagens dos interessados.'),field('WhatsApp com DDD',phone),el('p',{class:'small'},'Seu número permanece fora do perfil público e só é liberado pelo botão de contato. Se preferir cadastrar depois, feche esta janela e salve o anúncio como rascunho.'),submit);panel.content.append(form);
+    return new Promise((resolve,reject)=>{
+      let saved=false;
+      panel.node.addEventListener('close',()=>{if(!saved)reject(Error('Publicação não concluída. Cadastre o WhatsApp ou salve como rascunho.'));},{once:true});
+      form.onsubmit=event=>{event.preventDefault();busy(submit,async()=>{
+        let number=phone.value.replace(/\D/g,'');if([10,11].includes(number.length))number='55'+number;
+        if(!/^55[1-9]\d{9,10}$/.test(number))throw Error('Informe um WhatsApp brasileiro válido com DDD.');
+        await TerraOperations.withChallenge('sensitive',async()=>{
+          const rows=unwrap(await table('terra_contact_settings').update({phone:number,enabled:true}).eq('user_id',id).select('user_id'));
+          if(!rows.length)unwrap(await table('terra_contact_settings').insert({phone:number,enabled:true}));
+        });saved=true;panel.node.close();resolve();
+      },form);};
+    });
   }
   async function saveProfile(form, photo) {
     const id = (await R.user()).id;
@@ -81,7 +104,7 @@ window.TerraMarketData = (() => {
     rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Informação temporariamente indisponível.');return result.data;},
     dashboard:()=>rpc('terra_professional_dashboard',{}),
     ownListings:async(query,status,offset=0)=>{let q=table('terra_listings').select(R.listFields,{count:'exact'}).eq('owner_id',(await R.user()).id).order('created_at',{ascending:false}).order('id',{ascending:false});if(status)q=q.eq('status',status);if(query)q=q.ilike('title','%'+query.replace(/[\\%_]/g,'\\$&')+'%');const result=await q.range(offset,offset+49);return {rows:await R.hydratePhotos(unwrap(result)),total:result.count};},
-    get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
+    requirePublishContact,get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
     advertiser: id => rpc('terra_advertiser',{p_owner:id}),
     stats: ids => rpc('terra_listing_stats',{p_ids:ids}),

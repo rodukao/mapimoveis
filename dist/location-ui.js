@@ -40,7 +40,7 @@ $('location-form').onsubmit = async event => {
   event.preventDefault();
   if ($('location-submit').disabled || saving) return;
   const sequence = ++locationSearchSequence;
-  $('location-submit').disabled = true; $('location-submit').textContent = 'Buscando…';
+  $('location-submit').disabled = true; $('location-submit').setAttribute('aria-label','Buscando localização'); $('location-submit').setAttribute('aria-busy','true');
   $('location-panel').hidden = false; $('location-results').replaceChildren(); $('location-message').textContent = 'Buscando localização…';
   try {
     const places = await window.TerraLocation.search($('location-query').value);
@@ -55,5 +55,12 @@ $('location-form').onsubmit = async event => {
   } catch (error) {
     if (sequence !== locationSearchSequence) return;
     $('location-message').textContent = ['TypeError','TimeoutError','AbortError'].includes(error.name) ? 'Não foi possível consultar a localização. Confira a conexão e tente novamente.' : error.message;
-  } finally { $('location-submit').disabled = false; $('location-submit').textContent = 'Buscar'; }
+  } finally { $('location-submit').disabled = false; $('location-submit').setAttribute('aria-label','Buscar localização'); $('location-submit').removeAttribute('aria-busy'); }
 };
+
+// Keep one search form: sidebar on desktop, above the map on mobile.
+(()=>{
+ const toolbar=document.querySelector('.toolbar'),desktop=matchMedia('(min-width:721px)');
+ const place=()=>{if(desktop.matches)$('sidebar').prepend(toolbar);else document.querySelector('main').before(toolbar);};
+ desktop.addEventListener('change',place);place();
+})();

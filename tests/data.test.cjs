@@ -8,7 +8,7 @@ function setup({configured=true,key='sb_publishable_test',updateRow={id:'own'},i
  const calls=[],authCalls=[];let inserted,updated;
  const query={eq(...a){calls.push(['eq',...a]);return this},select(){return this},order(...a){calls.push(['order',...a]);return this},ilike(...a){calls.push(['ilike',...a]);return this},lte(...a){calls.push(['lte',...a]);return this},gte(...a){calls.push(['gte',...a]);return this},range(){return Promise.resolve({data:[],count:0,error:null})},single(){return Promise.resolve({data:{id:'own'},error:insertError})},maybeSingle(){return Promise.resolve({data:updateRow,error:null})},insert(data){inserted=data;return this},update(data){updated=data;return this}};
  const client={auth:{signInWithOAuth:async x=>{authCalls.push(x);return {data:{url:'https://example.supabase.co/auth/v1/authorize'},error:oauthError}},signUp:async x=>{authCalls.push(x);return {data:{},error:null}},signInWithPassword:async x=>{authCalls.push(x);return {data:{},error:null}},resetPasswordForEmail:async(email,options)=>{authCalls.push({email,options});return {data:{},error:null}},getUser:async()=>({data:{user:{id:'user-a'}},error:null})},from(name){calls.push(['from',name]);return query}};
- const ctx={URL,AbortSignal,fetch:async()=>({ok:true,json:async()=>({external:providers})}),window:{TERRA_CONFIG:configured?{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:key}:{},location:{href:'https://example.com/',assign:url=>authCalls.push({redirect:url})},supabase:{createClient(){return client}}}};
+ const ctx={TerraMarketData:{requirePublishContact:async status=>calls.push(['publication-contact',status])},URL,AbortSignal,fetch:async()=>({ok:true,json:async()=>({external:providers})}),window:{TERRA_CONFIG:configured?{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:key}:{},location:{href:'https://example.com/',assign:url=>authCalls.push({redirect:url})},supabase:{createClient(){return client}}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {api:ctx.window.TerraData,calls,authCalls,get inserted(){return inserted},get updated(){return updated}};
 }
 test('save sends only editable fields; forged owner, area, dates and revision are discarded',async()=>{
@@ -90,4 +90,9 @@ test('incomplete drafts save without invented title, price, city or UF; publishi
 test('all Brazilian UFs are accepted and unknown states are rejected',async()=>{
  for(const state of 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ')){const s=setup();await s.api.save({...valid,state,status:'published'},{id:'new'});assert.equal(s.inserted.state,state);}
  const s=setup();await assert.rejects(s.api.save({...valid,state:'XX'},{id:'new'}),/UF/);
+});
+
+test('publication checks private contact before writing; drafts do not require contact',async()=>{
+ const draft=setup();await draft.api.save(valid,{id:'draft'});assert.equal(draft.calls.some(x=>x[0]==='publication-contact'),false);
+ const published=setup();await published.api.save({...valid,status:'published'},{id:'public'});const contactIndex=published.calls.findIndex(x=>x[0]==='publication-contact');const writeIndex=published.calls.findIndex(x=>x[0]==='from');assert.ok(contactIndex>=0&&contactIndex<writeIndex);
 });

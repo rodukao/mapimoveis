@@ -13,10 +13,14 @@ window.TerraMarketplace = (() => {
     if (currentSession) return true;
     toast(message); openAuth('login'); return false;
   }
+  function paintHeart(button,active){
+    button.innerHTML='<svg class="favorite-icon" viewBox="0 0 24 24" fill="'+(active?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="/icons.svg?v='+APP_BRAND.version+'#favorite"/></svg>'+(button.classList.contains('card-heart')?'':'<span>'+(active?'Salvo':'Favoritar')+'</span>');
+    button.setAttribute('aria-label',active?'Remover dos favoritos':'Salvar nos favoritos');button.setAttribute('aria-pressed',String(active));button.disabled=favoriteBusy.has(button.dataset.favorite);
+  }
   function syncHearts() {
     document.querySelectorAll('[data-favorite]').forEach(button => {
       const active=favorites.has(button.dataset.favorite);
-      button.textContent=button.classList.contains('card-heart')?(active?'♥':'♡'):(active?'♥ Salvo':'♡ Favoritar');button.setAttribute('aria-label',active?'Remover dos favoritos':'Salvar nos favoritos');button.setAttribute('aria-pressed',String(active));button.disabled=favoriteBusy.has(button.dataset.favorite);
+      paintHeart(button,active);
     });
   }
   async function refreshFavorites() {
@@ -27,7 +31,7 @@ window.TerraMarketplace = (() => {
     catch (exception) { if(sequence===favoriteSequence)toast('Não foi possível carregar seus favoritos. Tente novamente pela sua conta.'); }
   }
   async function toggleFavorite(id) {
-    if (!requireLogin('Entre na sua conta para salvar terrenos.') || favoriteBusy.has(id)) return;
+    if (!requireLogin('Entre na sua conta para salvar imóveis.') || favoriteBusy.has(id)) return;
     favoriteBusy.add(id);syncHearts();
     const account=currentSession.user.id, active=!favorites.has(id);
     try {
@@ -39,7 +43,7 @@ window.TerraMarketplace = (() => {
       else toast(DATA.explain(exception));
     } finally {favoriteBusy.delete(id);syncHearts();}
   }
-  function favoriteButton(plot) {const button=el('button',{type:'button','data-favorite':plot.id,'aria-pressed':'false','aria-label':'Salvar nos favoritos',onclick:()=>toggleFavorite(plot.id)},'♡ Favoritar');return button;}
+  function favoriteButton(plot) {const button=el('button',{type:'button','data-favorite':plot.id,'aria-pressed':'false','aria-label':'Salvar nos favoritos',onclick:()=>toggleFavorite(plot.id)});paintHeart(button,favorites.has(plot.id));return button;}
   const compareBar=el('div',{id:'compare-bar',hidden:true},el('button',{id:'open-comparison',class:'primary',onclick:()=>comparison()},'Comparar'),el('button',{'aria-label':'Limpar comparação',onclick:()=>{compared.clear();syncCompare();}},'×'));
   document.body.append(compareBar);
   function syncCompare() {
@@ -51,8 +55,8 @@ window.TerraMarketplace = (() => {
   function decorateCard(card,plot) {
     const actions=card.querySelector('.card-actions');if(!actions)return;
     const checkbox=el('input',{type:'checkbox','data-compare':plot.id,checked:compared.has(plot.id)});
-    checkbox.onchange=()=>{if(checkbox.checked){if(compared.size>=4){checkbox.checked=false;return toast('Compare até 4 terrenos por vez.');}compared.set(plot.id,plot);}else compared.delete(plot.id);syncCompare();};
-    const heart=favoriteButton(plot);heart.classList.add('card-heart');const active=favorites.has(plot.id);heart.textContent=active?'♥':'♡';heart.setAttribute('aria-pressed',String(active));heart.setAttribute('aria-label',active?'Remover dos favoritos':'Salvar nos favoritos');heart.disabled=favoriteBusy.has(plot.id);card.append(heart);actions.append(field('+ Comparar',checkbox));
+    checkbox.onchange=()=>{if(checkbox.checked){if(compared.size>=4){checkbox.checked=false;return toast('Compare até 4 imóveis por vez.');}compared.set(plot.id,plot);}else compared.delete(plot.id);syncCompare();};
+    const heart=favoriteButton(plot);heart.classList.add('card-heart');const active=favorites.has(plot.id);paintHeart(heart,active);card.append(heart);actions.append(field('+ Comparar',checkbox));
     if(plot.status==='reserved'||plot.status==='sold')card.querySelector('.tag').textContent+=' · '+statuses[plot.status];
   }
   function openPlot(plot) {
@@ -78,13 +82,13 @@ window.TerraMarketplace = (() => {
   window.addEventListener('popstate',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);else {publicPanel?.close();routeSequence++;closeDetail();}});
   document.addEventListener('terra:ready',()=>{const params=new URL(location.href).searchParams,id=params.get('terreno'),owner=params.get('imobiliaria');if(id)openById(id);else if(owner)publicProfile(owner);});
   document.addEventListener('terra:session',()=>{if(favoriteAccount!==currentSession?.user.id)refreshFavorites();});
-  for(const name of ['terra:catalog','terra:editstart'])document.addEventListener(name,()=>{routeSequence++;detailOutline?.remove();detailOutline=null;});
+  for(const name of ['terra:catalog','terra:editstart','terra:deselect'])document.addEventListener(name,()=>{routeSequence++;detailOutline?.remove();detailOutline=null;});
   $('listing-detail').addEventListener('close',()=>{
     const url=new URL(location.href);url.searchParams.delete('terreno');history.replaceState(null,'',url);
     document.title=APP_BRAND.title;
   });
   async function share(plot) {
-    const url=link(plot.id), text=`${plot.title} — ${num(plot.area)} m² — ${money(plot.price)}. Veja no ${APP_BRAND.name}:`;
+    const url=link(plot.id), text=`${plot.title} — ${num(plot.details?.built_area_m2||plot.area)} m² — ${money(plot.price)}. Veja no ${APP_BRAND.name}:`;
     if(navigator.share){try{await navigator.share({title:plot.title,text,url});track('share_terreno',plot.id);return;}catch(exception){if(exception.name==='AbortError')return;}}
     const panel=dialog('Compartilhar terreno');
     const copy=el('button',{class:'full'},'Copiar link');
@@ -180,17 +184,17 @@ window.TerraMarketplace = (() => {
         advertiser.append(footer);
       }
     }catch(exception){advertiser.replaceChildren();error(advertiser,exception);}
-    const similar=el('section',{},el('h3',{},'Terrenos semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
+    const similar=el('section',{},el('h3',{},'Imóveis semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
     try{const rows=await api.similar(plot);if(!similar.isConnected)return;similar.lastChild.remove();if(!rows.length)similar.append(el('p',{},'Ainda não há anúncios semelhantes disponíveis.'));else rows.forEach(row=>similar.append(miniCard(fromRow(row),()=>openById(row.id))));}catch(exception){similar.lastChild?.remove();error(similar,exception);}
   });
   async function comparison() {
     if(compared.size<2)return;
-    const panel=dialog('Comparar terrenos',{wide:true}),loading=el('p',{},'Carregando anúncios atualizados…');panel.content.append(loading);
+    const panel=dialog('Comparar imóveis',{wide:true}),loading=el('p',{},'Carregando anúncios atualizados…');panel.content.append(loading);
     try{
       const rows=await api.byIds([...compared.keys()]);const list=rows.map(fromRow);loading.remove();
-      if(list.length<2)throw new Error('Alguns anúncios não estão mais disponíveis. Selecione pelo menos dois terrenos.');
+      if(list.length<2)throw new Error('Alguns anúncios não estão mais disponíveis. Selecione pelo menos dois imóveis.');
       track('compare_terreno');
-      const facts=[['Preço',p=>money(p.price)],['Área',p=>num(p.area)+' m²'],['Preço / m²',p=>unitMoney(p.price/p.area)],['Tipo',p=>p.tag],['Topografia',p=>p.topography || 'Não informada'],['Cidade',p=>p.city+', '+p.state],['Bairro',p=>p.neighborhood || 'Não informado'],['Infraestrutura',p=>TerraFilters.describe(p.infrastructure)],['Documentação declarada',p=>TerraFilters.describe(p.documents)],['Distâncias',p=>TerraRayX.summary(p.id,p.revision)]];
+      const facts=[['Preço',p=>money(p.price)],['Área no mapa',p=>num(p.area)+' m²'],['Área construída/privativa',p=>p.details?.built_area_m2?num(p.details.built_area_m2)+' m²':'Não informada'],['Quartos',p=>p.details?.bedrooms??'Não informado'],['Banheiros',p=>p.details?.bathrooms??'Não informado'],['Vagas',p=>p.details?.parking_spaces??'Não informado'],['Preço / m² no mapa',p=>unitMoney(p.price/p.area)],['Tipo',p=>p.tag],['Topografia',p=>p.topography || 'Não informada'],['Cidade',p=>p.city+', '+p.state],['Bairro',p=>p.neighborhood || 'Não informado'],['Infraestrutura',p=>TerraFilters.describe(p.infrastructure)],['Documentação declarada',p=>TerraFilters.describe(p.documents)],['Distâncias',p=>TerraRayX.summary(p.id,p.revision)]];
       const table=el('table',{class:'compare-table'},el('thead',{},el('tr',{},el('th',{scope:'col'},'Característica'),list.map(p=>el('th',{scope:'col'},el('button',{onclick:()=>{panel.node.close();openById(p.id);}},p.title))))),el('tbody',{},facts.map(([label,get])=>el('tr',{},el('th',{scope:'row'},label),list.map(p=>el('td',{},get(p)))))));
       const mapContainer=el('div',{class:'compare-map'});panel.content.append(el('div',{class:'table-scroll',tabIndex:0,'aria-label':'Comparação; role para os lados'},table),el('p',{class:'small'},'Infraestrutura e documentação são informações declaradas pelo anunciante.'),mapContainer);
       const comparisonMap=L.map(mapContainer,{scrollWheelZoom:false});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(comparisonMap);

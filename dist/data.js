@@ -161,6 +161,7 @@
   async function save(form, { id, revision, files = [], keepPhotoIds = [], photosChanged = false, photoOrder = null } = {}) {
     const account = await user();
     const clean = payload(form);
+    if(['published','reserved'].includes(clean.status))await TerraMarketData.requirePublishContact(clean.status);
     if (photosChanged) {
       if (keepPhotoIds.length + files.length > MAX_PHOTOS) throw new Error(`Um anúncio pode ter no máximo ${MAX_PHOTOS} fotos.`);
       Array.from(files).forEach(validatePhoto);
@@ -168,16 +169,16 @@
     let row;
     if (revision) {
       row = unwrap(await db().from('terra_listings').update(clean).eq('id', id).eq('owner_id', account.id).eq('revision', revision).select(fields).maybeSingle());
-      if (!row) throw new Error('Este anúncio mudou em outra sessão ou não está mais disponível. Reabra-o em Meus terrenos antes de editar.');
+      if (!row) throw new Error('Este anúncio mudou em outra sessão ou não está mais disponível. Reabra-o em Meus imóveis antes de editar.');
     } else {
       const result = await db().from('terra_listings').insert({ id, ...clean }).select(fields).single();
-      if (result.error?.code === '23505') throw new Error('Este anúncio já foi recebido. Confira Meus terrenos antes de tentar novamente.');
+      if (result.error?.code === '23505') throw new Error('Este anúncio já foi recebido. Confira Meus imóveis antes de tentar novamente.');
       row = unwrap(result);
     }
     if (photosChanged) {
       try { await syncPhotos(row.id, files, keepPhotoIds, photoOrder); }
       catch (cause) {
-        const error = new Error('O terreno foi salvo, mas não foi possível concluir as fotos. Abra-o em Meus terrenos para conferir e tentar novamente.');
+        const error = new Error('O imóvel foi salvo, mas não foi possível concluir as fotos. Abra-o em Meus imóveis para conferir e tentar novamente.');
         error.savedListing = row;
         error.cause = cause;
         throw error;

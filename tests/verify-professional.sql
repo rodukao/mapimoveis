@@ -4,8 +4,8 @@ insert into auth.users(id,aud,role,email,raw_user_meta_data,created_at,updated_a
 insert into auth.sessions(id,user_id,created_at,updated_at) select current_setting('qa.'||w)::uuid,current_setting('qa.'||w)::uuid,now(),now() from unnest(array['a','b'])t(w);
 select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('qa.a'),'role','authenticated','session_id',current_setting('qa.a'))::text,true);
 set local role authenticated;
-insert into public.terra_listings(id,title,city,state,category,price_brl,status,boundary_geojson) values(current_setting('qa.listing')::uuid,'QA contato','Juiz de Fora','MG','residencial',100000,'published','{"type":"Polygon","coordinates":[[[-43,-21],[-42.999,-21],[-42.999,-20.999],[-43,-21]]]}');
 insert into public.terra_contact_settings(phone,enabled) values('5532999999999',true);
+insert into public.terra_listings(id,title,city,state,category,price_brl,status,boundary_geojson) values(current_setting('qa.listing')::uuid,'QA contato','Juiz de Fora','MG','residencial',100000,'published','{"type":"Polygon","coordinates":[[[-43,-21],[-42.999,-21],[-42.999,-20.999],[-43,-21]]]}');
 update public.terra_profiles set account_type='imobiliaria',creci='12345-J',description='QA',website='https://example.invalid',instagram='qa.imobiliaria' where id=auth.uid();
 reset role;
 select set_config('request.jwt.claims','{"role":"anon"}',true);

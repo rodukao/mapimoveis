@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 function library(){const ctx={setTimeout,clearTimeout};vm.createContext(ctx);vm.runInContext(fs.readFileSync('dist/js/map/catalog.js','utf8'),ctx);return ctx.TerraCatalogMap;}
 function fakeMap(){
- const handlers={};let west=-44;const map={on(name,fn){(handlers[name]??=[]).push(fn);return map;},emit(name){for(const fn of handlers[name]||[])fn();},getBounds:()=>({getWest:()=>west,getEast:()=>west+1,getSouth:()=>-22,getNorth:()=>-21}),getZoom:()=>14,stop(){},setView(){return map;},fitBounds(b,options){map.lastOptions=options;map.emit('movestart');map.emit('moveend');return map;},invalidateSize(){map.emit('moveend');},pan(){west+=.01;map.emit('movestart');map.emit('moveend');},getContainer:()=>({style:{}})};return map;
+ const handlers={};let west=-44;const map={createPane(){return {style:{}};},getPane(){return {style:{}};},on(name,fn){(handlers[name]??=[]).push(fn);return map;},emit(name,event){for(const fn of handlers[name]||[])fn(event);},getBounds:()=>({getWest:()=>west,getEast:()=>west+1,getSouth:()=>-22,getNorth:()=>-21}),getZoom:()=>14,stop(){},setView(){return map;},fitBounds(b,options){map.lastOptions=options;map.emit('movestart');map.emit('moveend');return map;},invalidateSize(){map.emit('moveend');},pan(){west+=.01;map.emit('movestart');map.emit('moveend');},getContainer:()=>({style:{}})};return map;
 }
 function scheduled(search=async()=>true){const jobs=new Map();let id=0,calls=0,invalidations=0,blocked=false;const map=fakeMap();const controller=library().viewport(map,{blocked:()=>blocked,invalidate:()=>invalidations++,search:async b=>{calls++;return search(b);},schedule:fn=>{jobs.set(++id,fn);return id;},unschedule:id=>jobs.delete(id)});return {map,controller,jobs,block:value=>blocked=value,get calls(){return calls;},get invalidations(){return invalidations;},flush:async()=>{for(const [id,fn]of [...jobs]){jobs.delete(id);await fn();}}};}
 test('manual movement debounces, deduplicates rounded bounds, and programmatic moves do not search',async()=>{
@@ -43,9 +43,34 @@ function application(){
 test('pending refresh and failure retain existing cards and polygons, preserve filters, and show area error',async()=>{
  const a=application();const first=a.eval('loadListings()');a.requests[0].resolve({rows:[a.row('old')],total:1});await first;
  const count=a.polygons,refresh=a.eval('loadListings(false,true)');assert.equal(a.eval('plots[0].id'),'old');assert.equal(a.polygons,count);assert.equal(a.requests[1].args[0].city,'Curitiba');assert.equal(a.requests[1].args[0].maxPrice,200000);
- a.requests[1].reject(new Error('offline'));assert.equal(await refresh,false);assert.equal(a.eval('plots[0].id'),'old');assert.equal(a.polygons,count);assert.match(a.$('catalog-update').textContent,/Não foi possível atualizar os terrenos desta área/);
+ a.requests[1].reject(new Error('offline'));assert.equal(await refresh,false);assert.equal(a.eval('plots[0].id'),'old');assert.equal(a.polygons,count);assert.match(a.$('catalog-update').textContent,/Não foi possível atualizar os imóveis desta área/);
 });
 test('late responses cannot overwrite newer results, including during the next manual debounce',async()=>{
  const a=application(),old=a.eval('loadListings(false,true)'),fresh=a.eval('loadListings(false,true)');a.requests[1].resolve({rows:[a.row('fresh')],total:1});await fresh;a.requests[0].resolve({rows:[a.row('old')],total:1});assert.equal(await old,false);assert.equal(a.eval('plots[0].id'),'fresh');
  const pending=a.eval('loadListings(false,true)');a.eval('viewportSearch.cancel()');a.requests[2].resolve({rows:[a.row('late')],total:1});assert.equal(await pending,false);assert.equal(a.eval('plots[0].id'),'fresh');
+});
+
+test('closed boundary ignores clicks and does not create another pointer segment',()=>{
+ const a=application();a.eval("drawing=true;boundaryClosed=true;points=[{lat:-21,lng:-43},{lat:-21,lng:-42.99},{lat:-20.99,lng:-43}];window.TerraMapTools={canMapDraw:()=>true};map.emit('click',{latlng:{lat:-22,lng:-44}});map.emit('mousemove',{latlng:{lat:-22,lng:-44}})");assert.equal(a.eval('points.length'),3);assert.equal(a.eval('ghost'),null);
+});
+
+test('three positioned vertices stop cursor preview even before explicit closure',()=>{
+ const a=application();a.eval("drawing=true;boundaryClosed=false;points=[{lat:-21,lng:-43},{lat:-21,lng:-42.99},{lat:-20.99,lng:-43}];window.TerraMapTools={canMapDraw:()=>true};map.emit('mousemove',{latlng:{lat:-22,lng:-44}})");assert.equal(a.eval('ghost'),null);assert.equal(a.eval('points.length'),3);
+});
+
+test('card hover highlights the existing price marker and restores its stack order',()=>{
+ const c=library().interactions(),classes=new Map();let z=0;
+ const marker={getElement:()=>({classList:{toggle:(key,value)=>classes.set(key,value)}}),setZIndexOffset:value=>z=value};
+ c.register('a',null,null,marker);c.highlightListing('a','card');assert.equal(classes.get('map-highlight'),true);assert.equal(z,1000);
+ c.selectListing('a');c.unhighlightListing('a','card');assert.equal(classes.get('map-highlight'),false);assert.equal(classes.get('chosen'),true);assert.equal(z,1200);
+ c.selectListing('b');assert.equal(classes.get('chosen'),false);assert.equal(z,0);
+});
+
+test('deselect clears selection and stale hover without rebuilding map layers',()=>{
+ const c=library().interactions();let style,z;const classes=new Map();
+ const layer={setStyle:s=>style=s,bringToFront(){}};
+ const marker={getElement:()=>({classList:{toggle:(key,value)=>classes.set(key,value)}}),setZIndexOffset:value=>z=value};
+ c.register('a',layer,null,marker);c.selectListing('a');c.highlightListing('a','focus');c.highlightListing('a','card');
+ c.deselect();assert.equal(c.selectedId,null);assert.equal(style.weight,3);assert.equal(classes.get('chosen'),false);assert.equal(classes.get('map-highlight'),false);assert.equal(z,0);assert.equal(c.layers.get('a'),layer);
+ c.deselect();assert.equal(c.layers.size,1);
 });

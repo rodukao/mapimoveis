@@ -1,13 +1,13 @@
 /* Public product identity. Keep the active origin until DNS, TLS and Auth redirects are ready. */
 (()=>{
- const name='TerraMapa',tagline='Terrenos de verdade, vistos no mapa.';
+ const name='TerraMapa',tagline='Seu próximo imóvel, visto no mapa.';
  globalThis.APP_BRAND=Object.freeze({
   name,slug:'terramapa',domain:'terramapa.com.br',targetOrigin:'https://terramapa.com.br',
   origin:'https://terramapa.danielleczfranco.chatgpt.site',
   legacyOrigin:'https://terramapa.danielleczfranco.chatgpt.site',redirectLegacy:false,
-  shortTagline:'terrenos no mapa',
-  tagline,title:name+' — terrenos no mapa',
-  description:tagline+' Explore limites, fotos e informações de terrenos em um só lugar.',
-  version:'1.3.0',themeColor:'#145A46'
+  shortTagline:'imóveis no mapa',
+  tagline,title:name+' — imóveis no mapa',
+  description:tagline+' Explore limites, fotos e informações de imóveis em um só lugar.',
+  version:'1.5.7',themeColor:'#145A46'
  });
 })();

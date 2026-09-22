@@ -8,7 +8,7 @@ test('staging: ciclo A/B, rascunho, publicação, fotos, permissões e situaçõ
   const a=await signedPage(browser,baseURL,'A'),b=await signedPage(browser,baseURL,'B');
   const title='QA E2E '+Date.now(),searchName=title+' alertas';let id;
   try{
-    await a.page.locator('#announce').click();await drawImport(a.page);
+    await a.page.locator('#announce:visible, #mobile-nav-announce:visible').click();await drawImport(a.page);
     await a.page.locator('#title').fill(title);await a.page.locator('#save-listing').click();await expect(a.page.locator('#editor')).toBeHidden();
     await account(a.page,'Meus anúncios');let item=a.page.locator('.account-item').filter({hasText:title});await item.locator('.mini-card').click();
     id=new URL(a.page.url()).searchParams.get('terreno');expect(id).toMatch(/^[0-9a-f-]{36}$/);
@@ -38,7 +38,7 @@ test('staging: ciclo A/B, rascunho, publicação, fotos, permissões e situaçõ
       await b.page.goto('/?terreno='+id);if(publiclyVisible)await expect(b.page.locator('#detail-facts')).toContainText(label);else await expect(b.page.getByRole('heading',{name:'Terreno indisponível'})).toBeVisible();
     }
     await a.page.locator('#delete-listing').click();await a.page.locator('#confirm-delete').click();await expect(a.page.locator('#delete-dialog')).toBeHidden();id=null;
-    await a.page.locator('#account').click();await a.page.getByRole('button',{name:'Conta e sair',exact:true}).click();await a.page.locator('#signout').click();await expect(a.page.locator('#account')).toHaveText('Entrar');
+    await a.page.locator('#account:visible, #mobile-nav-account:visible').click();await a.page.getByRole('button',{name:'Conta e sair',exact:true}).click();await a.page.locator('#signout').click();await expect(a.page.locator('#account')).toHaveText('Entrar');
   }finally{
     // Cleanup after a failed assertion is limited to this test's synthetic ID.
     // A normal run deletes it through the owner UI before logging out.

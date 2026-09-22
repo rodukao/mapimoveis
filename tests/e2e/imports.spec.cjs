@@ -17,7 +17,7 @@ for(const [name,contents,message]of cases){
     test.skip(info.project.name!=='desktop-chromium','Importações executadas uma vez; coordenadas também cobertas no mobile.');
     test.skip(Boolean(readiness()),readiness());const a=await signedPage(browser,baseURL,'A');
     try{
-      await a.page.locator('#announce').click();await a.page.locator('#boundary-method').selectOption('import');
+      await a.page.locator('#announce:visible, #mobile-nav-announce:visible').click();await a.page.locator('#boundary-method').selectOption('import');
       await a.page.locator('.boundary-tools input[type=file]').setInputFiles({name,mimeType:'application/octet-stream',buffer:Buffer.from(contents)});
       await expect(a.page.locator('.boundary-tools')).toContainText(message);
       // Parsing remains local; cancel without creating a listing.
@@ -28,7 +28,7 @@ for(const [name,contents,message]of cases){
 test('staging: coordenadas válidas e inválidas preservam o último desenho',async({browser,baseURL},info)=>{
   test.skip(Boolean(readiness()),readiness());const a=await signedPage(browser,baseURL,'A',info.project.use);
   try{
-    await a.page.locator('#announce').click();await a.page.locator('#boundary-method').selectOption('coordinates');
+    await a.page.locator('#announce:visible, #mobile-nav-announce:visible').click();await a.page.locator('#boundary-method').selectOption('coordinates');
     const lat=a.page.getByRole('textbox',{name:'Latitude',exact:true}),lng=a.page.getByRole('textbox',{name:'Longitude',exact:true});
     for(let i=0;i<3;i++){await lat.nth(i).fill(String(boundary.coordinates[0][i][1]));await lng.nth(i).fill(String(boundary.coordinates[0][i][0]));}
     await expect(a.page.locator('#coordinate-editor')).toContainText('Desenho atualizado');

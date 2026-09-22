@@ -1,3 +1,90 @@
+## Busca lateral e cabeçalho simplificado — 1.5.7 (21/09/2026)
+
+Removidos atalhos de explorar e alertas do cabeçalho do catálogo. Alertas e contagem de não lidos ficam no modal da conta; consultas de contagem só acontecem com esse painel aberto. Desktop: o formulário único de busca permanece no topo fixo da coluna esquerda e o botão Filtros fica logo abaixo do título “Encontre seu imóvel. Entenda a localização”. Mobile: o mesmo formulário e o botão de filtros permanecem acima do mapa, acessíveis antes de abrir a lista. Mudança de viewport reposiciona os elementos sem duplicar listeners/formulários.
+
+99 testes aprovados, build e diff verificados. Navegador real: desktop 1366×768 com mapa iniciando em y=72 e altura de 696 px; alinhamento e busca lateral inspecionados. Mobile 390×844 com busca visível e toolbar fora da coluna recolhida. Sem mudanças no banco. Commit publicado em /version.json.
+
+---
+
+## Busca, alinhamento e seleção — 1.5.6 (21/09/2026)
+
+Desktop com campo de localização e botão de lupa; Filtros à direita alinhado ao CTA do header. Modal existente reúne os filtros e agora oferece Limpar filtros. Controles rápidos mobile preservados. Margens da lista, cards, ordenação, chips e estado vazio padronizadas; botões secundários em 14 px.
+
+Clique na área vazia do mapa e Escape removem seleção, hover persistente e destaque de preço/card sem reconstruir catálogo. Clique no polígono não propaga ao mapa. Escape nos detalhes fecha e limpa; outros modais e edição preservam seus comandos.
+
+99 testes JavaScript aprovados, incluindo retirada de seleção sem recriação das camadas. Build e diff verificados. Navegador real: desktop 1366×768, filtro de preço até resultado vazio, limpeza, botão secundário confirmado em 14 px; seleção de imóvel e Escape (zero cards/preços selecionados), nova seleção e clique fora do polígono (zero selecionados). Mobile 390×844: barra de busca, filtros rápidos e lista inspecionados. Sem mudanças de banco/permissões. Commit publicado em /version.json; pendências externas anteriores mantidas.
+
+---
+
+## Conta estável e navegação mobile explícita — 1.5.4 (21/09/2026)
+
+Desktop: janela com altura fixa adaptada à viewport, menu lateral estável e rolagem independente do conteúdo. Seções carregadas uma vez por abertura; conteúdo e formulário preservados na troca, com reutilização de consultas em andamento. Alterações em favoritos/situação invalidam o resumo. Nova abertura consulta novamente. Encerramento/troca de sessão fecha o painel. Sair reaproveita diretamente o handler de logout existente, com destaque vermelho suave, sem abrir a janela de autenticação.
+
+Mobile: Conta e Favoritos ocupam 100% da largura/altura, com espaço reservado à navegação inferior. Seis seções sempre visíveis em duas linhas, sem menu escondido. Conteúdo com rolagem interna e margem de segurança.
+
+98 testes existentes aprovados; build e git diff --check aprovados. Navegador real em fixture isolada: desktop 1366×768 manteve 1100×704 ao alternar Visão geral/Favoritos; contador de consultas ao resumo permaneceu em 1 ao retornar. Saída simulada confirmou chamada direta e fechamento. Mobile: 360×800, 390×844 e 412×915 com largura/altura integrais e sem overflow horizontal; Favoritos também 360×800. Não foi encerrada sessão real no Supabase nesta rodada; serviço e handler existentes não foram alterados. Sem migration. Commit publicado em /version.json; pendências externas anteriores preservadas.
+
+---
+
+## Favoritos, favicon e navegação da conta — 1.5.3 (21/09/2026)
+
+Coração SVG compartilhado entre menu, cards e detalhes, com rótulos acessíveis e estado salvo preenchido. Favicon SVG/PNG transparente, com URL versionada para renovar o cache. Conta com menu lateral no desktop e seletor expansível em duas colunas no mobile; seção atual indicada, espaçamento interno ampliado e sem rolagem horizontal das abas. Observador do menu inferior considera somente dialogs, preservando a navegação ao expandir o seletor.
+
+Validação: 98 testes JavaScript aprovados, build e git diff --check aprovados. Navegador real com fixture isolada usando o módulo real da conta em 1366×768 e 360×800: abertura, expansão do menu e seleção de Favoritos; painel mobile sem overflow horizontal (329/329 px). Dados da fixture são simulados; não foi efetuado login real. Catálogo real em 360×800: ícones da lista e menu inspecionados visualmente. PNG confirmado com alpha transparente. Fixture somente no servidor de desenvolvimento, fora do artefato publicado. Banco e permissões inalterados. Commit publicado disponível em /version.json. Domínio próprio e espelho GitHub continuam com as pendências anteriores.
+
+---
+
+## Navegação persistente — 1.5.2 (21/09/2026)
+
+Anunciar usa ícone de 24 px como os demais e fundo verde suave. Menu inferior compartilhado pelo catálogo, detalhes, galeria, filtros e painéis, inclusive a camada modal ativa; também disponível em /profissionais, /privacidade e /termos. Links das páginas informativas abrem diretamente a aba correspondente. Conta/favoritos indicam a aba ativa. Espaço reservado abaixo de conteúdo e acima do WhatsApp fixo. Saída da edição exige confirmação de descarte; operações de salvamento/autenticação em andamento são preservadas. Fechamento do login reaproveita a limpeza existente de senha e CAPTCHA.
+
+98 testes JavaScript aprovados. Navegador real: 360×800 com filtros → Lista → anúncio → Mapa, menu clicável dentro das janelas, barra entre y=734 e 800 e WhatsApp acima dela; 390×844 em /profissionais, menu visível e link Lista abrindo diretamente a lista do catálogo. Sem mudanças no banco ou nas permissões. Não foi efetuado login real nesta rodada. Versão e commit publicado disponíveis em /version.json.
+
+---
+
+## Imóveis, contato e identidade — 1.5.1 (20/09/2026)
+
+- Símbolo fornecido pelo usuário convertido em SVG e aplicado à marca, favicon, PWA e preview social. Assinatura: “Seu próximo imóvel, visto no mapa.”
+- Hover/foco no card destaca o preço correspondente em âmbar, com borda branca e prioridade visual, sem recarregar catálogo.
+- Tipos novos: casa, apartamento, cobertura, sobrado, sala comercial e galpão. Cadastro e filtros de quartos, banheiros, vagas e área construída/privativa. Dados persistem no JSON `details`, com validação numérica no banco. Anúncios existentes mantidos, sem reclassificação inferida pelo título.
+- Área construída/privativa declarada é separada da área geodésica no mapa. O cadastro continua usando polígono de referência do lote/empreendimento; não infere metragem interna de apartamentos. Ordenação e filtro de área no mapa estão explicitamente rotulados; área construída tem filtro próprio.
+- Publicação e reativação exigem WhatsApp habilitado. Formulário permite cadastrar o número e continuar, ou fechar e salvar rascunho. Proteção aplicada no banco também; telefone continua fora do perfil e das consultas públicas. Anúncios já públicos não foram despublicados.
+- Menu mobile: Mapa, Lista, Anunciar, Favoritos, Conta. Anunciar central em verde. Favoritos mantém exigência de conta.
+
+### Validação
+
+98 testes JavaScript aprovados, build e `git diff --check` aprovados. `tests/verify-property-types.sql` passou no Supabase com rollback integral: tipos/atributos, filtros reais, publicação sem contato, reativação com contato desabilitado, privacidade do telefone, isolamento de edição/exclusão e anúncios privados. `tests/verify-professional.sql` passou após adequar fixture à precondição de contato.
+
+Navegador real: 360×800, 390×844, 412×915 e desktop 1366×768. Barra com cinco opções e CTA dentro da tela; lista ocupa área de mapa e retorna pelo botão; ausência de overflow horizontal nas larguras 390 e 412; busca Apartamento + 2 quartos retornou corretamente vazia (nenhum registro atual com esse tipo); hover no primeiro card destacou o preço R$ 1.300.000. Última revisão confirmou ícone central branco e lista em 360×800 entre y=168 e y=734. Casos E2E atualizados; suíte autenticada de navegador não executada nesta rodada. Fluxo completo de cadastro de WhatsApp no navegador autenticado permanece para staging.
+
+Migration: `20260920230841_property_types_and_contact.sql`, aplicada via Supabase. Sem alteração de grants/RLS de anúncios existentes e sem exposição de telefones. Security/Performance Advisors executados; sem novos avisos atribuídos a esta alteração. Permanecem os avisos anteriores de PostGIS em public, spatial_ref_sys sem RLS, st_estimatedextent SECURITY DEFINER, proteção contra senhas vazadas desabilitada, tabelas internas fechadas por intenção e 9 índices ainda sem uso. Referências: [RLS](https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public), [PostGIS no schema público](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public), [funções públicas](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [senhas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection), [índices](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+
+Domínio atual preservado; terramapa.com.br continua pendente de configuração externa. Commit exato do artefato em `/version.json`. Código persistido no repositório de origem do Site; sincronização do espelho GitHub permanece pendente das versões anteriores. Lighthouse não reexecutado; demais pendências comerciais anteriores permanecem.
+
+---
+
+## Acabamento de navegação — 1.4.2
+
+Barra mobile inferior com Mapa, Lista, Anunciar e Conta, área segura reservada e preservação do editor ao navegar. Retirada ferramenta de desenho de área de interesse; busca por área visível mantida e filtros antigos preservados. Filtros mais compactos. Página para profissionais redesenhada com identidade existente, apresentação e etapas de uso, sem CTA de piloto. Prévia do cursor desativada a partir de três vértices; etiquetas de comprimento deslocadas acima dos pontos de inserção.
+
+94 testes JavaScript aprovados. Navegador real em 360×800: barra inferior entre y=734 e 800; mapa e lista terminam em y=734, sem sobreposição nem rolagem horizontal. Alternância Lista → Mapa conferida. Página profissional inspecionada visualmente no desktop. Casos E2E existentes atualizados para navegação e títulos novos; não executados nesta rodada. Banco e autenticação inalterados.
+
+---
+
+## Ajustes de mapa e edição — 1.4.1
+
+Satélite por padrão, com camada Esri World Boundaries and Places abaixo dos polígonos; nomes disponíveis dependem da cobertura e do zoom. Removidos o subtítulo ao lado da marca e o botão Salvar busca da barra principal. Lista mobile ocupa toda a área do mapa, com retorno fixo e CTA maior. Vértices arrastáveis, inserção ordenada pelos pontos intermediários e fechamento explícito pelo primeiro vértice ou botão; o fechamento interrompe a prévia e a medição do próximo ponto. Edição de registros e perímetros importados começa com polígono fechado.
+
+93 testes JavaScript passaram, incluindo quatro cenários novos de fechamento, inserção, arraste e validação. Build de produção aprovado. Esta rodada não incluiu teste autenticado em navegador nem alteração de banco. Camada de referência consultada em https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer . Código publicado identificável em `/version.json`.
+
+---
+
+## Atualização visual — 17/09/2026, 1.4.0
+
+Logo SVG completo, símbolo isolado e versão branca; favicon, PWA e OG atualizados. Inter na interface e Plus Jakarta Sans 700 nos títulos, fontes locais com licenças OFL. Ver `docs/BRAND_IDENTITY.md`. 89 testes JavaScript passaram. Inspeção em navegador no catálogo em 360×800, 390×844, 412×915 e 1366×768: sem overflow horizontal, fontes carregadas e CTA do cabeçalho dentro da tela. Sem alteração de domínio, banco ou permissões. Pendências comerciais e de Lighthouse do relatório abaixo permanecem. O commit publicado está em `/version.json`.
+
+---
+
 # TerraMapa — status do pré-piloto comercial
 
 Data: 16/09/2026. Versão: **1.3.0**.

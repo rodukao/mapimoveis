@@ -23,7 +23,7 @@ test('visitante: favorito solicita autenticação',async({page})=>{
 });
 test('visitante: filtros compartilhados, hectares e chips removíveis',async({page})=>{
   await page.locator('#quick-area').click();const panel=page.getByRole('dialog',{name:'Filtrar por área',exact:true});
-  await panel.getByLabel('Unidade de área').selectOption('10000');await panel.getByLabel('Área mínima',{exact:true}).fill('0.01');await reachable(panel.getByRole('button',{name:'Aplicar filtros'}));await panel.getByRole('button',{name:'Aplicar filtros'}).click();
+  await panel.getByLabel('Unidade de área').selectOption('10000');await panel.getByLabel('Área no mapa mínima',{exact:true}).fill('0.01');await reachable(panel.getByRole('button',{name:'Aplicar filtros'}));await panel.getByRole('button',{name:'Aplicar filtros'}).click();
   await showList(page);await expect(page.locator('#filter-chips')).toContainText('100 m²');await page.locator('#filter-chips button').filter({hasText:'Área'}).click();await expect(page.locator('#filter-chips')).not.toContainText('100 m²');
 });
 test('visitante: cidade e CEP real sem posição inventada',async({page})=>{
@@ -38,7 +38,7 @@ test('visitante: busca automática substitui o antigo botão de área',async({pa
   await page.locator('.leaflet-control-zoom-in').click();const r=await request;expect(r.postDataJSON().p_limit).toBe(50);await expect(page.locator('#catalog-update')).toBeHidden();
 });
 test('visitante: formulários de conta e recuperação, sem enviar credenciais',async({page})=>{
-  await page.locator('#account').click();await expect(page.locator('#auth-heading')).toHaveText('Entre para anunciar');
+  await page.locator('#account:visible, #mobile-nav-account:visible').click();await expect(page.locator('#auth-heading')).toHaveText('Entre para anunciar');
   await page.getByRole('button',{name:'Mostrar senha',exact:true}).click();await expect(page.locator('#auth-password')).toHaveAttribute('type','text');
   await page.getByRole('button',{name:'Ocultar senha',exact:true}).click();await expect(page.locator('#auth-password')).toHaveAttribute('type','password');
   await page.locator('#switch-auth').click();await expect(page.locator('#auth-heading')).toHaveText('Crie sua conta');await expect(page.locator('#auth-name')).toBeVisible();
@@ -57,10 +57,10 @@ test('visitante: área desenhada permanece ativa ao navegar',async({page})=>{
 });
 test('visitante: comparação de dois anúncios e controles sem cortes',async({page})=>{
   await showList(page);const checks=page.locator('#cards [data-compare]');await expect(checks.nth(1)).toBeAttached();await checks.nth(0).check();await checks.nth(1).check();await reachable(page.locator('#open-comparison'));await page.locator('#open-comparison').click();
-  const panel=page.getByRole('dialog',{name:'Comparar terrenos',exact:true});await expect(panel.locator('.compare-table')).toBeVisible();await reachable(panel.getByRole('button',{name:'Fechar',exact:true}));await expect(panel.locator('.compare-map .leaflet-tile').first()).toBeAttached();
+  const panel=page.getByRole('dialog',{name:'Comparar imóveis',exact:true});await expect(panel.locator('.compare-table')).toBeVisible();await reachable(panel.getByRole('button',{name:'Fechar',exact:true}));await expect(panel.locator('.compare-map .leaflet-tile').first()).toBeAttached();
 });
 test('visitante: semelhantes, Raio-X e contato acessível sem enviar mensagem',async({page})=>{
-  await openFirst(page);await expect(page.getByRole('heading',{name:'Terrenos semelhantes'})).toBeAttached();
+  await openFirst(page);await expect(page.getByRole('heading',{name:'Imóveis semelhantes'})).toBeAttached();
   const ray=page.getByRole('button',{name:'Consultar dados geográficos'});await reachable(ray);await ray.click();
   await expect(page.locator('.rayx')).toContainText(/Fontes:|Não foi possível/);
   const whatsapp=page.getByRole('button',{name:'Falar no WhatsApp',exact:true});if(await whatsapp.count())await reachable(whatsapp);

@@ -3,7 +3,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'dist');
 require('../dist/brand.js');
 const brand=globalThis.APP_BRAND;
 const version={name:brand.name,version:brand.version,commit:cp.execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()};
-const assets={};const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
+const assets={};const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(['server','client','assets','.openai','version.json'].includes(entry.name))continue;const p=path.join(dir,entry.name);if(entry.isDirectory())walk(p);else{let data=fs.readFileSync(p);if(/\.(html|webmanifest)$/.test(entry.name)){data=Buffer.from(data.toString().replace(/\{\{brand\.(\w+)\}\}/g,(_,key)=>{const value=key==='upperName'?brand.name.toUpperCase():brand[key];if(value===undefined)throw Error('Unknown brand key '+key);return value;}));}if(entry.name.endsWith('.html')){data=Buffer.from(data.toString().replace(/((?:src|href)="[^"?:]+\.(?:js|css))"/g,'$1?v='+version.version+'"'));}assets['/'+path.relative(out,p).split(path.sep).join('/') ]={type:mime[path.extname(p)]||'application/octet-stream',data:data.toString('base64')};}}}
 walk(out);
 // Dependency-free classic-script bundles: preserve global lexical bindings, no framework migration.

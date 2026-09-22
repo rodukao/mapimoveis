@@ -6,15 +6,19 @@ const DATA = window.TerraData;
 const plots = [];
 let searchLocation = null, searchMarker = null, locationSearchSequence = 0;
 let currentSession = null, mine = false, loading = false, loadFailed = false, totalListings = 0, loadSequence = 0;
-let editId = null, editRevision = null, saving = false, selected = -1, drawing = false, points = [];
+let editId = null, editRevision = null, saving = false, selected = -1, drawing = false, boundaryClosed = false, vertexDragging = false, points = [];
 let drawn = null, ghost = null, markers = [], plotLayers = [], vertices = [], currentArea = 0;
 let retainedPhotos = [], selectedPhotoFiles = [], photosChanged = false, previewUrls = [], photoOrder = [], photoGeneration=0;
 
 const map = L.map('map', { zoomControl: false, doubleClickZoom: false }).setView([-21.782, -43.392], 14);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
-const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>', maxNativeZoom: 19, maxZoom: 20 }).addTo(map);
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 });
+const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>', maxNativeZoom: 19, maxZoom: 20 });
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
+map.createPane('satelliteLabels');
+map.getPane('satelliteLabels').style.zIndex = 350;
+map.getPane('satelliteLabels').style.pointerEvents = 'none';
+const satelliteLabels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {pane:'satelliteLabels', attribution:'Labels &copy; Esri, HERE, Garmin, OpenStreetMap contributors', maxNativeZoom:18, maxZoom:19}).addTo(map);
 let mapErrors = 0;
 [street, satellite].forEach(layerItem => {
   layerItem.on('tileerror', () => { if (++mapErrors > 6) $('map-error').hidden = false; });
@@ -24,6 +28,8 @@ let mapErrors = 0;
 function layer(sat) {
   (sat ? street : satellite).remove();
   (sat ? satellite : street).addTo(map);
+  if(sat)satelliteLabels.addTo(map);else satelliteLabels.remove();
+  $('street').setAttribute('aria-pressed',String(!sat));$('satellite').setAttribute('aria-pressed',String(sat));
   $('street').classList.toggle('active', !sat);
   $('satellite').classList.toggle('active', sat);
 }
@@ -56,7 +62,7 @@ function render() {
     card.addEventListener('mouseleave', () => catalogMap.unhighlightListing(plot.id,'card'));
     card.addEventListener('focusin', () => catalogMap.highlightListing(plot.id,'focus'));
     card.addEventListener('focusout', event => { if(!card.contains(event.relatedTarget)) catalogMap.unhighlightListing(plot.id,'focus'); });
-    card.innerHTML = '<button type="button" class="card-open"><div class="card-media"><img alt="" hidden><span class="card-no-photo">Fotos não disponíveis</span></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área do terreno</small></div></div></button><div class="card-actions"></div>';
+    card.innerHTML = '<button type="button" class="card-open"><div class="card-media"><img alt="" hidden><span class="card-no-photo">Fotos não disponíveis</span></div><div class="card-top"><span class="tag"></span><span class="arrow">↗</span></div><h2></h2><div class="address"></div><div class="card-bottom"><div><div class="amount"></div><div class="sqm"></div></div><div class="plot-area"><strong></strong><br><small>área no mapa</small></div></div></button><div class="card-actions"></div>';
     const firstPhoto = plot.photos?.[0];
     if (firstPhoto) {
       const media = card.querySelector('.card-media');
@@ -71,13 +77,16 @@ function render() {
     card.querySelector('h2').textContent = plot.title || 'Rascunho sem título';
     card.querySelector('.address').textContent = plot.address;
     card.querySelector('.amount').textContent = money(plot.price);
-    card.querySelector('.sqm').textContent = plot.price == null ? 'Informe o preço para publicar' : num(plot.area) + ' m² · ' + (plot.area > 0 ? unitMoney(plot.price / plot.area) + '/m²' : 'Área pendente');
+    card.querySelector('.sqm').textContent = plot.price == null ? 'Informe o preço para publicar' : num(plot.area) + ' m² no mapa · ' + (plot.area > 0 ? unitMoney(plot.price / plot.area) + '/m²' : 'Área pendente');
     card.querySelector('.plot-area strong').textContent = num(plot.area) + ' m²';
+    if(plot.details?.built_area_m2){const a=Number(plot.details.built_area_m2);card.querySelector('.sqm').textContent=num(a)+' m² construídos/privativos'+(plot.price?' · '+unitMoney(plot.price/a)+'/m²':'');}
+    const rooms=[['bedrooms','quartos'],['bathrooms','banheiros'],['parking_spaces','vagas']].filter(([k])=>plot.details?.[k]!==undefined).map(([k,label])=>plot.details[k]+' '+label);
+    if(rooms.length){const info=document.createElement('div');info.className='small';info.textContent=rooms.join(' · ');card.querySelector('.card-open').append(info);}
     card.querySelector('.card-open').onclick = () => select(index);
     window.TerraMarketplace?.decorateCard(card,plot);
     $('cards').append(card);
     if (!drawing) {
-      const polygon = L.polygon(bounds(plot), catalogMap.styles.normal).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
+      const polygon = L.polygon(bounds(plot), {...catalogMap.styles.normal,bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
       plotLayers.push(polygon);
       const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin' + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => select(index,true));
       markers.push(marker);
@@ -88,7 +97,7 @@ function render() {
   if (!count) {
     const empty = document.createElement('p');
     empty.className = 'empty-message';
-    empty.textContent = loading ? 'Buscando terrenos…' : loadFailed ? 'Não foi possível carregar os terrenos. Tente novamente.' : mine ? 'Você ainda não tem terrenos com esses filtros.' : 'Nenhum terreno encontrado nesta área. Mova o mapa ou ajuste os filtros.';
+    empty.textContent = loading ? 'Buscando imóveis…' : loadFailed ? 'Não foi possível carregar os imóveis. Tente novamente.' : mine ? 'Você ainda não tem imóveis com esses filtros.' : 'Nenhum imóvel encontrado nesta área. Mova o mapa ou ajuste os filtros.';
     if(loading && window.TerraUI?.skeleton)$('cards').append(TerraUI.skeleton());else $('cards').append(empty);
     if(!loading&&!loadFailed&&!mine&&window.TerraUI){const actions=TerraUI.el('div',{class:'empty-actions'},TerraUI.el('button',{onclick:()=>$('reset').click()},'Limpar filtros'),TerraUI.el('button',{onclick:()=>map.zoomOut()},'Ver área maior'));$('cards').append(actions);}
   }
@@ -116,8 +125,8 @@ function updateDraw() {
   vertices.forEach(vertex => vertex.remove());
   vertices = [];
   if (points.length) {
-    drawn = (points.length >= 3 ? L.polygon(points, { color: '#D97706', weight: 3, fillOpacity: .23 }) : L.polyline(points, { color: '#D97706', weight: 3 })).addTo(map);
-    points.forEach((point, index) => vertices.push(L.circleMarker(point, { radius: 6, color: '#D97706', weight: 3, fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindTooltip('Ponto ' + (index + 1))));
+    drawn = (points.length >= 3 ? L.polygon(points, { color: '#D97706', weight: 3, fillOpacity: .23, interactive:false }) : L.polyline(points, { color: '#D97706', weight: 3, interactive:false })).addTo(map);
+    window.TerraEditorTools?.renderHandles();
   }
   currentArea = measure(points);
   $('draw-area').innerHTML = num(currentArea) + ' <small>m²</small>';
@@ -189,6 +198,7 @@ async function start(record = null) {
   editId = record?.id || crypto.randomUUID();
   editRevision = record?.revision || null;
   points = record?.points ? record.points.map(point => L.latLng(point[0], point[1])) : [];
+  boundaryClosed = points.length >= 3;
   fillEditor(record);
   $('sidebar').style.height = '';
   drawing = true;
@@ -201,13 +211,13 @@ async function start(record = null) {
   closeDetail();
   render();
   updateDraw();
-  map.getContainer().style.cursor = 'crosshair';
+  map.getContainer().style.cursor = boundaryClosed ? '' : 'crosshair';
   setTimeout(() => moveMapProgrammatically('invalidateSize'), 50);
 }
 
 function stop() {
   if (saving) return;
-  drawing = false;
+  drawing = false; boundaryClosed = false; vertexDragging = false;
   document.dispatchEvent(new CustomEvent('terra:editstop'));
   editId = null;
   editRevision = null;
@@ -225,18 +235,26 @@ function stop() {
 
 $('announce').onclick = () => start();
 $('cancel').onclick = stop;
-$('explore').onclick = () => { if (saving) return; clearLocation(false); mine = false; stop(); loadListings(); moveMapProgrammatically('setView',[-14.2, -51.9], 4); };
-$('undo').onclick = () => { if (!saving) { points.pop(); updateDraw(); } };
-$('clear').onclick = () => { if (!saving) { points = []; updateDraw(); } };
+$('undo').onclick = () => { if (!saving) { points.pop(); boundaryClosed = false; updateDraw(); } };
+$('clear').onclick = () => { if (!saving) { points = []; boundaryClosed = false; updateDraw(); } };
+function deselectListing(){selected=-1;catalogMap.deselect();document.dispatchEvent(new CustomEvent('terra:deselect'));}
+document.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||event.defaultPrevented||drawing||saving)return;
+  const dialogs=[...document.querySelectorAll('dialog[open]')];
+  if(dialogs.some(dialog=>dialog!==$('listing-detail')))return;
+  if($('listing-detail').open)closeDetail();
+  deselectListing();event.preventDefault();
+});
 map.on('click', event => {
-  if (!drawing || saving || !window.TerraMapTools?.canMapDraw()) return;
+  if(!drawing&&!saving&&!event.propagatedFrom){deselectListing();return;}
+  if (!drawing || saving || boundaryClosed || vertexDragging || !window.TerraMapTools?.canMapDraw()) return;
   if (points.length >= 200) return toast('Use no máximo 200 vértices.');
   if (points.length && map.distance(points.at(-1), event.latlng) < .2) return;
   points.push(event.latlng);
   updateDraw();
 });
 map.on('mousemove', event => {
-  if (!drawing || !points.length || !window.TerraMapTools?.canMapDraw()) return;
+  if (!drawing || saving || boundaryClosed || vertexDragging || points.length >= 3 || !points.length || !window.TerraMapTools?.canMapDraw()) return;
   if (ghost) ghost.remove();
   ghost = L.polyline([points.at(-1), event.latlng], { color: '#D97706', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
   $('distance').hidden = false;
@@ -300,7 +318,7 @@ $('form').onsubmit = async event => {
     saving = false;
     stop();
     await loadListings();
-    toast(form.status === 'published' ? 'Terreno salvo e disponível no catálogo.' : 'Terreno salvo. Você pode encontrá-lo em Meus terrenos.');
+    toast(form.status === 'published' ? 'Imóvel salvo e disponível no catálogo.' : 'Imóvel salvo. Você pode encontrá-lo em Meus imóveis.');
   } catch (error) {
     if (error.savedListing) {
       saving = false;
@@ -314,14 +332,14 @@ $('form').onsubmit = async event => {
   } finally {
     saving = false;
     $('listing-fields').disabled = false;
-    $('save-listing').textContent = 'Salvar terreno';
+    $('save-listing').textContent = 'Salvar imóvel';
     $('cancel').disabled = false;
     $('undo').disabled = false;
     $('clear').disabled = false;
   }
 };
 
-$('mobile-toggle').onclick = () => { const open = document.body.classList.toggle('show-list'); $('mobile-toggle').textContent = open ? 'Voltar para o mapa' : 'Ver lista de terrenos'; };
+$('mobile-toggle').onclick = () => { document.body.classList.add('show-list'); $('mobile-toggle').setAttribute('aria-expanded','true'); $('mobile-sheet-handle').focus(); };
 
 const categoryNames = { residencial: 'Residencial', condominio: 'Condomínio', chacara: 'Chácara', rural: 'Rural', comercial: 'Comercial' };
 function fromRow(row) {
@@ -332,7 +350,7 @@ function fromRow(row) {
 function updateRequiredFields() {
   const required=$('listing-status').value!=='draft';
   for(const id of ['title','value','city','state'])$(id).required=required;
-  $('save-note').textContent=required?'Confira título, preço, cidade e UF antes de salvar.':'Você pode completar título, preço, cidade e UF depois. O perímetro é necessário para guardar o terreno no mapa.';
+  $('save-note').textContent=required?'Confira título, preço, cidade e UF antes de salvar.':'Você pode completar título, preço, cidade e UF depois. O perímetro é necessário para guardar a localização do imóvel no mapa.';
 }
 $('listing-status').onchange=updateRequiredFields;
 function fillEditor(plot) {
@@ -350,7 +368,7 @@ function fillEditor(plot) {
   $('neighborhood').value = plot ? plot.neighborhood : searchLocation?.neighborhood || '';
   $('category').value = plot?.category || 'residencial';
   $('listing-status').value = plot?.status || 'draft';
-  $('save-listing').textContent = plot ? 'Salvar alterações' : 'Salvar terreno';
+  $('save-listing').textContent = plot ? 'Salvar alterações' : 'Salvar imóvel';
   updateRequiredFields();
   renderPhotoPreview();
   window.TerraFilters?.fillEditor(plot);
@@ -359,8 +377,8 @@ function fillEditor(plot) {
 function updateCatalogStatus(viewport=false) {
   if (!$('catalog-update')) return;
   $('catalog-update').hidden = !loading && !loadFailed;
-  $('catalog-update').textContent = loading ? 'Atualizando terrenos…' : loadFailed ? (viewport ? 'Não foi possível atualizar os terrenos desta área. Tente novamente.' : 'Não foi possível atualizar os terrenos. Tente novamente.') : '';
-  $('count').textContent = loading&&!plots.length?'Carregando terrenos…':totalListings + ' terrenos encontrados';
+  $('catalog-update').textContent = loading ? 'Atualizando imóveis…' : loadFailed ? (viewport ? 'Não foi possível atualizar os imóveis desta área. Tente novamente.' : 'Não foi possível atualizar os imóveis. Tente novamente.') : '';
+  $('count').textContent = loading&&!plots.length?'Carregando imóveis…':totalListings + ' imóveis encontrados';
   $('more-listings').hidden = plots.length >= totalListings;
   $('more-listings').disabled = loading;
   $('retry-listings').hidden = !loadFailed;
@@ -370,7 +388,7 @@ async function loadListings(append = false, viewport = false) {
   const sequence = ++loadSequence;
   loading = true; loadFailed = false;
   updateCatalogStatus(viewport);
-  if(!plots.length&&window.TerraUI?.skeleton)$('cards').replaceChildren(TerraUI.skeleton('Buscando terrenos…'));
+  if(!plots.length&&window.TerraUI?.skeleton)$('cards').replaceChildren(TerraUI.skeleton('Buscando imóveis…'));
   $('all-listings').classList.toggle('active', !mine);
   $('my-listings').classList.toggle('active', mine);
   $('list-meta').textContent = mine ? 'Seus anúncios' : 'Anúncios no mapa';
@@ -405,7 +423,7 @@ $('confirm-delete').onclick = async () => {
   if (!deleteTarget) return;
   $('confirm-delete').disabled = true;
   $('cancel-delete').disabled = true;
-  try { await DATA.remove(deleteTarget.id, deleteTarget.revision); $('delete-dialog').close(); deleteTarget = null; await loadListings(); toast('Terreno excluído.'); }
+  try { await DATA.remove(deleteTarget.id, deleteTarget.revision); $('delete-dialog').close(); deleteTarget = null; await loadListings(); toast('Imóvel excluído.'); }
   catch (error) { $('delete-error').textContent = DATA.explain(error); $('delete-error').hidden = false; }
   finally { $('confirm-delete').disabled = false; $('cancel-delete').disabled = false; }
 };

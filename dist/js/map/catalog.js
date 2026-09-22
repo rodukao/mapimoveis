@@ -16,15 +16,19 @@
       cards.get(id)?.classList.toggle('map-highlight',hover);
       const button=cards.get(id)?.querySelector('.card-open');
       if(active)button?.setAttribute('aria-current','true');else button?.removeAttribute('aria-current');
-      markers.get(id)?.getElement()?.classList.toggle('chosen',active);
+      const marker=markers.get(id);
+      marker?.getElement()?.classList.toggle('chosen',active);
+      marker?.getElement()?.classList.toggle('map-highlight',hover);
+      marker?.setZIndexOffset?.(active?1200:hover?1000:0);
     }
     function highlightListing(id,source='map'){if(!hovered.has(id))hovered.set(id,new Set());hovered.get(id).add(source);paint(id);}
     function unhighlightListing(id,source='map'){hovered.get(id)?.delete(source);paint(id);}
     function selectListing(id,scroll=false){const previous=selectedId;selectedId=id;paint(previous);paint(id);
       const card=cards.get(id);if(scroll&&card){const box=card.getBoundingClientRect(),parent=card.closest('aside').getBoundingClientRect();if(box.top<parent.top||box.bottom>parent.bottom)card.scrollIntoView({block:'nearest',behavior:'instant'});}}
+    function deselect(){const affected=new Set([selectedId,...hovered.keys()]);selectedId=null;hovered.clear();for(const id of affected)if(id!==null)paint(id);}
     function register(id,layer,card,marker){if(layer)layers.set(id,layer);if(card)cards.set(id,card);if(marker)markers.set(id,marker);paint(id);}
     function clear(){layers.clear();cards.clear();markers.clear();hovered.clear();}
-    return {layers,register,clear,highlightListing,unhighlightListing,selectListing,styles,get selectedId(){return selectedId;}};
+    return {layers,register,clear,highlightListing,unhighlightListing,selectListing,deselect,styles,get selectedId(){return selectedId;}};
   }
   function viewport(map,{blocked,search,invalidate,delay=400,schedule=setTimeout,unschedule=clearTimeout}) {
     let depth=0,manual=false,timer=null,lastKey=null,generation=0,pending=0;

@@ -10,11 +10,12 @@ function showDetail(plot) {
   $('detail-category').textContent = plot.tag;
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
-  $('detail-area').textContent = num(plot.area) + ' m²';
-  $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / plot.area) + ' / m²';
+  const displayArea=Number(plot.details?.built_area_m2)||plot.area;
+  $('detail-area').textContent = num(displayArea) + (plot.details?.built_area_m2?' m² construídos/privativos (declarados)':' m² de área no mapa');
+  $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / displayArea) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
-  const facts = [['Área estimada', num(plot.area) + ' m²']];
+  const facts = [['Área estimada no mapa', num(plot.area) + ' m²']];
   if (Number.isFinite(Number(plot.perimeter_m))) facts.push(['Perímetro', num(Number(plot.perimeter_m)) + ' m']);
   if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Ativo',reserved:'Reservado',sold:'Vendido',paused:'Pausado'}[plot.status] || plot.status]);
   if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);
