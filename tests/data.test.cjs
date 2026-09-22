@@ -9,7 +9,7 @@ function setup({configured=true,key='sb_publishable_test',updateRow={id:'own'},i
  const query={eq(...a){calls.push(['eq',...a]);return this},select(){return this},order(...a){calls.push(['order',...a]);return this},ilike(...a){calls.push(['ilike',...a]);return this},lte(...a){calls.push(['lte',...a]);return this},gte(...a){calls.push(['gte',...a]);return this},range(){return Promise.resolve({data:[],count:0,error:null})},single(){return Promise.resolve({data:{id:'own'},error:insertError})},maybeSingle(){return Promise.resolve({data:updateRow,error:null})},insert(data){inserted=data;return this},update(data){updated=data;return this}};
  const client={auth:{signInWithOAuth:async x=>{authCalls.push(x);return {data:{url:'https://example.supabase.co/auth/v1/authorize'},error:oauthError}},signUp:async x=>{authCalls.push(x);return {data:{},error:null}},signInWithPassword:async x=>{authCalls.push(x);return {data:{},error:null}},resetPasswordForEmail:async(email,options)=>{authCalls.push({email,options});return {data:{},error:null}},getUser:async()=>({data:{user:{id:'user-a'}},error:null})},from(name){calls.push(['from',name]);return query}};
  const ctx={TerraMarketData:{requirePublishContact:async status=>calls.push(['publication-contact',status])},URL,AbortSignal,fetch:async()=>({ok:true,json:async()=>({external:providers})}),window:{TERRA_CONFIG:configured?{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:key}:{},location:{href:'https://example.com/',assign:url=>authCalls.push({redirect:url})},supabase:{createClient(){return client}}}};
- vm.createContext(ctx);vm.runInContext(source,ctx);return {api:ctx.window.TerraData,calls,authCalls,get inserted(){return inserted},get updated(){return updated}};
+ vm.createContext(ctx);vm.runInContext(fs.readFileSync('dist/js/video.js','utf8'),ctx);vm.runInContext(source,ctx);return {api:ctx.window.TerraData,calls,authCalls,get inserted(){return inserted},get updated(){return updated}};
 }
 test('save sends only editable fields; forged owner, area, dates and revision are discarded',async()=>{
  const s=setup();await s.api.save({...valid,owner_id:'victim',area_m2:1,created_at:'2000-01-01',revision:99},{id:'new'});
@@ -17,6 +17,12 @@ test('save sends only editable fields; forged owner, area, dates and revision ar
 });
 test('updates require the signed-in owner and expected revision',async()=>{
  const s=setup();await s.api.save(valid,{id:'own',revision:3});assert.ok(s.calls.some(x=>x[0]==='eq'&&x[1]==='owner_id'&&x[2]==='user-a'));assert.ok(s.calls.some(x=>x[0]==='eq'&&x[1]==='revision'&&x[2]===3));
+});
+test('optional video ID survives create and edit, and can be removed without changing other details',async()=>{
+ const s=setup();await s.api.save({...valid,details:{bedrooms:2,youtube_video_id:'M7lc1UVf-VE'}},{id:'new'});assert.equal(s.inserted.details.youtube_video_id,'M7lc1UVf-VE');
+ await s.api.save({...valid,details:{bedrooms:2,youtube_video_id:'abcdefghijk'}},{id:'own',revision:3});assert.equal(s.updated.details.youtube_video_id,'abcdefghijk');
+ await s.api.save({...valid,details:{bedrooms:2}},{id:'own',revision:4});assert.equal(s.updated.details.youtube_video_id,undefined);assert.equal(s.updated.details.bedrooms,2);
+ for(const id of ['https://youtu.be/M7lc1UVf-VE','<iframe>',{},null]){const bad=setup();await assert.rejects(bad.api.save({...valid,details:{youtube_video_id:id}},{id:'new'}),/YouTube/);assert.equal(bad.inserted,undefined);}
 });
 test('a stale or denied update never reports success',async()=>{const s=setup({updateRow:null});await assert.rejects(s.api.save(valid,{id:'own',revision:3}),/outra sessão/)});
 test('invalid numeric prices are rejected before a write',async()=>{for(const price of ['NaN','Infinity',-1,0,1e20]){const s=setup();await assert.rejects(s.api.save({...valid,price_brl:price},{id:'new'}),/preço/);assert.equal(s.inserted,undefined)}});

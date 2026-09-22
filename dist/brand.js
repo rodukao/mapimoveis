@@ -8,6 +8,6 @@
   shortTagline:'imóveis no mapa',
   tagline,title:name+' — imóveis no mapa',
   description:tagline+' Explore limites, fotos e informações de imóveis em um só lugar.',
-  version:'1.5.8',themeColor:'#145A46'
+  version:'1.6.0',themeColor:'#145A46'
  });
 })();

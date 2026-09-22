@@ -14,6 +14,7 @@ test('visitante: galeria, miniaturas, lightbox e ampliação',async({page})=>{
   await expect(card).toBeAttached();await card.locator('.card-open').click();await expect(page.locator('#detail-photo')).toBeVisible();
   await expect.poll(()=>page.locator('#detail-photo').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
   if(await page.locator('#photo-next').isVisible()){const before=await page.locator('#photo-counter').innerText();await page.locator('#photo-next').click();await expect(page.locator('#photo-counter')).not.toHaveText(before);}
+  await page.getByRole('button',{name:'Ver foto 1',exact:true}).click();
   await reachable(page.locator('#expand-photo'));await page.locator('#expand-photo').click();await expect(page.locator('#photo-lightbox')).toBeVisible();
   await reachable(page.locator('#photo-zoom'));await page.locator('#photo-zoom').click();await expect(page.locator('#photo-zoom')).toHaveAttribute('aria-pressed','true');
   await reachable(page.locator('#close-lightbox'));await page.locator('#close-lightbox').click();await expect(page.locator('#listing-detail')).toBeVisible();

@@ -1,10 +1,16 @@
-let detailPhotos = [], detailPhotoIndex = 0, detailPlot = null;
+let detailMedia = [], detailPhotoIndex = 0, detailPlot = null;
+function stopDetailVideo() {
+  $('detail-video').replaceChildren(); $('lightbox-video').replaceChildren();
+}
 function closeDetail() {
+  stopDetailVideo();
   if ($('photo-lightbox').open) $('photo-lightbox').close();
   if ($('listing-detail').open) $('listing-detail').close();
 }
 function showDetail(plot) {
   if (!plot || drawing) return closeDetail();
+  stopDetailVideo();
+  if ($('photo-lightbox').open) $('photo-lightbox').close();
   detailPlot = plot;
   $('detail-title').textContent = plot.title || 'Rascunho sem título';
   $('detail-category').textContent = plot.tag;
@@ -27,18 +33,27 @@ function showDetail(plot) {
     const item = document.createElement('div'), term = document.createElement('dt'), definition = document.createElement('dd');
     term.textContent = label; definition.textContent = value; item.append(term,definition); $('detail-facts').append(item);
   }
-  detailPhotos = (plot.photos || []);
+  detailMedia = (plot.photos || []).map(photo => ({type:'photo',photo}));
+  const videoId = TerraVideo.fromDetails(plot.details);
+  if (videoId) detailMedia.push({type:'video',id:videoId});
   detailPhotoIndex = 0;
-  $('detail-gallery').hidden = !detailPhotos.length;
-  $('no-photos').hidden = Boolean(detailPhotos.length);
+  $('detail-gallery').hidden = !detailMedia.length;
+  $('no-photos').hidden = Boolean(detailMedia.length);
   $('photo-thumbnails').replaceChildren();
-  detailPhotos.forEach((photo,index) => {
-    const button = document.createElement('button'), img = document.createElement('img');
-    button.type = 'button'; button.setAttribute('aria-label', 'Ver foto ' + (index + 1));
-    TerraPhotos.bind(img,photo); img.alt = ''; img.loading = 'lazy'; button.append(img);
+  detailMedia.forEach((item,index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    if (item.type === 'video') {
+      button.className = 'video-thumbnail'; button.setAttribute('aria-label','Ver vídeo do imóvel');
+      const icon = document.createElement('span'), label = document.createElement('span');
+      icon.textContent = '▶'; icon.setAttribute('aria-hidden','true'); label.textContent = 'Vídeo'; button.append(icon,label);
+    } else {
+      const img = document.createElement('img'); button.setAttribute('aria-label', 'Ver foto ' + (index + 1));
+      TerraPhotos.bind(img,item.photo); img.alt = ''; img.loading = 'lazy'; button.append(img);
+    }
     button.onclick = () => displayPhoto(index); $('photo-thumbnails').append(button);
   });
-  if (detailPhotos.length) displayPhoto(0);
+  if (detailMedia.length) displayPhoto(0);
   if (!$('listing-detail').open) $('listing-detail').showModal();
   $('listing-detail').scrollTop = 0;
   document.dispatchEvent(new CustomEvent('terra:detail',{detail:plot}));
@@ -50,24 +65,43 @@ function resetPhotoZoom() {
   $('photo-zoom').setAttribute('aria-pressed','false');
 }
 function displayPhoto(index) {
-  if (!detailPhotos.length) return;
-  detailPhotoIndex = (index + detailPhotos.length) % detailPhotos.length;
-  const photo = detailPhotos[detailPhotoIndex];
-  const caption = `Foto ${detailPhotoIndex + 1} de ${detailPhotos.length}`;
+  if (!detailMedia.length) return;
+  stopDetailVideo();
+  detailPhotoIndex = (index + detailMedia.length) % detailMedia.length;
+  const item = detailMedia[detailPhotoIndex], video = item.type === 'video';
+  const caption = `${video ? 'Vídeo' : 'Foto'} · ${detailPhotoIndex + 1} de ${detailMedia.length}`;
+  $('expand-photo').hidden = video; $('detail-video').hidden = !video;
+  $('lightbox-photo').hidden = video; $('lightbox-video').hidden = !video;
+  $('photo-zoom').hidden = video; $('video-fallback').hidden = !video;
+  $('detail-video').parentElement.classList.toggle('is-video',video);
+  $('gallery-hint').textContent = video ? 'YouTube' : 'Deslize para ver mais';
   $('photo-error').hidden = true; $('lightbox-error').hidden = true;
-  for (const id of ['detail-photo','lightbox-photo']) {
-    TerraPhotos.bind($(id),photo,()=>{$(id==='detail-photo'?'photo-error':'lightbox-error').hidden=false;});
-    $(id).alt = photo.alt_text || `${detailPlot.title} — ${caption}`;
+  if (video) {
+    // Cancel pending photo-error callbacks when their image is no longer selected.
+    for (const id of ['detail-photo','lightbox-photo']) { $(id)._terraPhoto = null; $(id).onerror = null; }
+    const container = $($('photo-lightbox').open ? 'lightbox-video' : 'detail-video');
+    container.append(TerraVideo.player(item.id,detailPlot.title));
+    $('video-youtube-link').href = TerraVideo.watchUrl(item.id);
+  } else {
+    for (const id of ['detail-photo','lightbox-photo']) {
+      TerraPhotos.bind($(id),item.photo,()=>{$(id==='detail-photo'?'photo-error':'lightbox-error').hidden=false;});
+      $(id).alt = item.photo.alt_text || `${detailPlot.title} — ${caption}`;
+    }
   }
   $('photo-counter').textContent = caption; $('lightbox-counter').textContent = caption;
-  for (const id of ['photo-prev','photo-next','lightbox-prev','lightbox-next']) $(id).hidden = detailPhotos.length < 2;
+  for (const id of ['photo-prev','photo-next','lightbox-prev','lightbox-next']) $(id).hidden = detailMedia.length < 2;
   [...$('photo-thumbnails').children].forEach((button,i) => button.setAttribute('aria-current',String(i === detailPhotoIndex)));
   resetPhotoZoom();
 }
 $('close-detail').onclick = closeDetail;
 $('detail-map').onclick = closeDetail;
 $('close-lightbox').onclick = () => $('photo-lightbox').close();
-$('expand-photo').onclick = () => { if (detailPhotos.length) { resetPhotoZoom(); $('photo-lightbox').showModal(); } };
+$('expand-photo').onclick = () => { if (detailMedia.length) { resetPhotoZoom(); $('photo-lightbox').showModal(); displayPhoto(detailPhotoIndex); } };
+$('listing-detail').addEventListener('close', () => { if (!$('listing-detail').open) stopDetailVideo(); });
+$('photo-lightbox').addEventListener('close', () => {
+  stopDetailVideo();
+  if ($('listing-detail').open && detailMedia.length) displayPhoto(detailPhotoIndex);
+});
 $('photo-zoom').onclick = () => {
   const zoomed = $('lightbox-viewport').classList.toggle('zoomed');
   $('photo-zoom').setAttribute('aria-pressed',String(zoomed));
@@ -99,4 +133,3 @@ for (const element of [$('expand-photo'),$('lightbox-viewport')]) {
     start = null;
   },{passive:true});
 }
-

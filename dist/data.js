@@ -69,8 +69,9 @@
       neighborhood: form.neighborhood.trim(), category: form.category, price_brl: form.status==='draft' && String(form.price_brl).trim()==='' ? null : Number(form.price_brl),
       status: form.status, boundary_geojson: form.boundary_geojson,
       terrain_context: form.terrain_context || 'urban', topography: form.topography || '',
-      infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: form.details || {}
+      infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: {...(form.details || {})}
     };
+    if ('youtube_video_id' in clean.details && !window.TerraVideo?.isId(clean.details.youtube_video_id)) throw new Error('Cole um link válido de um vídeo do YouTube.');
     if ((clean.title.length < 3 && !(clean.status==='draft' && !clean.title)) || clean.title.length > 90) throw new Error('Use entre 3 e 90 caracteres no título.');
     if (clean.description.length > 4000 || (clean.city.length < 2 && !(clean.status==='draft' && !clean.city)) || clean.city.length > 100 || clean.neighborhood.length > 100) throw new Error('Revise a descrição e a localização do terreno.');
     if (!(clean.status==='draft' && clean.price_brl===null) && (!Number.isFinite(clean.price_brl) || clean.price_brl <= 0 || clean.price_brl > 999999999999.99)) throw new Error('Informe um preço de venda válido.');

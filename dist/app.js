@@ -294,16 +294,20 @@ if ($('photos')) $('photos').onchange = async event => {
   renderPhotoPreview();
 };
 
+TerraVideo.bindEditor();
 $('form').onsubmit = async event => {
   event.preventDefault();
   if($('photos').disabled)return toast('Aguarde o processamento das fotos.');
   if (saving) return;
+  if (!TerraVideo.validateEditor()) { $('youtube-url').reportValidity(); return; }
   try { window.TerraMapTools?.validateEditor(); } catch (error) { return toast(error.message); }
   if (points.length < 3 || currentArea < 1) return toast('Marque pelo menos 3 pontos para formar o terreno.');
   if (crosses(points)) return toast('Os limites se cruzam. Ajuste os pontos antes de continuar.');
   const ring = points.map(point => [point.lng, point.lat]);
   ring.push([...ring[0]]);
   const form = { title: $('title').value, description: $('description').value, city: $('city').value, state: $('state').value, neighborhood: $('neighborhood').value, category: $('category').value, price_brl: $('value').value, status: $('listing-status').value, ...TerraFilters.editorValues(), boundary_geojson: { type: 'Polygon', coordinates: [ring] } };
+  const videoId = TerraVideo.editorId();
+  if (videoId) form.details.youtube_video_id = videoId;
   const filesToUpload = selectedPhotoFiles.slice();
   const keepPhotoIds = retainedPhotos.map(photo => photo.id);
   saving = true;
@@ -372,6 +376,7 @@ function fillEditor(plot) {
   updateRequiredFields();
   renderPhotoPreview();
   window.TerraFilters?.fillEditor(plot);
+  TerraVideo.fillEditor(plot?.details);
 }
 
 function updateCatalogStatus(viewport=false) {

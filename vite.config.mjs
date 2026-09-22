@@ -1,5 +1,6 @@
 import {defineConfig,loadEnv} from 'vite';
 import fs from 'node:fs';
+import mediaFixture from './scripts/qa-media.cjs';
 
 // Development/QA only. Production continues to serve the authored dist files.
 export default defineConfig(({mode})=>{
@@ -11,6 +12,7 @@ export default defineConfig(({mode})=>{
       name:'terra-qa',
       configureServer(server){server.middlewares.use((req,res,next)=>{
         const url=new URL(req.url,'http://localhost');
+        if(url.pathname==='/__qa__/media'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(mediaFixture());return;}
         if(['/profissionais','/privacidade','/termos'].includes(url.pathname)){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(new URL('./dist'+url.pathname+'/index.html',import.meta.url)));return;}
         if(url.pathname==='/__qa__/account'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(new URL('./tests/fixtures/account-layout.html',import.meta.url)));return;}
         if(url.pathname==='/__qa__/feedback'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(new URL('./tests/fixtures/pilot-feedback.html',import.meta.url)));return;}
@@ -22,7 +24,7 @@ export default defineConfig(({mode})=>{
         if(url.pathname==='/__qa__/viewport'){
           const sizes={'360x800':[360,800],'390x844':[390,844],'412x915':[412,915],'844x390':[844,390],'1366x768':[1366,768],'1920x1080':[1920,1080]};
           const size=sizes[url.searchParams.get('size')]||sizes['360x800'];
-          const src=url.searchParams.get('view')==='account'?'/__qa__/account':url.searchParams.get('view')==='feedback'?'/__qa__/feedback':url.searchParams.get('view')==='professionals'?'/profissionais':'/__qa__/production';
+          const src=url.searchParams.get('view')==='account'?'/__qa__/account':url.searchParams.get('view')==='feedback'?'/__qa__/feedback':url.searchParams.get('view')==='professionals'?'/profissionais':url.searchParams.get('view')==='media'?'/__qa__/media':'/__qa__/production';
           res.setHeader('Content-Type','text/html; charset=utf-8');
           res.end(`<!doctype html><html lang="pt-BR"><title>TerraMapa — QA de viewport</title><body style="margin:0;background:#ddd"><iframe title="TerraMapa ${size.join('×')}" src="${src}" width="${size[0]}" height="${size[1]}" style="display:block;border:0"></iframe></body></html>`);return;
         }
