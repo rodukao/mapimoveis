@@ -37,7 +37,7 @@ export function createWorker(assets,version){
   let asset=path==='/'?'/index.html':path;
   if(['/privacidade','/termos','/profissionais'].includes(path))asset=path+'/index.html';
   if(!assets[asset])return reply('Página não encontrada.',404,'text/plain',{'X-Robots-Tag':'noindex'});
-  if(!asset.endsWith('.html'))return reply(bytes(asset),200,assets[asset].type,{'Cache-Control':url.searchParams.get('v')===version.version?'public, max-age=31536000, immutable':'public, max-age=3600'});
+  if(!asset.endsWith('.html'))return reply(bytes(asset),200,assets[asset].type,{'Cache-Control':version.assetVersion&&url.searchParams.get('v')===version.assetVersion?'public, max-age=31536000, immutable':'public, max-age=0, must-revalidate'});
   let indexable=true,canonical=ORIGIN+(path==='/index.html'?'/':path);
   if(url.search){indexable=false;const id=url.searchParams.get('terreno');
    if((path==='/'||path==='/index.html')&&UUID.test(id||'')&&[...url.searchParams.keys()].every(k=>k==='terreno')){

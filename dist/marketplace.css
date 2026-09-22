@@ -216,7 +216,12 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 }
 
 /* A single alignment grid for search and catalog controls. */
-.search-icon,.filter-desktop-label{display:none}
+.search-icon{display:block}
+.filter-desktop-label{display:inline}
+.filter-mobile-label,.search-button-label{display:none}
+#location-submit{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#145A46;color:white;border-color:#145A46}
+#location-submit:hover{background:#0D4737}
+#location-query{height:44px}
 #browse{--catalog-inset:24px}
 #browse .list-heading{padding-left:var(--catalog-inset);padding-right:var(--catalog-inset)}
 #browse .sort-control{padding-left:var(--catalog-inset);padding-right:var(--catalog-inset);gap:12px}
@@ -235,13 +240,14 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
  .toolbar .location-search{max-width:560px;min-width:0}
  .toolbar #quick-price,.toolbar #quick-area,.toolbar #quick-type,.toolbar #reset{display:none}
  #browse .list-heading #advanced-filters{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:-7px 0 18px;padding:11px 20px;font-size:14px}
- .filter-desktop-label{display:inline}.filter-mobile-label,.search-button-label{display:none}
- .search-icon{display:block}
- #location-submit{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#145A46;color:white;border-color:#145A46}
- #location-submit:hover{background:#0D4737}
- #location-query{height:44px}
 }
-@media(max-width:720px){#browse{--catalog-inset:16px}}
+@media(max-width:720px){
+ #browse{--catalog-inset:16px}
+ .toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 16px}
+ .toolbar .location-search{width:100%;min-width:0;max-width:none}
+ .toolbar #quick-price,.toolbar #quick-area,.toolbar #quick-type,.toolbar #reset{display:none}
+ .toolbar #advanced-filters{width:100%;min-height:44px;margin:0;padding:11px 16px;font-size:14px}
+}
 
 @media(min-width:721px){
  #sidebar>.toolbar{position:sticky;top:0;z-index:600;display:flex;flex-wrap:wrap;gap:10px;padding:18px 24px 14px;min-height:0;background:#F7F9F7}
