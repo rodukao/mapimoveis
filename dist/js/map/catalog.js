@@ -5,12 +5,19 @@
     hover: {color:'#EA580C',weight:5,opacity:1,fillOpacity:.24},
     selected: {color:'#C2410C',weight:6,opacity:1,fillOpacity:.28}
   };
+  const propertyGroups = {
+    land:{label:'Terreno',color:'#F59E0B',hover:'#EA580C',selected:'#C2410C',categories:['residencial','lote','condominio','chacara','sitio','fazenda','rural']},
+    residential:{label:'Imóvel Residencial',color:'#22C55E',hover:'#16A34A',selected:'#15803D',categories:['casa','apartamento','cobertura','sobrado']},
+    commercial:{label:'Imóvel Comercial',color:'#3B82F6',hover:'#2563EB',selected:'#1D4ED8',categories:['sala_comercial','galpao','comercial','industrial']}
+  };
+  function propertyGroup(category){return Object.keys(propertyGroups).find(key=>propertyGroups[key].categories.includes(category)) || 'land';}
+  function styleFor(category,state='normal'){const group=propertyGroups[propertyGroup(category)],color=state==='normal'?group.color:group[state];return {...styles[state],color,fillColor:color};}
   function interactions() {
-    const layers=new Map(), cards=new Map(), markers=new Map(), hovered=new Map();
+    const layers=new Map(), cards=new Map(), markers=new Map(), categories=new Map(), hovered=new Map();
     let selectedId=null;
     function paint(id) {
       const active=id===selectedId, hover=Boolean(hovered.get(id)?.size), layer=layers.get(id);
-      layer?.setStyle(styles[active?'selected':hover?'hover':'normal']);
+      layer?.setStyle(styleFor(categories.get(id),active?'selected':hover?'hover':'normal'));
       if(active||hover)layer?.bringToFront();
       cards.get(id)?.classList.toggle('selected',active);
       cards.get(id)?.classList.toggle('map-highlight',hover);
@@ -26,8 +33,8 @@
     function selectListing(id,scroll=false){const previous=selectedId;selectedId=id;paint(previous);paint(id);
       const card=cards.get(id);if(scroll&&card){const box=card.getBoundingClientRect(),parent=card.closest('aside').getBoundingClientRect();if(box.top<parent.top||box.bottom>parent.bottom)card.scrollIntoView({block:'nearest',behavior:'instant'});}}
     function deselect(){const affected=new Set([selectedId,...hovered.keys()]);selectedId=null;hovered.clear();for(const id of affected)if(id!==null)paint(id);}
-    function register(id,layer,card,marker){if(layer)layers.set(id,layer);if(card)cards.set(id,card);if(marker)markers.set(id,marker);paint(id);}
-    function clear(){layers.clear();cards.clear();markers.clear();hovered.clear();}
+    function register(id,layer,card,marker,category){categories.set(id,category);if(layer)layers.set(id,layer);if(card)cards.set(id,card);if(marker)markers.set(id,marker);paint(id);}
+    function clear(){layers.clear();cards.clear();markers.clear();categories.clear();hovered.clear();}
     return {layers,register,clear,highlightListing,unhighlightListing,selectListing,deselect,styles,get selectedId(){return selectedId;}};
   }
   function viewport(map,{blocked,search,invalidate,delay=400,schedule=setTimeout,unschedule=clearTimeout}) {
@@ -50,5 +57,5 @@
     }finally{depth--;}}
     return {move,cancel,resetKey(){lastKey=null;},bounds};
   }
-  root.TerraCatalogMap={interactions,viewport};
+  root.TerraCatalogMap={interactions,viewport,propertyGroups,propertyGroup,styleFor};
 })(typeof window==='undefined'?globalThis:window);

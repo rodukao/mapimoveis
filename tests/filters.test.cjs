@@ -2,11 +2,11 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 // DOM doubles test the actual form handlers without claiming visual browser QA.
 function setup(){
  const ids=new Map();let lastPanel,loads=0,moves=0;
- function el(tag,attrs={},...children){const n={tag,value:'',children:[],hidden:false,...attrs,append(...items){this.children.push(...items.flat());},prepend(...items){this.children.unshift(...items);},replaceChildren(...items){this.children=[];this.append(...items);},closest(){return {after(){}};},after(){},querySelectorAll(selector){return walk(this).filter(n=>n.tag==='input'&&selector.includes('"'+n.name+'"')&&(!selector.includes(':checked')||n.checked));}};n.append(...children);if(tag==='select')n.value=n.children.find(c=>c.selected)?.value??n.children[0]?.value??'';if(n.id)ids.set(n.id,n);return n;}
+ function el(tag,attrs={},...children){const n={tag,value:'',children:[],hidden:false,...attrs,append(...items){this.children.push(...items.flat());},prepend(...items){this.children.unshift(...items);},get options(){return this.children;},replaceChildren(...items){this.children=[];this.append(...items);},closest(){return {after(){}};},after(){},querySelectorAll(selector){return walk(this).filter(n=>n.tag==='input'&&selector.includes('"'+n.name+'"')&&(!selector.includes(':checked')||n.checked));}};n.append(...children);if(tag==='select')n.value=n.children.find(c=>c.selected)?.value??n.children[0]?.value??'';if(n.id)ids.set(n.id,n);return n;}
  function walk(n){return [n,...(n.children||[]).flatMap(c=>typeof c==='object'?walk(c):[])];}
  const $=id=>{if(!ids.has(id))ids.set(id,el('div'));return ids.get(id);};
  const media={matches:true,addEventListener(){}},toolbar=el('div'),title=el('h1');
- const ctx={window:null,structuredClone,$,money:n=>'R$ '+n,num:n=>String(n),currentArea:0,searchLocation:null,searchMarker:null,mine:false,loadListings:()=>loads++,moveMapProgrammatically:()=>moves++,clearLocation:()=>ctx.TerraFilters.clearSpatial(),matchMedia:()=>media,document:{querySelector:selector=>selector==='.toolbar'?toolbar:title,addEventListener(){}},TerraUI:{el,field:(label,n)=>el('label',{},label,n),options:(values,value='')=>Object.entries(values).map(([key,label])=>({tag:'option',value:key,selected:key===value,children:[label]})),dialog:()=>lastPanel={node:{close(){}},content:el('div')},error:(form,e)=>{throw e;}}};ctx.window=ctx;vm.createContext(ctx);vm.runInContext(fs.readFileSync('dist/brand.js','utf8'),ctx);vm.runInContext(fs.readFileSync('dist/js/search/filters.js','utf8'),ctx);
+ const ctx={window:null,structuredClone,$,money:n=>'R$ '+n,num:n=>String(n),currentArea:0,drawing:false,searchLocation:null,searchMarker:null,mine:false,loadListings:()=>loads++,moveMapProgrammatically:()=>moves++,clearLocation:()=>ctx.TerraFilters.clearSpatial(),matchMedia:()=>media,document:{querySelector:selector=>selector==='.toolbar'?toolbar:title,addEventListener(){}},TerraUI:{el,field:(label,n)=>el('label',{},label,n),options:(values,value='')=>Object.entries(values).map(([key,label])=>({tag:'option',value:key,selected:key===value,children:[label]})),dialog:()=>lastPanel={node:{close(){}},content:el('div')},error:(form,e)=>{throw e;}}};ctx.window=ctx;vm.createContext(ctx);vm.runInContext(fs.readFileSync('dist/js/map/catalog.js','utf8'),ctx);vm.runInContext(fs.readFileSync('dist/brand.js','utf8'),ctx);vm.runInContext(fs.readFileSync('dist/js/search/filters.js','utf8'),ctx);
  return {api:ctx.TerraFilters,$,walk,get panel(){return lastPanel;},get loads(){return loads;},get moves(){return moves;}};
 }
 test('saved searches, viewport and interest geometry share one filter object and keep attribute filters',()=>{
@@ -34,4 +34,14 @@ test('property editor preserves zero rooms and the declared area separately from
 test('new property filters survive viewport updates and can be removed independently',()=>{
  const s=setup();s.api.applySaved({category:'apartamento',minBedrooms:2,minBathrooms:2,minParking:1,minBuiltArea:60});s.api.setViewport({west:-44,east:-43,south:-22,north:-21});assert.equal(s.api.get().minBedrooms,2);
  const chip=s.$('filter-chips').children.find(n=>n.children.some(c=>typeof c==='string'&&c.startsWith('Quartos:')));chip.onclick();assert.equal(s.api.get().minBedrooms,undefined);assert.equal(s.api.get().minParking,1);assert.equal(s.api.get().category,'apartamento');
+});
+
+test('colored type filter narrows categories, clears incompatible category and survives other filters',()=>{
+ const s=setup();s.api.applySaved({category:'casa',minPrice:50000,city:'Curitiba'});s.$('quick-type').onclick();
+ const form=s.panel.content.children[0],all=s.walk(form),commercial=all.find(n=>n.name==='property-group'&&n.value==='commercial');
+ commercial.onchange();form.onsubmit({preventDefault(){}});
+ assert.equal(s.api.get().propertyGroup,'commercial');assert.equal(s.api.get().category,undefined);assert.equal(s.api.get().minPrice,50000);
+ s.api.setViewport({west:-44,east:-43,south:-22,north:-21});assert.equal(s.api.get().propertyGroup,'commercial');
+ s.$('quick-type').onclick();const next=s.panel.content.children[0];assert.equal(s.walk(next).find(n=>n.name==='property-group'&&n.value==='commercial').checked,true);
+ s.walk(next).find(n=>n.name==='property-group'&&n.value==='').onchange();next.onsubmit({preventDefault(){}});assert.equal(s.api.get().propertyGroup,undefined);assert.equal(s.api.get().city,'Curitiba');
 });

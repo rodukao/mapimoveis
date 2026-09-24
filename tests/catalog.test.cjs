@@ -74,3 +74,15 @@ test('deselect clears selection and stale hover without rebuilding map layers',(
  c.deselect();assert.equal(c.selectedId,null);assert.equal(style.weight,3);assert.equal(classes.get('chosen'),false);assert.equal(classes.get('map-highlight'),false);assert.equal(z,0);assert.equal(c.layers.get('a'),layer);
  c.deselect();assert.equal(c.layers.size,1);
 });
+
+test('property colors remain in their family through hover, selection and deselection',()=>{
+ const lib=library();
+ for(const [category,group] of [['residencial','land'],['lote','land'],['casa','residential'],['apartamento','residential'],['sala_comercial','commercial'],['galpao','commercial']]){
+  assert.equal(lib.propertyGroup(category),group);let style;const c=lib.interactions();
+  c.register(category,{setStyle:s=>style=s,bringToFront(){}},null,null,category);
+  assert.equal(style.color,lib.propertyGroups[group].color);
+  c.highlightListing(category);assert.equal(style.color,lib.propertyGroups[group].hover);
+  c.selectListing(category);assert.equal(style.color,lib.propertyGroups[group].selected);
+  c.deselect();assert.equal(style.color,lib.propertyGroups[group].color);assert.equal(style.fillColor,style.color);
+ }
+});

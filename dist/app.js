@@ -58,6 +58,7 @@ function render() {
     const card = document.createElement('article');
     card.className = 'card';
     card.dataset.listingId = plot.id;
+    card.dataset.propertyGroup = TerraCatalogMap.propertyGroup(plot.category);
     card.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover)').matches) catalogMap.highlightListing(plot.id,'card'); });
     card.addEventListener('mouseleave', () => catalogMap.unhighlightListing(plot.id,'card'));
     card.addEventListener('focusin', () => catalogMap.highlightListing(plot.id,'focus'));
@@ -86,11 +87,11 @@ function render() {
     window.TerraMarketplace?.decorateCard(card,plot);
     $('cards').append(card);
     if (!drawing) {
-      const polygon = L.polygon(bounds(plot), {...catalogMap.styles.normal,bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
+      const polygon = L.polygon(bounds(plot), {...TerraCatalogMap.styleFor(plot.category),bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
       plotLayers.push(polygon);
-      const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin' + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => select(index,true));
+      const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin property-' + TerraCatalogMap.propertyGroup(plot.category) + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => select(index,true));
       markers.push(marker);
-      catalogMap.register(plot.id, polygon, card, marker);
+      catalogMap.register(plot.id, polygon, card, marker, plot.category);
     }
   });
   updateCatalogStatus();
@@ -125,7 +126,7 @@ function updateDraw() {
   vertices.forEach(vertex => vertex.remove());
   vertices = [];
   if (points.length) {
-    drawn = (points.length >= 3 ? L.polygon(points, { color: '#D97706', weight: 3, fillOpacity: .23, interactive:false }) : L.polyline(points, { color: '#D97706', weight: 3, interactive:false })).addTo(map);
+    drawn = (points.length >= 3 ? L.polygon(points, { color: TerraCatalogMap.styleFor($('category').value).color, weight: 3, fillOpacity: .23, interactive:false }) : L.polyline(points, { color: TerraCatalogMap.styleFor($('category').value).color, weight: 3, interactive:false })).addTo(map);
     window.TerraEditorTools?.renderHandles();
   }
   currentArea = measure(points);
@@ -256,7 +257,7 @@ map.on('click', event => {
 map.on('mousemove', event => {
   if (!drawing || saving || boundaryClosed || vertexDragging || points.length >= 3 || !points.length || !window.TerraMapTools?.canMapDraw()) return;
   if (ghost) ghost.remove();
-  ghost = L.polyline([points.at(-1), event.latlng], { color: '#D97706', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
+  ghost = L.polyline([points.at(-1), event.latlng], { color: TerraCatalogMap.styleFor($('category').value).color, weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
   $('distance').hidden = false;
   $('distance').textContent = num(map.distance(points.at(-1), event.latlng)) + ' m até o próximo ponto';
 });

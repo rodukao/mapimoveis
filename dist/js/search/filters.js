@@ -1,6 +1,7 @@
 window.TerraFilters = (() => {
   const {el,dialog,field,options,error,busy}=TerraUI;
   const categories={'':'Todos os tipos',casa:'Casa',apartamento:'Apartamento',cobertura:'Cobertura',sobrado:'Sobrado',sala_comercial:'Sala comercial',galpao:'Galpão',residencial:'Terreno urbano',lote:'Lote',condominio:'Condomínio',chacara:'Chácara',sitio:'Sítio',fazenda:'Fazenda',rural:'Área rural',comercial:'Área comercial',industrial:'Área industrial'};
+  const propertyGroups=TerraCatalogMap.propertyGroups;
   const topo={'':'Não informada',plano:'Plano',aclive:'Aclive',declive:'Declive',misto:'Misto'};
   const groups={infrastructure:{agua:'Água',energia:'Energia',esgoto:'Esgoto',asfalto:'Asfalto',internet:'Internet / fibra',calcada:'Calçada'},features:{esquina:'Esquina',murado:'Murado',cercado:'Cercado',nascente:'Nascente',vista:'Vista panorâmica'},documents:{escritura:'Escritura',matricula:'Matrícula',iptu:'IPTU',car:'CAR',ccir:'CCIR',sigef:'SIGEF'}};
   const labels=Object.assign({},...Object.values(groups));
@@ -27,6 +28,7 @@ window.TerraFilters = (() => {
     const range=(low,high,format)=>[low!==undefined?'de '+format(low):'',high!==undefined?'até '+format(high):''].filter(Boolean).join(' ');
     if(active.minPrice!==undefined||active.maxPrice!==undefined)add('Preço '+range(active.minPrice,active.maxPrice,money),['minPrice','maxPrice']);
     if(active.minArea!==undefined||active.maxArea!==undefined)add('Área '+range(active.minArea,active.maxArea,n=>num(n)+' m²'),['minArea','maxArea']);
+    if(active.propertyGroup)add(propertyGroups[active.propertyGroup]?.label || active.propertyGroup,['propertyGroup']);
     for(const [key,names] of [['category',categories],['topography',topo],['context',{urban:'Urbano',rural:'Rural'}]])if(active[key])add(names[active[key]], [key]);
     for(const key of Object.keys(groups))if(active[key]?.length)add(describe(active[key]),[key]);
     for(const [key,label] of [['minBedrooms','Quartos'],['minBathrooms','Banheiros'],['minParking','Vagas']])if(active[key]!==undefined)add(label+': '+active[key]+' ou mais',[key]);
@@ -44,9 +46,18 @@ window.TerraFilters = (() => {
     const areaMin=el('input',{type:'number',min:0,step:'any',value:f.minArea ?? ''}),areaMax=el('input',{type:'number',min:0,step:'any',value:f.maxArea ?? ''}),unit=el('select',{},options({'1':'m²','10000':'ha'}));
     let previousUnit=1;unit.onchange=()=>{for(const input of [areaMin,areaMax])if(input.value!=='')input.value=Number(input.value)*previousUnit/Number(unit.value);previousUnit=Number(unit.value);};
     const context=el('select',{},options({'':'Urbanos e rurais',urban:'Urbano',rural:'Rural'},f.context)),category=el('select',{},options(categories,f.category)),topography=el('select',{},options({...topo,'':'Qualquer topografia'},f.topography));
+    const typeChoices=el('fieldset',{class:'property-type-choices'},el('legend',{},'Tipo de imóvel'));
+    let selectedGroup=f.propertyGroup || '';
+    const refreshCategories=()=>{const previous=category.value;category.replaceChildren(...options(Object.fromEntries(Object.entries(categories).filter(([key])=>!key||!selectedGroup||propertyGroups[selectedGroup]?.categories.includes(key))),previous));if(![...category.options].some(option=>option.value===previous))category.value='';};
+    for(const [key,label] of [['','Todos os tipos'],...Object.entries(propertyGroups).map(([key,g])=>[key,g.label])]){
+      const radio=el('input',{type:'radio',name:'property-group',value:key,checked:selectedGroup===key});
+      radio.onchange=()=>{selectedGroup=key;refreshCategories();};
+      typeChoices.append(el('label',{'data-property-group':key},radio,el('span',{class:'property-type-dot','aria-hidden':'true'}),label));
+    }
+    refreshCategories();
     if(!scope||scope==='price')form.append(el('div',{class:'two-fields'},field('Preço mínimo (R$)',priceMin),field('Preço máximo (R$)',priceMax)));
     if(!scope||scope==='area')form.append(field('Unidade de área',unit),el('div',{class:'two-fields'},field('Área no mapa mínima',areaMin),field('Área no mapa máxima',areaMax)));
-    if(!scope||scope==='type')form.append(field('Contexto',context),field('Tipo',category));
+    if(!scope||scope==='type')form.append(typeChoices,field('Contexto',context),field('Categoria específica',category));
     const counts=Object.fromEntries([['minBedrooms','Quartos'],['minBathrooms','Banheiros'],['minParking','Vagas']].map(([key,label])=>[key,el('select',{},options({'':'Qualquer quantidade','1':'1 ou mais','2':'2 ou mais','3':'3 ou mais','4':'4 ou mais','5':'5 ou mais'},f[key]===undefined?'':String(f[key])))]));
     const builtMin=el('input',{type:'number',min:1,max:1000000,step:'any',value:f.minBuiltArea??''});
     if(!scope){
@@ -59,6 +70,7 @@ window.TerraFilters = (() => {
     form.append(el('button',{class:'primary full',type:'submit'},'Aplicar filtros'),el('button',{class:'full',type:'button',onclick:()=>{panel.node.close();$('reset').click();}},'Limpar filtros'));
     form.onsubmit=event=>{event.preventDefault();try{
       const next={...f};
+      if(!scope||scope==='type'){if(selectedGroup)next.propertyGroup=selectedGroup;else delete next.propertyGroup;}
       for(const [key,input,multiplier] of [['minPrice',priceMin,1],['maxPrice',priceMax,1],['minArea',areaMin,+unit.value],['maxArea',areaMax,+unit.value]]){
         if(input.value===''){delete next[key];continue;}const value=Number(input.value)*multiplier;if(!Number.isFinite(value)||value<0||value>1e12)throw new Error('Informe valores numéricos válidos.');next[key]=value;
       }
@@ -103,8 +115,8 @@ window.TerraFilters = (() => {
   extra.append(el('p',{class:'small'},`Informe apenas características que você conhece. A declaração não representa validação documental pelo ${APP_BRAND.name}.`));
   $('category').closest('label').after(extra);
   $('category').replaceChildren(...options(Object.fromEntries(Object.entries(categories).filter(([k])=>k))));
-  context.onchange=()=>{urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';if(context.value==='rural'&&!['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='rural';if(context.value==='urban'&&['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='residencial';updateArea();};
-  $('category').onchange=()=>{context.value=['rural','chacara','sitio','fazenda'].includes($('category').value)?'rural':'urban';urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';updateArea();};
+  context.onchange=()=>{urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';if(context.value==='rural'&&!['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='rural';if(context.value==='urban'&&['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='residencial';updateArea();if(drawing)updateDraw();};
+  $('category').onchange=()=>{context.value=['rural','chacara','sitio','fazenda'].includes($('category').value)?'rural':'urban';urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';updateArea();if(drawing)updateDraw();};
   function updateArea(){ $('rural-area').textContent='Área desenhada: '+(currentArea/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha'; }
   function fillEditor(plot){
     context.value=plot?.terrain_context || (['rural','chacara','sitio','fazenda'].includes(plot?.category)?'rural':'urban');topography.value=plot?.topography || '';
