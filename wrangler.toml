@@ -1,0 +1,10 @@
+name = "terramapa"
+main = "dist/server/index.js"
+compatibility_date = "2026-09-24"
+
+# Gerado por `node scripts/build-site.cjs` (ignorado pelo Git, igual ao processo já usado pelo projeto).
+# Nenhuma característica do site é alterada por este arquivo: ele só descreve como publicar
+# o Worker (server/site-worker.mjs) já existente para uma conta Cloudflare própria.
+
+[observability]
+enabled = true
