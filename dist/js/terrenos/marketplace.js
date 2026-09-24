@@ -186,6 +186,9 @@ window.TerraMarketplace = (() => {
     }catch(exception){advertiser.replaceChildren();error(advertiser,exception);}
     const similar=el('section',{},el('h3',{},'Imóveis semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
     try{const rows=await api.similar(plot);if(!similar.isConnected)return;similar.lastChild.remove();if(!rows.length)similar.append(el('p',{},'Ainda não há anúncios semelhantes disponíveis.'));else rows.forEach(row=>similar.append(miniCard(fromRow(row),()=>openById(row.id))));}catch(exception){similar.lastChild?.remove();error(similar,exception);}
+    // Sticky contact bar tracks the whole info column (not just this section) so it stays
+    // visible for the entire scroll, not only once the advertiser block is reached.
+    const footer=$('contact-footer');if(footer&&section.isConnected)section.parentElement?.append(footer);
   });
   async function comparison() {
     if(compared.size<2)return;
