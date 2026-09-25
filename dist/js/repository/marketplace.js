@@ -103,6 +103,7 @@ window.TerraMarketData = (() => {
   return {
     rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Informação temporariamente indisponível.');return result.data;},
     dashboard:()=>rpc('terra_professional_dashboard',{}),
+    mySubscription:()=>rpc('terra_my_subscription',{}),
     ownListings:async(query,status,offset=0)=>{let q=table('terra_listings').select(R.listFields,{count:'exact'}).eq('owner_id',(await R.user()).id).order('created_at',{ascending:false}).order('id',{ascending:false});if(status)q=q.eq('status',status);if(query)q=q.ilike('title','%'+query.replace(/[\\%_]/g,'\\$&')+'%');const result=await q.range(offset,offset+49);return {rows:await R.hydratePhotos(unwrap(result)),total:result.count};},
     requirePublishContact,get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',

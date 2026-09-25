@@ -1,6 +1,6 @@
 window.TerraAccount = (() => {
   const {el,dialog,error,busy,field,options}=TerraUI,api=TerraMarketData;
-  const tabs={overview:'Visão geral',listings:'Meus anúncios',favorites:'Favoritos',searches:'Buscas salvas',alerts:'Alertas',profile:'Perfil'};
+  const tabs={overview:'Visão geral',listings:'Meus anúncios',billing:'Plano e cobrança',favorites:'Favoritos',searches:'Buscas salvas',alerts:'Alertas',profile:'Perfil'};
   const accountLinks=el('div',{class:'account-links'});
   for(const [key,label] of Object.entries(tabs))accountLinks.append(el('button',{class:'full',onclick:()=>{$('auth-dialog').close();open(key);}},label));
   $('account-listings').replaceWith(accountLinks);
@@ -35,7 +35,7 @@ window.TerraAccount = (() => {
       if(!cached){
         const target=el('section');
         const entry={promise:null,node:null};
-        entry.promise=({overview:overview,listings:ownListings,favorites:favoriteListings,searches:savedSearches,alerts:notifications,profile:profileForm})[key](target,panel).then(()=>{entry.node=target;return target;});
+        entry.promise=({overview:overview,listings:ownListings,billing:billingSection,favorites:favoriteListings,searches:savedSearches,alerts:notifications,profile:profileForm})[key](target,panel).then(()=>{entry.node=target;return target;});
         sections.set(key,entry);
       }
       try{const target=await sections.get(key).promise;if(current===sequence&&panel.node.open){body.replaceChildren(target);body.scrollTop=0;}}catch(exception){sections.delete(key);if(current===sequence){selected=null;body.replaceChildren();error(body,exception);}}
@@ -54,11 +54,13 @@ window.TerraAccount = (() => {
     if(!data.top.length)target.append(el('p',{},'Ainda não há interações no período.'));
     for(const row of data.top){const button=el('button',{class:'mini-card',onclick:()=>{panel.node.close();TerraMarketplace.openById(row.id);}},el('strong',{},row.title||'Anúncio sem título'),el('span',{},`${row.contacts} contatos · ${row.favorites} favoritos · ${row.views} visualizações`));target.append(button);}
   }
+  async function billingSection(target,panel){await TerraLazy.load('billing');return TerraBilling.planTab(target,panel);}
   async function ownListings(target,panel){
     let offset=0,sequence=0,timer;const query=el('input',{type:'search',placeholder:'Buscar anúncio…','aria-label':'Buscar anúncio',maxLength:100}),filter=el('select',{'aria-label':'Filtrar situação'},options({'':'Todos',published:'Ativos',reserved:'Reservados',sold:'Vendidos',paused:'Pausados',draft:'Rascunhos'})),list=el('div'),more=el('button',{class:'full'},'Carregar mais anúncios');target.append(el('div',{class:'management-filters'},query,filter),list,more);
     async function load(reset=false){const run=++sequence;if(reset)offset=0;const startOffset=offset,result=await api.ownListings(query.value.trim(),filter.value,startOffset);if(run!==sequence)return;const plots=result.rows.map(fromRow);if(reset)list.replaceChildren();offset=startOffset+plots.length;
       for(const plot of plots){const item=el('article',{class:'account-item'},TerraMarketplace.miniCard(plot,()=>{panel.node.close();TerraMarketplace.openById(plot.id);}),el('p',{class:'status-label'},TerraMarketplace.statuses[plot.status])),actions=el('div',{class:'row-actions'});
         actions.append(el('button',{onclick:()=>{panel.node.close();start(plot);if(plot.points.length)moveMapProgrammatically('fitBounds',plot.points,{padding:[25,25],maxZoom:18});}},'Editar'),el('button',{onclick:()=>TerraMarketplace.share(plot)},'Compartilhar'));
+        if(!['draft','sold'].includes(plot.status))actions.append(el('button',{onclick:()=>TerraLazy.load('billing').then(()=>TerraBilling.boostModal(plot)).catch(e=>error(item,e))},plot.boosted_until&&new Date(plot.boosted_until)>new Date()?'Destaque ativo':'Impulsionar'));
         for(const [status,label] of [['reserved','Reservar'],['paused','Pausar'],['sold','Marcar vendido'],['published','Publicar']]){if(status===plot.status)continue;const button=el('button',{},label);button.onclick=()=>busy(button,async()=>{const changed=await api.status(plot,status);plot.revision=changed.revision;plot.status=changed.status;panel.invalidate('overview');await load(true);await loadListings();toast('Situação atualizada.');},item);actions.append(button);}item.append(actions);list.append(item);
       }
       if(!offset)list.append(el('p',{class:'empty-message'},'Nenhum anúncio encontrado com esses filtros.'));more.hidden=offset>=result.total;
