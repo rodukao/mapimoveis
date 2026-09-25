@@ -60,7 +60,12 @@ window.TerraAccount = (() => {
     async function load(reset=false){const run=++sequence;if(reset)offset=0;const startOffset=offset,result=await api.ownListings(query.value.trim(),filter.value,startOffset);if(run!==sequence)return;const plots=result.rows.map(fromRow);if(reset)list.replaceChildren();offset=startOffset+plots.length;
       for(const plot of plots){const item=el('article',{class:'account-item'},TerraMarketplace.miniCard(plot,()=>{panel.node.close();TerraMarketplace.openById(plot.id);}),el('p',{class:'status-label'},TerraMarketplace.statuses[plot.status])),actions=el('div',{class:'row-actions'});
         actions.append(el('button',{onclick:()=>{panel.node.close();start(plot);if(plot.points.length)moveMapProgrammatically('fitBounds',plot.points,{padding:[25,25],maxZoom:18});}},'Editar'),el('button',{onclick:()=>TerraMarketplace.share(plot)},'Compartilhar'));
-        if(!['draft','sold'].includes(plot.status))actions.append(el('button',{onclick:()=>TerraLazy.load('billing').then(()=>TerraBilling.boostModal(plot)).catch(e=>error(item,e))},plot.boosted_until&&new Date(plot.boosted_until)>new Date()?'Destaque ativo':'Impulsionar'));
+        if(!['draft','sold'].includes(plot.status)){
+          actions.append(el('button',{onclick:()=>TerraLazy.load('billing').then(()=>TerraBilling.boostModal(plot)).catch(e=>error(item,e))},plot.boosted_until&&new Date(plot.boosted_until)>new Date()?'Destaque ativo':'Impulsionar'));
+          const renew=el('button',{},'Renovar');
+          renew.onclick=()=>busy(renew,async()=>{const r=await api.renew(plot.id);plot.renewed_at=r.renewed_at;toast('Anúncio renovado por 30 dias.');},item);
+          actions.append(renew);
+        }
         for(const [status,label] of [['reserved','Reservar'],['paused','Pausar'],['sold','Marcar vendido'],['published','Publicar']]){if(status===plot.status)continue;const button=el('button',{},label);button.onclick=()=>busy(button,async()=>{const changed=await api.status(plot,status);plot.revision=changed.revision;plot.status=changed.status;panel.invalidate('overview');await load(true);await loadListings();toast('Situação atualizada.');},item);actions.append(button);}item.append(actions);list.append(item);
       }
       if(!offset)list.append(el('p',{class:'empty-message'},'Nenhum anúncio encontrado com esses filtros.'));more.hidden=offset>=result.total;
@@ -95,7 +100,10 @@ window.TerraAccount = (() => {
     let offset=0;const more=el('button',{class:'full'},'Carregar mais alertas');
     async function load(){
       const rows=await api.notifications(offset);offset+=rows.length;
-      for(const row of rows){const button=el('button',{class:'notification'+(row.is_read?'':' unread')},el('strong',{},'Novo terreno para '+(row.terra_saved_searches?.name || 'sua busca')),el('small',{},new Date(row.created_at).toLocaleString('pt-BR')));button.onclick=()=>busy(button,async()=>{await api.readNotification(row.id);panel.node.close();updateBadge();TerraMarketplace.openById(row.listing_id);},target);target.insertBefore(button,more.parentElement?more:null);}
+      for(const row of rows){
+        const title=row.terra_listings?.title||'Seu anúncio';
+        const label=row.kind==='listing_expiring'?`"${title}" expira em breve — toque em Renovar em Meus anúncios`:row.kind==='listing_paused'?`"${title}" foi pausado por falta de renovação`:'Novo terreno para '+(row.terra_saved_searches?.name || 'sua busca');
+        const button=el('button',{class:'notification'+(row.is_read?'':' unread')},el('strong',{},label),el('small',{},new Date(row.created_at).toLocaleString('pt-BR')));button.onclick=()=>busy(button,async()=>{await api.readNotification(row.id);panel.node.close();updateBadge();TerraMarketplace.openById(row.listing_id);},target);target.insertBefore(button,more.parentElement?more:null);}
       if(!offset)target.append(el('p',{},'Nenhum alerta por enquanto. Ative alertas em uma busca salva para acompanhar novos anúncios.'));more.hidden=rows.length<50;
     }
     await load();more.onclick=()=>busy(more,load,target);target.append(more);
