@@ -54,7 +54,7 @@ window.TerraMarketData = (() => {
     const {el,field,dialog,busy}=TerraUI,panel=dialog('Cadastre seu WhatsApp para publicar');
     const phone=el('input',{type:'tel',inputMode:'tel',autocomplete:'tel',required:true,maxLength:20,value:contact?.phone||'',placeholder:'32 99999-9999'});
     const submit=el('button',{type:'submit',class:'primary full'},'Salvar WhatsApp e continuar');
-    const form=el('form',{},el('p',{},'O WhatsApp é a única forma de contato com anunciantes no TerraMapa. Cadastre um número que possa receber mensagens dos interessados.'),field('WhatsApp com DDD',phone),el('p',{class:'small'},'Seu número permanece fora do perfil público e só é liberado pelo botão de contato. Se preferir cadastrar depois, feche esta janela e salve o anúncio como rascunho.'),submit);panel.content.append(form);
+    const form=el('form',{},el('p',{},'O WhatsApp é a única forma de contato com anunciantes no Terra à Vista Imóveis. Cadastre um número que possa receber mensagens dos interessados.'),field('WhatsApp com DDD',phone),el('p',{class:'small'},'Seu número permanece fora do perfil público e só é liberado pelo botão de contato. Se preferir cadastrar depois, feche esta janela e salve o anúncio como rascunho.'),submit);panel.content.append(form);
     return new Promise((resolve,reject)=>{
       let saved=false;
       panel.node.addEventListener('close',()=>{if(!saved)reject(Error('Publicação não concluída. Cadastre o WhatsApp ou salve como rascunho.'));},{once:true});

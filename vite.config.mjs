@@ -26,7 +26,7 @@ export default defineConfig(({mode})=>{
           const size=sizes[url.searchParams.get('size')]||sizes['360x800'];
           const src=url.searchParams.get('view')==='account'?'/__qa__/account':url.searchParams.get('view')==='feedback'?'/__qa__/feedback':url.searchParams.get('view')==='professionals'?'/profissionais':url.searchParams.get('view')==='media'?'/__qa__/media':'/__qa__/production';
           res.setHeader('Content-Type','text/html; charset=utf-8');
-          res.end(`<!doctype html><html lang="pt-BR"><title>TerraMapa — QA de viewport</title><body style="margin:0;background:#ddd"><iframe title="TerraMapa ${size.join('×')}" src="${src}" width="${size[0]}" height="${size[1]}" style="display:block;border:0"></iframe></body></html>`);return;
+          res.end(`<!doctype html><html lang="pt-BR"><title>Terra à Vista Imóveis — QA de viewport</title><body style="margin:0;background:#ddd"><iframe title="Terra à Vista Imóveis ${size.join('×')}" src="${src}" width="${size[0]}" height="${size[1]}" style="display:block;border:0"></iframe></body></html>`);return;
         }
         if(url.pathname==='/config.js'&&env.E2E_SUPABASE_URL){
           if(!env.E2E_SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_')){

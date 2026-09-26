@@ -3,25 +3,25 @@
   "scripts": [
     {
       "file": "brand.js",
-      "bytes": 679,
-      "gzip": 431
+      "bytes": 703,
+      "gzip": 443
     },
     {
       "file": "supabase.js",
-      "bytes": 186617,
-      "gzip": 48228
+      "bytes": 186640,
+      "gzip": 48243
     },
     {
       "file": "leaflet.js",
-      "bytes": 147552,
-      "gzip": 42706
+      "bytes": 147557,
+      "gzip": 42715
     },
     {
       "file": "assets/core.js",
-      "bytes": 145558,
-      "gzip": 43718
+      "bytes": 147769,
+      "gzip": 44012
     }
   ],
-  "total_bytes": 480406,
-  "total_gzip": 135083
+  "total_bytes": 482669,
+  "total_gzip": 135413
 }

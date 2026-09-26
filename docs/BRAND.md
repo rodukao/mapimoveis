@@ -1,6 +1,6 @@
-# TerraMapa — identidade 1.1.0
+# Terra à Vista Imóveis — identidade 2.0.0
 
-Assinatura: **Terrenos de verdade, vistos no mapa.**
+Rebrand de TerraMapa para Terra à Vista Imóveis em 25/09/2026, a partir de logo fornecida pelo usuário. Assinatura: **Seu próximo imóvel, à vista.** Ver `docs/BRAND_IDENTITY.md` para símbolo, cores e inventário de arquivos.
 
 `dist/brand.js` é a fonte de identidade, versão, domínio pretendido e origem ativa. O frontend usa `APP_BRAND`; o build resolve os marcadores de HTML/manifest e incorpora a mesma configuração no Worker. As imagens são ativos editoriais que precisam ser atualizados junto da marca.
 
@@ -8,6 +8,6 @@ A origem publicada continua `https://terramapa.danielleczfranco.chatgpt.site`. `
 
 Banco `terra_*`, permissões, proprietários, arquivos e identificadores JavaScript internos foram preservados. Anúncios privados continuam sem preview e sem indexação. A página `/profissionais` apresenta somente recursos existentes.
 
-E-mails: não foi possível inspecionar ou editar os templates atuais pelo conector disponível. Ao configurar SMTP, usar remetente TerraMapa; em Authentication → Email Templates, revisar nome e assuntos mantendo os links e variáveis de confirmação originais. SMTP, remetente verificado e revisão jurídica continuam pendentes; esta entrega não os configura.
+E-mails: não foi possível inspecionar ou editar os templates atuais pelo conector disponível. Ao configurar SMTP, usar remetente Terra à Vista Imóveis; em Authentication → Email Templates, revisar nome e assuntos mantendo os links e variáveis de confirmação originais. SMTP, remetente verificado e revisão jurídica continuam pendentes; esta entrega não os configura.
 
-Validação: 77 testes JavaScript aprovados, incluindo privacidade do preview e autenticação; build e respostas do Worker para início, Privacidade, Termos, Profissionais e manifest verificados sem marcadores pendentes. Não houve alteração de schema nem repetição dos testes SQL. Não foi realizado novo QA de navegador real nesta mudança de marca.
+Validação: ver seção de testes deste rebrand. Não houve alteração de schema, autenticação, permissões ou regras de contato.

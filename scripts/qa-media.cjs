@@ -13,7 +13,7 @@ module.exports=()=>{
  const $=id=>document.getElementById(id),drawing=false,currentSession=null,num=n=>String(n),money=n=>'R$ '+n,unitMoney=n=>'R$ '+n;
  const TerraPhotos={bind(img,p){img.src=p.url;img._terraPhoto={};}};
  </script><script src="/js/video.js"></script><script src="/detail.js"></script><script>
- const sample={id:'fixture',title:'Imóvel de demonstração',tag:'Terreno',address:'Juiz de Fora · MG',price:100000,area:500,description:'Galeria de teste',details:{youtube_video_id:'M7lc1UVf-VE'},photos:[{url:'/og.png',alt_text:'Imagem de demonstração'},{url:'/icon-512.png',alt_text:'Marca TerraMapa'}]};
+ const sample={id:'fixture',title:'Imóvel de demonstração',tag:'Terreno',address:'Juiz de Fora · MG',price:100000,area:500,description:'Galeria de teste',details:{youtube_video_id:'M7lc1UVf-VE'},photos:[{url:'/og.png',alt_text:'Imagem de demonstração'},{url:'/icon-512.png',alt_text:'Marca Terra à Vista Imóveis'}]};
  $('mixed').onclick=()=>showDetail(sample);$('video-only').onclick=()=>showDetail({...sample,photos:[]});$('empty').onclick=()=>showDetail({...sample,photos:[],details:{}});
  TerraVideo.bindEditor();$('restore-video').onclick=()=>TerraVideo.fillEditor(sample.details);
  $('fixture-editor').onsubmit=e=>{e.preventDefault();try{$('fixture-result').textContent=TerraVideo.editorId()||'Sem vídeo';}catch(err){$('fixture-result').textContent=err.message;}};

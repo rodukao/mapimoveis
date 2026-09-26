@@ -1,12 +1,12 @@
 /* Shared map interaction state. Neither hover nor selection rebuilds a layer. */
 (function(root) {
   const styles = {
-    normal: {color:'#F59E0B',weight:3,opacity:1,fillOpacity:.14},
-    hover: {color:'#EA580C',weight:5,opacity:1,fillOpacity:.24},
-    selected: {color:'#C2410C',weight:6,opacity:1,fillOpacity:.28}
+    normal: {color:'#D9751E',weight:3,opacity:1,fillOpacity:.14},
+    hover: {color:'#B9641A',weight:5,opacity:1,fillOpacity:.24},
+    selected: {color:'#A35817',weight:6,opacity:1,fillOpacity:.28}
   };
   const propertyGroups = {
-    land:{label:'Terreno',color:'#F59E0B',hover:'#EA580C',selected:'#C2410C',categories:['residencial','lote','condominio','chacara','sitio','fazenda','rural']},
+    land:{label:'Terreno',color:'#D9751E',hover:'#B9641A',selected:'#A35817',categories:['residencial','lote','condominio','chacara','sitio','fazenda','rural']},
     residential:{label:'Imóvel Residencial',color:'#22C55E',hover:'#16A34A',selected:'#15803D',categories:['casa','apartamento','cobertura','sobrado']},
     commercial:{label:'Imóvel Comercial',color:'#3B82F6',hover:'#2563EB',selected:'#1D4ED8',categories:['sala_comercial','galpao','comercial','industrial']}
   };
