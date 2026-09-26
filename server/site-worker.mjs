@@ -32,7 +32,7 @@ export function createWorker(assets,version){
   if(!['GET','HEAD'].includes(request.method))return reply('Method not allowed',405,'text/plain');
   if(APP_BRAND.redirectLegacy&&ORIGIN===APP_BRAND.targetOrigin&&url.origin===APP_BRAND.legacyOrigin&&!url.searchParams.has('code')&&!url.searchParams.has('recovery'))return new Response(null,{status:308,headers:{Location:ORIGIN+url.pathname+url.search,'Cache-Control':'public, max-age=300'}});
   if(path==='/version.json')return reply(JSON.stringify(version),200,'application/json');
-  if(path==='/robots.txt')return reply(`User-agent: *\nAllow: /\nDisallow: /*?recovery=\nDisallow: /*?code=\nSitemap: ${ORIGIN}/sitemap.xml\n`,200,'text/plain');
+  if(path==='/robots.txt')return reply(`User-agent: *\nAllow: /\nDisallow: /*?recovery=\nDisallow: /*?code=\nDisallow: /*?checkout=\nDisallow: /*?boost=\nSitemap: ${ORIGIN}/sitemap.xml\n`,200,'text/plain');
   if(path==='/sitemap.xml')return reply('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/privacidade','/termos','/profissionais'].map(p=>`<url><loc>${ORIGIN}${p}</loc></url>`).join('')+'</urlset>',200,'application/xml');
   let asset=path==='/'?'/index.html':path;
   if(['/privacidade','/termos','/profissionais'].includes(path))asset=path+'/index.html';

@@ -9,7 +9,7 @@
   const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
   const PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const PHOTO_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at,terrain_context,topography,infrastructure,features,documents,details';
+  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at,terrain_context,topography,infrastructure,features,documents,details,boosted_until,renewed_at';
   const photoFields = 'terra_listing_photos(id,listing_id,storage_path,alt_text,sort_order,created_at)';
   const listFields = `${fields},${photoFields}`;
   let client = null;

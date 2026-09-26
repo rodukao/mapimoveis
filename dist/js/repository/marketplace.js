@@ -103,6 +103,8 @@ window.TerraMarketData = (() => {
   return {
     rayx: async listingId => {const result=await R.db().functions.invoke('terra-rayx',{body:{listingId}});if(result.error)throw new Error('Informação temporariamente indisponível.');return result.data;},
     dashboard:()=>rpc('terra_professional_dashboard',{}),
+    mySubscription:()=>rpc('terra_my_subscription',{}),
+    renew:id=>rpc('terra_renew_listing',{p_listing:id}),
     ownListings:async(query,status,offset=0)=>{let q=table('terra_listings').select(R.listFields,{count:'exact'}).eq('owner_id',(await R.user()).id).order('created_at',{ascending:false}).order('id',{ascending:false});if(status)q=q.eq('status',status);if(query)q=q.ilike('title','%'+query.replace(/[\\%_]/g,'\\$&')+'%');const result=await q.range(offset,offset+49);return {rows:await R.hydratePhotos(unwrap(result)),total:result.count};},
     requirePublishContact,get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
@@ -115,7 +117,7 @@ window.TerraMarketData = (() => {
     editSearch: async (id,patch) => unwrap(await table('terra_saved_searches').update(patch).eq('id',id).eq('user_id',(await R.user()).id)),
     deleteSearch: async id => unwrap(await table('terra_saved_searches').delete().eq('id',id).eq('user_id',(await R.user()).id)),
     unreadCount: async () => {const result=await table('terra_notifications').select('id',{head:true,count:'exact'}).eq('user_id',(await R.user()).id).eq('is_read',false);unwrap(result);return result.count;},
-    notifications: async (offset=0) => unwrap(await table('terra_notifications').select('id,listing_id,search_id,is_read,created_at,terra_saved_searches(name)').eq('user_id',(await R.user()).id).order('created_at',{ascending:false}).range(offset,offset+49)),
+    notifications: async (offset=0) => unwrap(await table('terra_notifications').select('id,listing_id,search_id,kind,is_read,created_at,terra_saved_searches(name),terra_listings(title)').eq('user_id',(await R.user()).id).order('created_at',{ascending:false}).range(offset,offset+49)),
     readNotification: async id => unwrap(await table('terra_notifications').update({is_read:true}).eq('id',id).eq('user_id',(await R.user()).id))
   };
 })();

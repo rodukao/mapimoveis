@@ -9,7 +9,7 @@ walk(out);
 // A release label can be reused; an immutable asset URL must change with its content.
 version.assetVersion=crypto.createHash('sha256').update(JSON.stringify(assets)).update(fs.readFileSync(__filename)).digest('hex').slice(0,16);
 // Dependency-free classic-script bundles: preserve global lexical bindings, no framework migration.
-const groups={account:['js/account/panel.js'],admin:['js/account/admin.js'],feedback:['js/account/feedback.js'],operations:['js/account/operations.js'],photos:['js/photo-processing.js'],geometry:['js/map/geometry.js'],editor:['js/map/editor.js']};
+const groups={account:['js/account/panel.js'],admin:['js/account/admin.js'],feedback:['js/account/feedback.js'],operations:['js/account/operations.js'],billing:['js/account/billing.js'],photos:['js/photo-processing.js'],geometry:['js/map/geometry.js'],editor:['js/map/editor.js']};
 const bundles=Object.fromEntries(Object.keys(groups).map(key=>[key,['assets/'+key+'.js']]));
 function bundle(name,files,prefix=''){const content=prefix+files.map(file=>';\n'+fs.readFileSync(path.join(out,file),'utf8')+'\n').join('');assets['/assets/'+name+'.js']={type:mime['.js'],data:Buffer.from(content).toString('base64')};fs.mkdirSync(path.join(out,'assets'),{recursive:true});fs.writeFileSync(path.join(out,'assets',name+'.js'),content);}
 for(const [name,files] of Object.entries(groups))bundle(name,files);

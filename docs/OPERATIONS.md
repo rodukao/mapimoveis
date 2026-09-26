@@ -24,6 +24,28 @@ O domínio autorizado é `terramapa.danielleczfranco.chatgpt.site`. Para outra h
 
 Limites atuais por conta: contato 20/h e 60/dia; denúncias 10/h e 20/dia; novos anúncios 20/h e 100/dia; chamadas sensíveis selecionadas 120/h e 500/dia. Após 5 contatos, 3 denúncias, 5 criações ou 60 chamadas sensíveis em uma hora, exige-se um desafio por próxima operação. Limites diários usam UTC. Ajustar somente com evidência de uso legítimo e revisar os testes SQL.
 
+## Planos e cobrança (Stripe)
+
+Contas grátis (Básica) publicam até 5 anúncios ativos (`published`/`reserved`/`paused`); Plus (R$29/mês) até 10; Pro (R$79/mês) até 50 — um limite técnico de segurança, não comercializado como "ilimitado". Acima de 50, a mensagem de erro direciona para um plano Empresas sob consulta (sem checkout self-service). O impulsionamento avulso (R$14,90 = 7 dias de destaque na busca) fica disponível para qualquer anúncio ativo; comprar de novo enquanto já está em destaque estende o prazo em vez de resetar.
+
+Em Supabase → Edge Functions → Secrets, cadastre:
+
+- `STRIPE_SECRET_KEY` — chave secreta da conta Stripe (`sk_test_...` em teste, `sk_live_...` em produção). Sem ela, `terra-billing` responde 503 antes de qualquer chamada à Stripe.
+- `STRIPE_WEBHOOK_SECRET` — segredo de assinatura do endpoint de webhook, gerado ao cadastrar o endpoint no painel Stripe (ou pelo script `scripts/stripe-setup.mjs`, veja abaixo). Sem ele, `terra-billing-webhook` responde 503 e nunca processa um evento não verificado.
+- `STRIPE_PRICE_PLUS`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BOOST` — IDs de preço (`price_...`) dos três produtos. Sem eles, a operação correspondente em `terra-billing` responde 503.
+
+No painel Stripe, cadastre o endpoint de webhook em `https://<project-ref>.supabase.co/functions/v1/terra-billing-webhook` com os eventos `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` e `customer.subscription.deleted`. Configure quais métodos de pagamento valem para assinatura (cartão + Pix — boleto não é indicado para cobrança recorrente) e para o impulsionamento avulso (cartão + Pix + boleto, sem restrição por ser pagamento único).
+
+### Automação com `scripts/stripe-setup.mjs`
+
+Roda localmente com `STRIPE_SECRET_KEY` no ambiente e cria (de forma idempotente, com `Idempotency-Key`) os Products/Prices de Plus, Pro e Boost, além do endpoint de webhook — sem precisar clicar no painel. Ao final, imprime os 5 valores prontos para colar nos secrets acima:
+
+```sh
+STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.mjs
+```
+
+Rode primeiro em modo teste (`sk_test_...`); repita com a chave `sk_live_...` só quando for para produção — o script é seguro de rodar de novo (reaproveita produtos/preços existentes em vez de duplicar).
+
 O catálogo continua público. A liberação de WhatsApp exige login, sessão ativa e anúncio elegível; o servidor registra o lead antes de retornar o contato. As chamadas de Raio-X sem cache têm orçamento compartilhado de 30 análises por anúncio/hora. Isso reduz abuso, mas não substitui monitoramento de tráfego nem proteção de infraestrutura.
 
 ## Exclusão de conta
