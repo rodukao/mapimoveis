@@ -3,8 +3,8 @@
   "scripts": [
     {
       "file": "brand.js",
-      "bytes": 703,
-      "gzip": 443
+      "bytes": 694,
+      "gzip": 438
     },
     {
       "file": "supabase.js",
@@ -18,10 +18,10 @@
     },
     {
       "file": "assets/core.js",
-      "bytes": 147769,
-      "gzip": 44012
+      "bytes": 148691,
+      "gzip": 44259
     }
   ],
-  "total_bytes": 482669,
-  "total_gzip": 135413
+  "total_bytes": 483582,
+  "total_gzip": 135655
 }

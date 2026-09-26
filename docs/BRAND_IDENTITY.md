@@ -1,17 +1,16 @@
-# Terra à Vista Imóveis — identidade 2.0
+# Terra à Vista — identidade 2.1
 
-Rebrand de TerraMapa para Terra à Vista Imóveis (logo fornecida pelo usuário em 25/09/2026). Símbolo: telhado/parcela superior laranja e duas parcelas inferiores verde-escuro, separadas por limites em negativo — mesma lógica de território em partes do símbolo anterior, recor­tada da arte enviada e convertida em caminhos SVG. Verde institucional #164018, laranja #D9751E, vermelho de apoio #BF300F (usado no "IMÓVEIS" do lockup e como estado ativo/selecionado da UI). Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
+Rebrand de TerraMapa para Terra à Vista (logo fornecida pelo usuário em 25/09/2026, revisada em 26/09/2026 removendo a palavra "Imóveis" do lockup). Wordmark "TERRAÀVISTA!" em verde institucional #164018, com um símbolo em formato de crachá/pin no lugar do acento do "À", em âmbar #F59E0B com contorno branco. Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
 
 ## Arquivos
 
-- `dist/logo.svg`: símbolo + wordmark "TERRAÀVISTA! IMÓVEIS", extraído da arte vetorial original enviada pelo usuário (viewBox recortado no bbox real do conteúdo); independente de fontes instaladas.
-- `dist/brand/symbol.svg`: símbolo isolado.
-- `dist/brand/logo-reversed.svg`: versão com o verde e o wordmark trocados por branco, mantendo laranja e vermelho, para fundo verde-escuro ou escuro.
-- `dist/favicon.svg`: símbolo isolado para tamanhos pequenos.
+- `dist/logo.svg`: wordmark "TERRAÀVISTA!" com o símbolo substituindo o acento do À, extraído da arte vetorial enviada pelo usuário (viewBox recortado no bbox real do conteúdo); independente de fontes instaladas.
+- `dist/brand/symbol.svg` e `dist/favicon.svg`: símbolo isolado (o crachá/pin âmbar), para uso em tamanhos pequenos ou quando o nome não couber.
+- `dist/brand/logo-reversed.svg`: versão com o wordmark trocado por branco, mantendo o âmbar do símbolo, para fundo verde-escuro ou escuro.
 - PNGs de 64, 180, 192 e 512 px derivados do SVG; PWA e Apple.
 - `dist/brand/social.svg` e `dist/og.png`: aplicação institucional para compartilhamento (1200×630).
 
-Preservar proporção e cores do símbolo. Não comprimir horizontalmente nem adicionar sombra ao símbolo. Usar símbolo isolado quando o nome não puder ser lido confortavelmente. O SVG completo é apropriado para materiais comerciais.
+Preservar proporção e cores do símbolo. Não comprimir horizontalmente nem adicionar sombra. O SVG completo é apropriado para materiais comerciais.
 
 Pendência de infraestrutura (fora do escopo desta troca visual): `dist/brand.js` mantém `slug`, `domain`, `origin` e `legacyOrigin` apontando para `terramapa.*` até uma decisão sobre migrar o domínio/nome técnico para refletir "Terra à Vista" — mudar isso envolve DNS, TLS e os redirects de Auth no Supabase.
 

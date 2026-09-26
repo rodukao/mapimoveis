@@ -1,4 +1,4 @@
-// Configuração pública do projeto Terra à Vista Imóveis.
+// Configuração pública do projeto Terra à Vista.
 // NUNCA colocar secret key, service_role, senha do banco ou token de acesso aqui.
 window.TERRA_CONFIG = Object.freeze({
   supabaseUrl: 'https://pkofzhlcbqupanzydyyf.supabase.co',

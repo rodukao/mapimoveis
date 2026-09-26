@@ -1,4 +1,4 @@
-# Terra à Vista Imóveis
+# Terra à Vista
 
 Site de anúncios de terrenos com mapa, cadastro de contas, desenho dos limites, cálculo de área no PostGIS, fotos no Supabase Storage, galeria e visualização ampliada.
 
