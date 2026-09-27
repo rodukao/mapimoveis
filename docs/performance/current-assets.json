@@ -18,10 +18,10 @@
     },
     {
       "file": "assets/core.js",
-      "bytes": 154901,
-      "gzip": 46190
+      "bytes": 155034,
+      "gzip": 46221
     }
   ],
-  "total_bytes": 489952,
-  "total_gzip": 137672
+  "total_bytes": 490085,
+  "total_gzip": 137703
 }
