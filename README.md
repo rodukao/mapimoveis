@@ -2,7 +2,7 @@
 
 Site de anúncios de terrenos com mapa, cadastro de contas, desenho dos limites, cálculo de área no PostGIS, fotos no Supabase Storage, galeria e visualização ampliada.
 
-Site atual: https://terramapa.danielleczfranco.chatgpt.site
+Site atual: https://terramapa.rodukao.workers.dev (Cloudflare Workers, `npm run deploy`). Domínio pretendido: terraavistaimoveis.com.br — ver [docs/DOMAIN-ROLLOUT.md](docs/DOMAIN-ROLLOUT.md).
 
 Esta versão inclui favoritos, painel da conta, filtros avançados, comparação e ferramentas geográficas. As migrações foram autorizadas, aplicadas e verificadas no projeto existente. Consulte [o estado da entrega e as pendências](docs/ROADMAP_STATUS.md).
 

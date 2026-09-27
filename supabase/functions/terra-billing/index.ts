@@ -1,7 +1,7 @@
 // Creates Stripe Checkout/Billing Portal sessions. The Stripe secret key never leaves
 // this Edge runtime — the browser only ever receives a redirect URL.
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.danielleczfranco.chatgpt.site').split(',').map(x=>x.trim());
+const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.rodukao.workers.dev').split(',').map(x=>x.trim());
 const headers={'Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
 function key(jsonName,legacy){const value=Deno.env.get(jsonName);return (value?JSON.parse(value).default:null)||Deno.env.get(legacy);}
 async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(15000)});}

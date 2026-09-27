@@ -30,6 +30,11 @@ for(const [name,asset] of Object.entries(assets))if(name.endsWith('.html')){
  });
  asset.data=Buffer.from(markup).toString('base64');
 }
+// Stylesheet font/image URLs must match the versioned HTML preloads, or the browser downloads them twice.
+for(const [name,asset] of Object.entries(assets))if(name.endsWith('.css')){
+ const css=Buffer.from(asset.data,'base64').toString().replace(/url\((['"]?)(\/[^'")?#]+)(?:\?[^'")#]*)?\1\)/g,(match,quote,pathname)=>assets[pathname]?'url('+quote+pathname+'?v='+version.assetVersion+quote+')':match);
+ asset.data=Buffer.from(css).toString('base64');
+}
 const zlib=require('node:zlib');const initial=['brand.js','supabase.js','leaflet.js','assets/core.js'].map(file=>{const data=Buffer.from(assets['/'+file].data,'base64');return {file,bytes:data.length,gzip:zlib.gzipSync(data).length};});
 fs.mkdirSync(path.join(root,'docs/performance'),{recursive:true});fs.writeFileSync(path.join(root,'docs/performance/current-assets.json'),JSON.stringify({version:version.version,scripts:initial,total_bytes:initial.reduce((sum,x)=>sum+x.bytes,0),total_gzip:initial.reduce((sum,x)=>sum+x.gzip,0)},null,2)+'\n');
 const source=fs.readFileSync(path.join(root,'server/site-worker.mjs'),'utf8').replace("import '../dist/brand.js';",fs.readFileSync(path.join(out,'brand.js'),'utf8')).replaceAll('export ','');

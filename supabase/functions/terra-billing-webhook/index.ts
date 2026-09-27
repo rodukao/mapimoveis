@@ -41,25 +41,33 @@ Deno.serve(async req=>{
   if(!first)return reply(200,{ok:true,duplicate:true});
 
   const obj=event.data?.object||{};
-  if(event.type==='customer.subscription.created'||event.type==='customer.subscription.updated'){
-   const userId=obj.metadata?.supabase_user_id;
-   if(userId){
-    const priceId=obj.items?.data?.[0]?.price?.id;
-    const plan=priceId===pricePro?'pro':priceId===pricePlus?'plus':(obj.metadata?.plan||'plus');
-    await rpc('terra_sync_subscription',{p_user:userId,p_customer:obj.customer||null,p_subscription:obj.id||null,p_plan:plan,p_status:obj.status||'active',p_period_end:obj.current_period_end?new Date(obj.current_period_end*1000).toISOString():null,p_cancel_at_period_end:!!obj.cancel_at_period_end});
+  const apply=async()=>{
+   if(event.type==='customer.subscription.created'||event.type==='customer.subscription.updated'){
+    const userId=obj.metadata?.supabase_user_id;
+    if(userId){
+     const priceId=obj.items?.data?.[0]?.price?.id;
+     const plan=priceId===pricePro?'pro':priceId===pricePlus?'plus':(obj.metadata?.plan||'plus');
+     await rpc('terra_sync_subscription',{p_user:userId,p_customer:obj.customer||null,p_subscription:obj.id||null,p_plan:plan,p_status:obj.status||'active',p_period_end:obj.current_period_end?new Date(obj.current_period_end*1000).toISOString():null,p_cancel_at_period_end:!!obj.cancel_at_period_end});
+    }
+    return {ok:true};
    }
-   return reply(200,{ok:true});
+   if(event.type==='customer.subscription.deleted'){
+    const userId=obj.metadata?.supabase_user_id;
+    if(userId)await rpc('terra_sync_subscription',{p_user:userId,p_customer:obj.customer||null,p_subscription:obj.id||null,p_plan:'basica',p_status:'canceled',p_period_end:obj.current_period_end?new Date(obj.current_period_end*1000).toISOString():null,p_cancel_at_period_end:false});
+    return {ok:true};
+   }
+   if(event.type==='checkout.session.completed'&&obj.mode==='payment'&&obj.metadata?.kind==='boost'){
+    const {supabase_user_id,listing_id}=obj.metadata;
+    if(supabase_user_id&&listing_id)await rpc('terra_apply_boost',{p_user:supabase_user_id,p_listing:listing_id,p_session:obj.id||null,p_payment_intent:obj.payment_intent||null,p_amount:(obj.amount_total||0)/100});
+    return {ok:true};
+   }
+   return {ok:true,ignored:event.type};
+  };
+  try{return reply(200,await apply());}
+  catch(_){
+   // Release the dedupe mark so Stripe's retry of this same event is applied instead of skipped.
+   await rpc('terra_stripe_event_release',{p_event_id:event.id}).catch(()=>{});
+   return reply(500,{error:'Falha ao aplicar o evento. O Stripe tentará novamente.'});
   }
-  if(event.type==='customer.subscription.deleted'){
-   const userId=obj.metadata?.supabase_user_id;
-   if(userId)await rpc('terra_sync_subscription',{p_user:userId,p_customer:obj.customer||null,p_subscription:obj.id||null,p_plan:'basica',p_status:'canceled',p_period_end:obj.current_period_end?new Date(obj.current_period_end*1000).toISOString():null,p_cancel_at_period_end:false});
-   return reply(200,{ok:true});
-  }
-  if(event.type==='checkout.session.completed'&&obj.mode==='payment'&&obj.metadata?.kind==='boost'){
-   const {supabase_user_id,listing_id}=obj.metadata;
-   if(supabase_user_id&&listing_id)await rpc('terra_apply_boost',{p_user:supabase_user_id,p_listing:listing_id,p_session:obj.id||null,p_payment_intent:obj.payment_intent||null,p_amount:(obj.amount_total||0)/100});
-   return reply(200,{ok:true});
-  }
-  return reply(200,{ok:true,ignored:event.type});
  }catch(error){return reply(400,{error:error instanceof Error?error.message:'Assinatura inválida.'});}
 });

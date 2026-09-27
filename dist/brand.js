@@ -1,13 +1,15 @@
-/* Public product identity. Keep the active origin until DNS, TLS and Auth redirects are ready. */
+/* Public product identity. Keep the active origin until DNS, TLS and Auth redirects are ready.
+   Domain rollout: switch origin to targetOrigin, then set redirectLegacy:true (legacyOrigin is the
+   workers.dev address served by this same Worker). See docs/DOMAIN-ROLLOUT.md. */
 (()=>{
  const name='Terra à Vista',tagline='Seu próximo imóvel, à vista.';
  globalThis.APP_BRAND=Object.freeze({
-  name,slug:'terramapa',domain:'terramapa.com.br',targetOrigin:'https://terramapa.com.br',
-  origin:'https://terramapa.danielleczfranco.chatgpt.site',
-  legacyOrigin:'https://terramapa.danielleczfranco.chatgpt.site',redirectLegacy:false,
+  name,slug:'terramapa',domain:'terraavistaimoveis.com.br',targetOrigin:'https://terraavistaimoveis.com.br',
+  origin:'https://terramapa.rodukao.workers.dev',
+  legacyOrigin:'https://terramapa.rodukao.workers.dev',redirectLegacy:false,
   shortTagline:'imóveis à vista',
   tagline,title:name+' — imóveis à vista',
   description:tagline+' Explore limites, fotos e informações de imóveis em um só lugar.',
-  version:'1.6.1',themeColor:'#164018'
+  version:'1.6.2',themeColor:'#164018'
  });
 })();

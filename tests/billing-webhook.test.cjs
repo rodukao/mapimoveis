@@ -4,13 +4,14 @@ function sign(payload,timestamp=Math.floor(Date.now()/1000)){
  const mac=crypto.createHmac('sha256',secret).update(timestamp+'.'+payload).digest('hex');
  return {header:`t=${timestamp},v1=${mac}`,timestamp};
 }
-function setup({webhookSecret=true,seen=false,prices=true}={}){
+function setup({webhookSecret=true,seen=false,prices=true,failRpc=null}={}){
  let handler;const calls=[];
  const env={SUPABASE_URL:'https://project.example.invalid',SUPABASE_SECRET_KEYS:JSON.stringify({default:'sb_secret_server'}),STRIPE_WEBHOOK_SECRET:webhookSecret?secret:undefined,STRIPE_PRICE_PLUS:prices?'price_plus':undefined,STRIPE_PRICE_PRO:prices?'price_pro':undefined};
  const context={Request,Response,URL,URLSearchParams,TextEncoder,Uint8Array,AbortSignal,crypto:webcrypto,
   fetch:async(url,options)=>{
    const u=new URL(url);const body=options?.body?JSON.parse(options.body):null;calls.push({path:u.pathname,body});
    if(u.pathname==='/rest/v1/rpc/terra_stripe_event_seen')return Response.json(!seen);
+   if(failRpc&&u.pathname==='/rest/v1/rpc/'+failRpc)return Response.json({message:'boom'},{status:400});
    if(u.pathname.startsWith('/rest/v1/rpc/terra_'))return new Response(null,{status:204});
    throw new Error('Unexpected path '+u.pathname);
   },
@@ -63,4 +64,10 @@ test('unhandled event types are acknowledged without calling any RPC',async()=>{
  const s=setup();const payload=event('payment_intent.created',{});const {header}=sign(payload);
  const r=await s.call(payload,header);assert.equal(r.status,200);assert.equal((await r.json()).ignored,'payment_intent.created');
  assert.equal(s.calls.length,1); // only the dedupe check
+});
+test('a failed apply releases the dedupe mark and asks Stripe to retry',async()=>{
+ const s=setup({failRpc:'terra_apply_boost'});
+ const payload=event('checkout.session.completed',{id:'cs_2',mode:'payment',amount_total:1490,metadata:{kind:'boost',supabase_user_id:'u1',listing_id:'l1'}},'evt_fail');
+ const {header}=sign(payload);const r=await s.call(payload,header);assert.equal(r.status,500);
+ const release=s.calls.find(c=>c.path.endsWith('terra_stripe_event_release'));assert.ok(release);assert.equal(release.body.p_event_id,'evt_fail');
 });

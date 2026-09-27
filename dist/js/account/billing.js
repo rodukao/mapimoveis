@@ -22,7 +22,7 @@ window.TerraBilling = (() => {
     );
     target.append(grid);
     target.append(el('p',{class:'small'},'Precisa de mais de 50 anúncios ativos? Temos o plano Empresas sob consulta.'),
-      el('a',{class:'action-link',href:'mailto:contato@terramapa.com.br?subject=Plano%20Empresas'},'Fale conosco sobre o plano Empresas'));
+      el('a',{class:'action-link',href:'mailto:contato@'+APP_BRAND.domain+'?subject=Plano%20Empresas'},'Fale conosco sobre o plano Empresas'));
     if(subscription.has_customer){
       const manage=el('button',{},subscription.cancel_at_period_end?'Assinatura será cancelada — gerenciar':'Gerenciar assinatura');
       manage.onclick=()=>busy(manage,()=>invoke({operation:'billing_portal'}).then(r=>location.assign(r.url)),target);

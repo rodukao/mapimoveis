@@ -117,6 +117,7 @@ async function initializeData() {
     currentSession = await DATA.session();
     updateAccount();
     await loadListings();
+    fitInitialCatalog();
     document.dispatchEvent(new CustomEvent('terra:ready'));
   } catch (error) { toast(DATA.explain(error)); loadFailed = true; render(); }
 }

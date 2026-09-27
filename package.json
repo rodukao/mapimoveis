@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "pretest": "node scripts/build-site.cjs",
     "test": "node --test tests/*.test.cjs",
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list",

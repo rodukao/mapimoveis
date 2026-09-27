@@ -44,6 +44,14 @@ const viewportSearch = TerraCatalogMap.viewport(map, {
 });
 function moveMapProgrammatically(method,...args) { return viewportSearch.move(method,...args); }
 function bounds(plot) { return plot.points; }
+// First visit frames the listings instead of a fixed city, unless a link, search or gesture already chose the view.
+let visitorMovedMap = false;
+map.on('mousedown dragstart', () => { visitorMovedMap = true; });
+function fitInitialCatalog() {
+  const params = new URL(location.href).searchParams;
+  if (visitorMovedMap || mine || searchLocation || params.has('terreno') || params.has('imobiliaria') || !plots.length) return;
+  moveMapProgrammatically('fitBounds', plots.flatMap(bounds), { paddingTopLeft: [30, 70], paddingBottomRight: [150, 90], maxZoom: 15 });
+}
 
 function render() {
   markers.forEach(marker => marker.remove());

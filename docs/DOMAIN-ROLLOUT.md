@@ -1,19 +1,20 @@
 # Domínio próprio — implantação posterior
 
-Estado em 15/09/2026: nenhum domínio personalizado vinculado ao Sites. O endereço atual segue ativo. Não foram alteradas configurações externas de Auth, OAuth ou Turnstile.
+Estado em 27/09/2026: o site publicado é o Worker Cloudflare `terramapa` em `https://terramapa.rodukao.workers.dev`, que é a origem canônica atual. O domínio pretendido é `terraavistaimoveis.com.br`, ainda não registrado. A cópia antiga em `terramapa.danielleczfranco.chatgpt.site` não é servida por este Worker e deve ser desativada na hospedagem de origem.
 
 ## Preparação entregue
 
-`dist/brand.js` centraliza `origin`, `targetOrigin`, `legacyOrigin` e `redirectLegacy`. Worker, canonical, Open Graph, sitemap e compartilhamento usam a origem ativa. Manifest utiliza caminhos relativos e preserva sua identidade. Recuperação, confirmação e OAuth retornam à origem onde o usuário iniciou a ação.
+`dist/brand.js` centraliza `origin`, `targetOrigin`, `legacyOrigin` e `redirectLegacy`. Worker, canonical, Open Graph, sitemap e links de compartilhamento usam `origin`. `legacyOrigin` é o endereço workers.dev, servido pelo mesmo Worker, para permitir o redirecionamento 308 após a troca. Recuperação, confirmação e OAuth retornam à origem onde o usuário iniciou a ação.
 
 ## Ordem da ativação
 
-1. Registrar/controlar terramapa.com.br. Vincular ao Site existente e aplicar exatamente os registros DNS devolvidos pelo provedor; não inventar IP ou CNAME. Aguardar domínio e certificado ativos.
-2. No Supabase Auth → URL Configuration, adicionar `https://terramapa.com.br/` e `https://terramapa.com.br/?recovery=1` aos redirects autorizados. Preservar as URLs do endereço antigo. Trocar Site URL para a nova origem somente quando ela estiver acessível.
-3. No Turnstile, acrescentar terramapa.com.br à lista de hostnames e manter o hostname antigo. No Google Cloud, revisar o domínio autorizado/tela de consentimento e as origens necessárias; o callback OAuth continua sendo o callback do projeto Supabase, não a página inicial do site. Não ativar um provedor incompleto.
-4. Revisar CORS/hostnames nas funções Supabase e publicar essa mudança antes de enviar visitantes ao domínio novo. Manter o endereço antigo permitido durante a transição.
-5. Testar no novo endereço: catálogo, login, Google, confirmação, recuperação, upload, contato e links individuais. Sessões locais não são transferidas automaticamente entre origens.
-6. Alterar `APP_BRAND.origin` para `APP_BRAND.targetOrigin` e publicar. Canonical/OG/sitemap e novos compartilhamentos passam a apontar para o domínio validado; o endereço antigo deixa de concorrer como URL canônica.
-7. Após validar, habilitar `redirectLegacy:true` e publicar. O Worker responde 308 somente para o hostname antigo conhecido, preservando caminho e query. Links de retorno de Auth com `code` ou `recovery` permanecem atendidos no endereço antigo e continuam noindex. Não remover os redirects antigos enquanto existirem e-mails de recuperação/convites em circulação.
+1. Registrar `terraavistaimoveis.com.br` (registro.br). Adicionar o domínio à conta Cloudflare (trocar os nameservers no registro.br para os indicados pela Cloudflare) e, em Workers & Pages → `terramapa` → Settings → Domains & Routes, adicionar o Custom Domain. Aguardar domínio e certificado ativos.
+2. No Supabase Auth → URL Configuration, adicionar `https://terraavistaimoveis.com.br/` e `https://terraavistaimoveis.com.br/?recovery=1` aos redirects autorizados. Preservar as URLs do workers.dev. Trocar Site URL para a nova origem somente quando ela estiver acessível.
+3. No Turnstile, acrescentar `terraavistaimoveis.com.br` à lista de hostnames e manter o workers.dev. No Google Cloud (se o login Google estiver ativo), revisar domínio autorizado e tela de consentimento; o callback OAuth continua sendo o do projeto Supabase.
+4. Nas funções Supabase, acrescentar a nova origem ao segredo `TERRA_ALLOWED_ORIGINS` (lista separada por vírgula), mantendo o workers.dev durante a transição.
+5. Testar no novo endereço: catálogo, cadastro, confirmação por e-mail, recuperação de senha, upload, contato por WhatsApp e links individuais. Sessões não são transferidas entre origens.
+6. Alterar `APP_BRAND.origin` para `APP_BRAND.targetOrigin` e publicar (`npm run deploy`). Canonical/OG/sitemap e novos compartilhamentos passam a apontar para o domínio novo.
+7. Após validar, habilitar `redirectLegacy:true` e publicar. O Worker responde 308 do workers.dev para o domínio novo, preservando caminho e query. Links de retorno de Auth com `code` ou `recovery` continuam atendidos no workers.dev. Não remover os redirects antigos do Supabase enquanto houver e-mails de recuperação em circulação.
+8. Criar a caixa `contato@terraavistaimoveis.com.br` (o painel de planos usa `contato@` + `APP_BRAND.domain`), por exemplo com Cloudflare Email Routing encaminhando para o seu e-mail.
 
-A etapa de DNS precisa de acesso ao registrador. A configuração de Google/Turnstile precisa de acesso às respectivas contas. Não há necessidade de enviar senhas no chat.
+A etapa de DNS precisa de acesso ao registrador. A configuração de Supabase/Google/Turnstile precisa de acesso às respectivas contas. Não há necessidade de enviar senhas no chat.

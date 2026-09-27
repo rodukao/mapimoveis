@@ -1,6 +1,6 @@
 // Only the website Worker can supply the trusted visitor identity.
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const origins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.danielleczfranco.chatgpt.site').split(',').map(s=>s.trim());
+const origins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.rodukao.workers.dev').split(',').map(s=>s.trim());
 const key=(name,old)=>{const v=Deno.env.get(name);return (v?JSON.parse(v).default:null)||Deno.env.get(old);};
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
 Deno.serve(async req=>{

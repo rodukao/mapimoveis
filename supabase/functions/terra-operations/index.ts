@@ -1,6 +1,6 @@
 // Privileged credentials are read only from the Edge runtime, never returned.
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.danielleczfranco.chatgpt.site').split(',').map(x=>x.trim());
+const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.rodukao.workers.dev').split(',').map(x=>x.trim());
 const headers={'Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
 function key(jsonName,legacy){const value=Deno.env.get(jsonName);return (value?JSON.parse(value).default:null)||Deno.env.get(legacy);}
 async function payload(req,max=4096){if(!req.body)throw new Error('Requisição inválida.');const reader=req.body.getReader();let size=0;const chunks=[];while(true){const x=await reader.read();if(x.done)break;size+=x.value.length;if(size>max){await reader.cancel();throw new Error('Requisição muito grande.');}chunks.push(x.value);}const bytes=new Uint8Array(size);let i=0;for(const c of chunks){bytes.set(c,i);i+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));}

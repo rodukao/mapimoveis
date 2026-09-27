@@ -14,6 +14,7 @@ function showDetail(plot) {
   detailPlot = plot;
   $('detail-title').textContent = plot.title || 'Rascunho sem título';
   $('detail-category').textContent = plot.tag;
+  if ($('detail-eyebrow')) $('detail-eyebrow').textContent = (window.TerraCatalogMap?.propertyGroup(plot.category) || 'land') === 'land' ? 'DETALHES DO TERRENO' : 'DETALHES DO IMÓVEL';
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
   const displayArea=Number(plot.details?.built_area_m2)||plot.area;
