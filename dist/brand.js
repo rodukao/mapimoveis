@@ -10,6 +10,6 @@
   shortTagline:'imóveis à vista',
   tagline,title:name+' — imóveis à vista',
   description:tagline+' Explore limites, fotos e informações de imóveis em um só lugar.',
-  version:'1.7.2',themeColor:'#164018'
+  version:'1.7.3',themeColor:'#164018'
  });
 })();

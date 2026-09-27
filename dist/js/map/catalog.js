@@ -57,5 +57,19 @@
     }finally{depth--;}}
     return {move,cancel,resetKey(){lastKey=null;},bounds};
   }
-  root.TerraCatalogMap={interactions,viewport,propertyGroups,propertyGroup,styleFor};
+  // Price pins that would overlap collapse into the first visible one, which shows "+N".
+  // entries: [{id, marker}]; each entry gets .group with the entries it hides.
+  function declutter(map,entries,firstId=null){
+    if(typeof map.latLngToContainerPoint!=='function')return;
+    const ordered=[...entries].sort((a,b)=>(b.id===firstId)-(a.id===firstId)),leaders=[];
+    for(const entry of ordered){entry.group=[];const node=entry.marker.getElement?.();if(node){node.style.display='';node.querySelector('.pin-more')?.remove();}}
+    for(const entry of ordered){
+      const node=entry.marker.getElement?.();if(!node)continue;
+      const point=map.latLngToContainerPoint(entry.marker.getLatLng()),w=node.offsetWidth/2+4,h=node.offsetHeight/2+4,box=[point.x-w,point.y-h,point.x+w,point.y+h];
+      const leader=leaders.find(l=>box[0]<l.box[2]&&box[2]>l.box[0]&&box[1]<l.box[3]&&box[3]>l.box[1]);
+      if(leader){leader.entry.group.push(entry);node.style.display='none';}else leaders.push({entry,box});
+    }
+    for(const {entry} of leaders)if(entry.group.length){const badge=document.createElement('span');badge.className='pin-more';badge.textContent='+'+entry.group.length;badge.setAttribute('aria-label',`e mais ${entry.group.length} ${entry.group.length===1?'imóvel':'imóveis'} aqui`);entry.marker.getElement().append(badge);}
+  }
+  root.TerraCatalogMap={interactions,viewport,declutter,propertyGroups,propertyGroup,styleFor};
 })(typeof window==='undefined'?globalThis:window);

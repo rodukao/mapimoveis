@@ -57,6 +57,7 @@ function render() {
   markers.forEach(marker => marker.remove());
   plotLayers.forEach(plotLayer => plotLayer.remove());
   markers = [];
+  pinEntries = [];
   plotLayers = [];
   catalogMap.clear();
   $('cards').replaceChildren();
@@ -98,12 +99,14 @@ function render() {
     if (!drawing) {
       const polygon = L.polygon(bounds(plot), {...TerraCatalogMap.styleFor(plot.category),bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
       plotLayers.push(polygon);
-      const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin property-' + TerraCatalogMap.propertyGroup(plot.category) + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => select(index,true));
+      const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin property-' + TerraCatalogMap.propertyGroup(plot.category) + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => openPin(index, marker));
       markers.push(marker);
+      pinEntries.push({ id: plot.id, marker, plot });
       catalogMap.register(plot.id, polygon, card, marker, plot.category);
     }
   });
   updateCatalogStatus();
+  declutterPins();
   if (!count) {
     const empty = document.createElement('p');
     empty.className = 'empty-message';
@@ -113,6 +116,16 @@ function render() {
   }
   $('more-listings').hidden = loading || plots.length >= totalListings;
   $('retry-listings').hidden = !loadFailed;
+}
+
+// Overlapping price pins are grouped; a grouped pin zooms in until its listings separate.
+let pinEntries = [];
+function declutterPins() { TerraCatalogMap.declutter(map, pinEntries, catalogMap.selectedId); }
+map.on('zoomend', declutterPins);
+function openPin(index, marker) {
+  const group = pinEntries.find(entry => entry.marker === marker)?.group || [];
+  if (!group.length || map.getZoom() >= map.getMaxZoom() - 1) return select(index, true);
+  map.fitBounds([plots[index], ...group.map(entry => entry.plot)].map(plot => [plot.lat, plot.lng]), { padding: [80, 80], maxZoom: map.getMaxZoom() - 1 });
 }
 
 function select(index, scroll=false) { if(drawing || window.TerraMapTools?.interestActive)return; if (plots[index]) { catalogMap.selectListing(plots[index].id,scroll); TerraMarketplace.openPlot(plots[index]); } }
