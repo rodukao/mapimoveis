@@ -308,3 +308,5 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .carousel-price{padding:10px 12px 0;font-size:17px;color:#164018}.carousel-title{padding:2px 12px;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.carousel-card small{padding:2px 12px 12px;color:#67776d;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:721px){.carousel-card{flex-basis:46%}}
 .listing-carousel{align-items:flex-start}.carousel-card{height:auto}.carousel-media{aspect-ratio:auto;height:150px;width:100%;overflow:hidden}
+.detail-location-actions>a,.detail-location-actions>button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:1 1 150px;min-height:46px;margin:0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--green);font:600 15px/1.2 var(--font-ui);text-decoration:none;text-align:center}
+.detail-stats{margin:12px 0 16px}

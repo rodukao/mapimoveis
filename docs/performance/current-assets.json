@@ -1,5 +1,5 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "scripts": [
     {
       "file": "brand.js",
@@ -18,10 +18,10 @@
     },
     {
       "file": "assets/core.js",
-      "bytes": 168301,
-      "gzip": 50666
+      "bytes": 168516,
+      "gzip": 50693
     }
   ],
-  "total_bytes": 503352,
-  "total_gzip": 142148
+  "total_bytes": 503567,
+  "total_gzip": 142175
 }
