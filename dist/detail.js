@@ -23,7 +23,7 @@ function showDetail(plot) {
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
   const kind = window.TerraFilters?.kindOf(plot.category);
-  const facts = [[kind === 'apartment' || kind === 'office' ? 'Área do prédio no mapa' : 'Área estimada no mapa', num(plot.area) + ' m²']];
+  const facts = [[{ apartment: 'Área do prédio no mapa', office: 'Área do prédio no mapa', house: 'Área do terreno no mapa', warehouse: 'Área do terreno no mapa' }[kind] || 'Área estimada no mapa', num(plot.area) + ' m²']];
   if (Number.isFinite(Number(plot.perimeter_m))) facts.push(['Perímetro', num(Number(plot.perimeter_m)) + ' m']);
   if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Ativo',reserved:'Reservado',sold:'Vendido',paused:'Pausado'}[plot.status] || plot.status]);
   if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);

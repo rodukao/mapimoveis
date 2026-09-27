@@ -104,6 +104,7 @@ window.TerraFilters = (() => {
   }
   // Optional attributes are shared by editor, details, filters, and comparison.
   // Each property kind only shows the attributes that make sense for it.
+  const accessLabels={'':'Não informado',asfalto:'Asfalto',terra:'Estrada de terra',cascalho:'Cascalho',trilha:'Trilha'};
   const kindOf=category=>({casa:'house',sobrado:'house',apartamento:'apartment',cobertura:'apartment',sala_comercial:'office',galpao:'warehouse'})[category]||'land';
   const builtKinds=['house','apartment','office','warehouse'];
   const detailFields={
@@ -144,7 +145,7 @@ window.TerraFilters = (() => {
   const extra=el('div',{id:'terrain-attributes'}),topography=el('select',{id:'terrain-topography'},options(topo));
   const topographyField=field('Topografia declarada',topography);
   const urban=el('div',{id:'urban-attributes'},field('Zoneamento (opcional)',el('input',{id:'zoning',maxLength:100})),field('Testada em metros (opcional)',el('input',{id:'frontage',type:'number',min:0,step:'any'})));
-  const rural=el('div',{id:'rural-attributes',hidden:true},el('p',{id:'rural-area'}),field('Tipo de acesso',el('select',{id:'rural-access'},options({'':'Não informado',asfalto:'Asfalto',terra:'Estrada de terra',cascalho:'Cascalho',trilha:'Trilha'}))),field('Reserva legal (informação declarada)',el('input',{id:'legal-reserve',maxLength:200,placeholder:'Opcional'})));
+  const rural=el('div',{id:'rural-attributes',hidden:true},el('p',{id:'rural-area'}),field('Tipo de acesso',el('select',{id:'rural-access'},options(accessLabels))),field('Reserva legal (informação declarada)',el('input',{id:'legal-reserve',maxLength:200,placeholder:'Opcional'})));
   const propertyFields=el('div',{id:'property-rooms'}),detailInputs={};
   for(const [key,spec] of Object.entries(detailFields)){
     const input=el('input',{id:'property-'+key,type:'number',min:spec.min,max:spec.max,step:spec.step,inputMode:spec.step===1?'numeric':'decimal'}),caption=el('span',{});
@@ -196,9 +197,8 @@ window.TerraFilters = (() => {
   document.addEventListener('terra:detail',event=>{
     const p=event.detail,kind=kindOf(p.category),spec=kinds[kind],details=p.details||{},rows=[],list=$('detail-features');
     if(spec.terrain&&p.terrain_context==='rural')rows.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
-    if(kind==='house'||kind==='warehouse')rows.push(['Área do terreno (no mapa)',num(p.area)+' m²']);
     for(const key of Object.keys(detailFields))if(details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind)+(key==='built_area_m2'?' declarada':''),detailText(key,details[key])]);
-    for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,String(details[key])]);
+    for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,key==='access'?(accessLabels[details[key]]||String(details[key])):String(details[key])]);
     if(spec.terrain)rows.push(['Contexto',p.terrain_context==='rural'?'Rural':'Urbano'],['Topografia declarada',topo[p.topography] || 'Não informada']);
     if(spec.infrastructure)rows.push(['Infraestrutura',describe(p.infrastructure)]);
     rows.push([builtKinds.includes(kind)?'Diferenciais':'Características',describe(p.features)],['Documentação declarada',describe(p.documents)]);
