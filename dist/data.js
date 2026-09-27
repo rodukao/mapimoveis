@@ -9,7 +9,7 @@
   const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
   const PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const PHOTO_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at,terrain_context,topography,infrastructure,features,documents,details,boosted_until,renewed_at';
+  const fields = 'id,owner_id,title,description,city,state,neighborhood,category,price_brl,status,boundary_geojson,area_m2,perimeter_m,latitude,longitude,price_per_m2,revision,created_at,updated_at,terrain_context,topography,infrastructure,features,documents,details,boosted_until,renewed_at,short_code,location_precision';
   const photoFields = 'terra_listing_photos(id,listing_id,storage_path,alt_text,sort_order,created_at)';
   const listFields = `${fields},${photoFields}`;
   let client = null;
@@ -69,7 +69,7 @@
       neighborhood: form.neighborhood.trim(), category: form.category, price_brl: form.status==='draft' && String(form.price_brl).trim()==='' ? null : Number(form.price_brl),
       status: form.status, boundary_geojson: form.boundary_geojson,
       terrain_context: form.terrain_context || 'urban', topography: form.topography || '',
-      infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: {...(form.details || {})}
+      infrastructure: form.infrastructure || [], features: form.features || [], documents: form.documents || [], details: {...(form.details || {})}, location_precision: form.location_precision === 'approximate' ? 'approximate' : 'exact'
     };
     if ('youtube_video_id' in clean.details && !window.TerraVideo?.isId(clean.details.youtube_video_id)) throw new Error('Cole um link válido de um vídeo do YouTube.');
     if ((clean.title.length < 3 && !(clean.status==='draft' && !clean.title)) || clean.title.length > 90) throw new Error('Use entre 3 e 90 caracteres no título.');
@@ -191,6 +191,7 @@
   window.TerraRepository = {db, user, unwrap, fields, listFields, hydratePhotos};
   window.TerraData = {
     configured, list, save, syncPhotos, maxPhotos: MAX_PHOTOS,
+    exactBoundary: async id => unwrap(await db().rpc('terra_exact_boundary', { p_listing: id })),
     session: async () => configured ? unwrap(await db().auth.getSession()).session : null,
     subscribe: fn => configured ? db().auth.onAuthStateChange(fn).data.subscription : { unsubscribe() {} },
     signUp: async (name, email, password, captchaToken) => unwrap(await db().auth.signUp({ email, password, options: { data: { display_name: name.trim() }, emailRedirectTo: new URL('./', window.location.href).href, captchaToken } })),

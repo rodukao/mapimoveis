@@ -6,9 +6,22 @@ const PROJECT='https://pkofzhlcbqupanzydyyf.supabase.co',KEY='sb_publishable_r7y
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const title=APP_BRAND.title,description=APP_BRAND.description;
-export function metadata(url,indexable=true){
+// Link previews (WhatsApp, social networks) describe the listing itself when the URL points to one.
+const thousands=n=>String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const BUILT=['casa','sobrado','apartamento','cobertura','sala_comercial','galpao'];
+export function listingPreview(row){
+ if(!row?.title)return null;
+ const d=row.details||{},built=BUILT.includes(row.category)&&Number(d.built_area_m2)>0,area=Number(row.area_m2);
+ const size=built?thousands(d.built_area_m2)+' m²':area>=10000?(area/10000).toFixed(2).replace('.',',')+' ha':area>0?thousands(area)+' m²':'';
+ const place=[row.neighborhood,[row.city,row.state].filter(Boolean).join(' - ')].filter(Boolean).join(', ');
+ const summary=[row.price_brl!=null?'R$ '+thousands(row.price_brl):'',size,Number(d.bedrooms)>0?d.bedrooms+(Number(d.bedrooms)===1?' quarto':' quartos'):'',place].filter(Boolean).join(' · ');
+ const photo=Array.isArray(row.terra_listing_photos)&&row.terra_listing_photos.length>0;
+ return {title:row.title,description:summary,image:photo?`${ORIGIN}/og/listing/${row.id}.jpg?r=${row.revision||1}`:null};
+}
+export function metadata(url,indexable=true,listing=null){
  if(!indexable)return '<meta name="robots" content="noindex,nofollow,noarchive">';
- return `<link rel="canonical" href="${escape(url)}"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:image" content="${ORIGIN}/og.png?v=${APP_BRAND.version}"><meta property="og:type" content="website"><meta property="og:url" content="${escape(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${ORIGIN}/og.png?v=${APP_BRAND.version}"><meta name="robots" content="index,follow">`;
+ const t=listing?escape(listing.title):title,d=listing?escape(listing.description):description,image=escape(listing?.image||`${ORIGIN}/og.png?v=${APP_BRAND.version}`);
+ return `<link rel="canonical" href="${escape(url)}"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:image" content="${image}"><meta property="og:type" content="${listing?'article':'website'}"><meta property="og:site_name" content="${escape(APP_BRAND.name)}"><meta property="og:locale" content="pt_BR"><meta property="og:url" content="${escape(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"><meta name="twitter:image" content="${image}"><meta name="robots" content="index,follow">`;
 }
 export function createWorker(assets,version){
  const decoded=new Map();
@@ -31,6 +44,25 @@ export function createWorker(assets,version){
   }
   if(!['GET','HEAD'].includes(request.method))return reply('Method not allowed',405,'text/plain');
   if(APP_BRAND.redirectLegacy&&ORIGIN===APP_BRAND.targetOrigin&&url.origin===APP_BRAND.legacyOrigin&&!url.searchParams.has('code')&&!url.searchParams.has('recovery'))return new Response(null,{status:308,headers:{Location:ORIGIN+url.pathname+url.search,'Cache-Control':'public, max-age=300'}});
+  const short=path.match(/^\/i\/([2-9a-hjkmnp-z]{6})$/);
+  if(short){
+   try{const q=new URL(PROJECT+'/rest/v1/terra_listings');q.searchParams.set('short_code','eq.'+short[1]);q.searchParams.set('status','in.(published,reserved,sold)');q.searchParams.set('select','id');
+    const r=await fetch(q,{headers:{apikey:KEY},signal:AbortSignal.timeout(5000)});const rows=r.ok?await r.json():[];
+    if(UUID.test(rows?.[0]?.id||''))return new Response(null,{status:302,headers:{Location:ORIGIN+'/?terreno='+rows[0].id,'Cache-Control':'public, max-age=300'}});
+   }catch(_){}
+   return new Response(null,{status:302,headers:{Location:ORIGIN+'/','Cache-Control':'no-store'}});
+  }
+  const cover=path.match(/^\/og\/listing\/([0-9a-f-]{36})\.jpg$/i);
+  if(cover&&UUID.test(cover[1])){
+   // The photo bucket is private: sign the cover with the anonymous key (Storage policy only allows public listings).
+   try{const q=new URL(PROJECT+'/rest/v1/terra_listing_photos');q.searchParams.set('listing_id','eq.'+cover[1]);q.searchParams.set('select','storage_path');q.searchParams.set('order','sort_order.asc');q.searchParams.set('limit','1');
+    const rows=await(await fetch(q,{headers:{apikey:KEY},signal:AbortSignal.timeout(5000)})).json();const stored=rows?.[0]?.storage_path;if(!stored)throw Error();
+    const signed=await fetch(PROJECT+'/storage/v1/object/sign/terra-listing-photos/'+stored,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:120}),signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null);
+    if(!signed?.signedURL)throw Error();
+    const image=await fetch(PROJECT+'/storage/v1'+signed.signedURL,{signal:AbortSignal.timeout(10000)});if(!image.ok)throw Error();
+    return new Response(request.method==='HEAD'?null:image.body,{status:200,headers:{'Content-Type':image.headers.get('Content-Type')||'image/jpeg','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'}});
+   }catch(_){return new Response(null,{status:302,headers:{Location:ORIGIN+'/og.png?v='+APP_BRAND.version,'Cache-Control':'public, max-age=300'}});}
+  }
   if(path==='/version.json')return reply(JSON.stringify(version),200,'application/json');
   if(path==='/robots.txt')return reply(`User-agent: *\nAllow: /\nDisallow: /*?recovery=\nDisallow: /*?code=\nDisallow: /*?checkout=\nDisallow: /*?boost=\nSitemap: ${ORIGIN}/sitemap.xml\n`,200,'text/plain');
   if(path==='/sitemap.xml')return reply('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/privacidade','/termos','/profissionais'].map(p=>`<url><loc>${ORIGIN}${p}</loc></url>`).join('')+'</urlset>',200,'application/xml');
@@ -38,16 +70,17 @@ export function createWorker(assets,version){
   if(['/privacidade','/termos','/profissionais'].includes(path))asset=path+'/index.html';
   if(!assets[asset])return reply('Página não encontrada.',404,'text/plain',{'X-Robots-Tag':'noindex'});
   if(!asset.endsWith('.html'))return reply(bytes(asset),200,assets[asset].type,{'Cache-Control':version.assetVersion&&url.searchParams.get('v')===version.assetVersion?'public, max-age=31536000, immutable':'public, max-age=0, must-revalidate'});
-  let indexable=true,canonical=ORIGIN+(path==='/index.html'?'/':path);
+  let listing=null,indexable=true,canonical=ORIGIN+(path==='/index.html'?'/':path);
   if(url.search){indexable=false;const id=url.searchParams.get('terreno');
    if((path==='/'||path==='/index.html')&&UUID.test(id||'')&&[...url.searchParams.keys()].every(k=>k==='terreno')){
-    try{const q=new URL(PROJECT+'/rest/v1/terra_listings');q.searchParams.set('id','eq.'+id);q.searchParams.set('status','in.(published,reserved,sold)');q.searchParams.set('select','id');
+    try{const q=new URL(PROJECT+'/rest/v1/terra_listings');q.searchParams.set('id','eq.'+id);q.searchParams.set('status','in.(published,reserved,sold)');q.searchParams.set('select','id,title,price_brl,area_m2,city,state,neighborhood,category,details,revision,terra_listing_photos(storage_path)');
      const r=await fetch(q,{headers:{apikey:KEY},signal:AbortSignal.timeout(5000)});const rows=r.ok?await r.json():[];indexable=Array.isArray(rows)&&rows.length===1&&rows[0].id===id;
-     if(indexable)canonical=ORIGIN+'/?terreno='+id;
+     if(indexable){canonical=ORIGIN+'/?terreno='+id;listing=listingPreview(rows[0]);}
     }catch(_){indexable=false;}
    }
   }
-  const html=new TextDecoder().decode(bytes(asset)).replace('<!-- TERRA_METADATA -->',metadata(canonical,indexable));
+  let html=new TextDecoder().decode(bytes(asset)).replace('<!-- TERRA_METADATA -->',metadata(canonical,indexable,listing));
+  if(listing)html=html.replace(/<title>[^<]*<\/title>/,'<title>'+escape(listing.title)+' — '+escape(APP_BRAND.name)+'</title>');
   return reply(html,200,'text/html; charset=utf-8',indexable&&!url.search?{'Cache-Control':'public, max-age=0, must-revalidate'}:{'Cache-Control':'no-store',...(!indexable?{'X-Robots-Tag':'noindex, nofollow, noarchive'}:{})});
  }};
 }

@@ -152,7 +152,13 @@ window.TerraFilters = (() => {
     detailInputs[key]={input,caption,wrapper:el('label',{},caption,input)};propertyFields.append(detailInputs[key].wrapper);
   }
   const kindNote=el('p',{class:'small',id:'property-note'}),groupBlocks={},groupTitles={};
-  extra.append(propertyFields,kindNote,topographyField,urban,rural);
+  // Exact drawing is the product's differentiator; approximate is offered but discouraged.
+  const exactOption=el('input',{type:'radio',name:'location-precision',value:'exact',checked:true}),approximateOption=el('input',{type:'radio',name:'location-precision',value:'approximate'});
+  const precisionTip=el('p',{class:'small precision-tip'},`Recomendamos a localização exata: o desenho no mapa é o diferencial do ${APP_BRAND.name} e passa mais confiança a quem vai comprar. Na aproximada, o público vê só um círculo de cerca de 350 m na região; o desenho exato continua visível apenas para você.`);
+  const precisionField=el('fieldset',{class:'location-precision'},el('legend',{},'Localização no anúncio'),el('label',{class:'radio-option'},exactOption,el('span',{},el('strong',{},'Exata'),' — mostrar o desenho do imóvel (recomendado)')),el('label',{class:'radio-option'},approximateOption,el('span',{},el('strong',{},'Aproximada'),' — mostrar só a região')),precisionTip);
+  const markPrecision=()=>precisionTip.classList?.toggle('warning',approximateOption.checked);
+  exactOption.onchange=approximateOption.onchange=markPrecision;
+  extra.append(precisionField,propertyFields,kindNote,topographyField,urban,rural);
   for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])extra.append(groupBlocks[group]=el('details',{},groupTitles[group]=el('summary',{},title),checks(group,[],'editor')));
   extra.append(el('p',{class:'small'},`Informe apenas características que você conhece. A declaração não representa validação documental pelo ${APP_BRAND.name}.`));
   $('category').closest('label').after(extra);
@@ -179,7 +185,8 @@ window.TerraFilters = (() => {
     if(plot?.category)$('category').value=plot.category;
     context.value=plot?.terrain_context || (['rural','chacara','sitio','fazenda'].includes(plot?.category)?'rural':'urban');topography.value=plot?.topography || '';
     const d=plot?.details || {};for(const key of Object.keys(detailFields))detailInputs[key].input.value=d[key]??'';$('zoning').value=d.zoning || '';$('frontage').value=d.frontage ?? '';$('rural-access').value=d.access || '';$('legal-reserve').value=d.legal_reserve || '';
-    for(const group of Object.keys(groups))extra.querySelectorAll(`input[name="editor-${group}"]`).forEach(input=>input.checked=(plot?.[group] || []).includes(input.value));applyKind();updateArea();
+    for(const group of Object.keys(groups))extra.querySelectorAll(`input[name="editor-${group}"]`).forEach(input=>input.checked=(plot?.[group] || []).includes(input.value));
+    approximateOption.checked=plot?.location_precision==='approximate';exactOption.checked=!approximateOption.checked;markPrecision();applyKind();updateArea();
   }
   function editorValues(){
     const kind=kindOf($('category').value),spec=kinds[kind],terrainContext=spec.terrain?context.value:'urban',details={};
@@ -191,7 +198,7 @@ window.TerraFilters = (() => {
       details[key]=n;
     }
     if(builtKinds.includes(kind)&&details.built_area_m2===undefined&&['published','reserved'].includes($('listing-status').value))throw Error('Informe a '+shortLabel('built_area_m2',kind).toLowerCase()+' para publicar. Você pode salvar como rascunho.');
-    return {terrain_context:terrainContext,topography:spec.terrain?topography.value:'',details,infrastructure:spec.infrastructure?readChecks(extra,'infrastructure','editor'):[],features:readChecks(extra,'features','editor').filter(value=>spec.features.includes(value)),documents:readChecks(extra,'documents','editor')};
+    return {location_precision:approximateOption.checked?'approximate':'exact',terrain_context:terrainContext,topography:spec.terrain?topography.value:'',details,infrastructure:spec.infrastructure?readChecks(extra,'infrastructure','editor'):[],features:readChecks(extra,'features','editor').filter(value=>spec.features.includes(value)),documents:readChecks(extra,'documents','editor')};
   }
   const describe=values=>(values || []).map(key=>labels[key] || key).join(', ') || 'Não informado';
   document.addEventListener('terra:detail',event=>{

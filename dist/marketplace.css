@@ -286,3 +286,13 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .legend{display:flex;flex-wrap:wrap;gap:5px 10px;max-width:100%;font-size:12px}
 .legend [data-property-group]{padding:0;white-space:nowrap}
 .pin-more{position:absolute;top:-10px;right:-12px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:#164018;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px #0003;font:700 11px/20px var(--font-ui);text-align:center;pointer-events:none}
+/* Listing page extras (showcase.js) */
+.detail-highlights{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:14px 0 4px;padding:0}.detail-highlights li{padding:7px 12px;border-radius:999px;background:#eff5ee;border:1px solid #dbe6d9;color:#264a2c;font-size:14px;font-weight:600}
+.detail-location{margin:22px 0 8px}.detail-location h3{margin-bottom:10px}.detail-mini-map{height:280px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#dfe7dc}.detail-location .small{margin:8px 0 10px;color:#5b665b}
+.detail-location-actions{display:flex;flex-wrap:wrap;gap:10px}.detail-location-actions>*{flex:1 1 180px;text-align:center;justify-content:center}
+.seller-invite{margin:26px 0 12px;padding:20px;border-radius:14px;background:linear-gradient(135deg,#164018,#23612a);color:#fff}.seller-invite strong{font-size:19px}.seller-invite p{margin:6px 0 14px;color:#e4efe2;line-height:1.5}.seller-invite .primary{background:#fff;color:#164018;border-color:#fff}
+.location-precision{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px}.location-precision legend{font-weight:600;padding:0 4px}.radio-option{display:flex!important;gap:10px;align-items:flex-start;margin:6px 0;font-weight:400!important}.radio-option input{width:auto;margin-top:3px}
+.precision-tip{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:#eff5ee;color:#335238}.precision-tip.warning{background:#fff4e5;color:#7a4a00}
+.placa-preview{display:block;width:100%;max-width:360px;margin:10px auto 14px;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px #0000001a}
+.share-url{margin:-4px 0 12px;color:#5b665b;word-break:break-all}
+@media(max-width:720px){.detail-mini-map{height:230px}}

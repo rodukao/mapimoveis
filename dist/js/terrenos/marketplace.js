@@ -9,6 +9,7 @@ window.TerraMarketplace = (() => {
   catch (_) { sessionId = crypto.randomUUID(); }
   const track = (name,listing) => api.event(name,listing,sessionId).catch(() => { /* Analytics cannot replace or block catalog data. Contact uses the strict recorder below. */ });
   function link(id) { const url=new URL('/',APP_BRAND.origin);url.searchParams.set('terreno',id);return url.href; }
+  function shareUrl(plot) { return plot.short_code ? APP_BRAND.origin+'/i/'+plot.short_code : link(plot.id); }
   function requireLogin(message = 'Entre na sua conta para continuar.') {
     if (currentSession) return true;
     toast(message); openAuth('login'); return false;
@@ -88,13 +89,16 @@ window.TerraMarketplace = (() => {
     document.title=APP_BRAND.title;
   });
   async function share(plot) {
-    const url=link(plot.id), text=`${plot.title} — ${num(plot.details?.built_area_m2||plot.area)} m² — ${money(plot.price)}. Veja no ${APP_BRAND.name}:`;
-    if(navigator.share){try{await navigator.share({title:plot.title,text,url});track('share_terreno',plot.id);return;}catch(exception){if(exception.name==='AbortError')return;}}
-    const panel=dialog('Compartilhar terreno');
+    const url=shareUrl(plot), text=`${plot.title} — ${num(plot.details?.built_area_m2||plot.area)} m² — ${money(plot.price)}. Veja no ${APP_BRAND.name}:`;
+    // Always show the panel: it is also where sellers get the QR code for their sign.
+    const panel=dialog('Compartilhar imóvel');
+    const native=navigator.share?el('button',{class:'primary full',onclick:async()=>{try{await navigator.share({title:plot.title,text,url});track('share_terreno',plot.id);}catch(_){}}},'Compartilhar…'):null;
+    const sign=el('button',{class:'full'},'QR Code para placa');
+    sign.onclick=()=>busy(sign,async()=>{await TerraLazy.load('qr');await TerraPlaca.open(plot,url);track('share_terreno',plot.id);},panel.content);
     const copy=el('button',{class:'full'},'Copiar link');
     copy.onclick=()=>busy(copy,async()=>{if(navigator.clipboard){await navigator.clipboard.writeText(url);toast('Link copiado!');track('share_terreno',plot.id);}else{const input=el('input',{value:url,readOnly:true,'aria-label':'Link do terreno'});panel.content.append(input);input.select();}},panel.content);
     const whatsapp=el('a',{class:'action-link',href:'https://wa.me/?text='+encodeURIComponent(text+' '+url),target:'_blank',rel:'noopener',onclick:()=>track('share_terreno',plot.id)},'Compartilhar no WhatsApp');
-    panel.content.append(el('p',{},plot.title),copy,whatsapp);
+    panel.content.append(el('p',{},plot.title),el('p',{class:'small share-url'},url.replace(/^https?:\/\//,'')),...(native?[native]:[]),copy,whatsapp,sign);
   }
   async function contact(plot,button) {
     if(button.disabled)return;
@@ -103,7 +107,7 @@ window.TerraMarketplace = (() => {
     try {
       const result=await TerraOperations.contact({listing:plot.id||null,owner:plot.contactOwner||null,session:sessionId},()=>tab?.close());
       if(!/^https:\/\/wa\.me\/55\d{10,11}$/.test(result.url || ''))throw new Error('WhatsApp indisponível.');
-      const url=result.url+'?text='+encodeURIComponent(plot.contactOwner?`Olá! Vi o perfil da sua imobiliária no ${APP_BRAND.name} e gostaria de informações.`:`Olá! Vi seu anúncio “${plot.title}” no ${APP_BRAND.name} e gostaria de mais informações.\n${link(plot.id)}`);
+      const url=result.url+'?text='+encodeURIComponent(plot.contactOwner?`Olá! Vi o perfil da sua imobiliária no ${APP_BRAND.name} e gostaria de informações.`:`Olá! Vi seu anúncio “${plot.title}” no ${APP_BRAND.name} e gostaria de mais informações.\n${shareUrl(plot)}`);
       if(tab&&!tab.closed)tab.location.href=url;else window.location.assign(url);
     }catch(exception){tab?.close();toast(DATA.explain(exception));}
     finally{button.disabled=false;button.textContent=label;}

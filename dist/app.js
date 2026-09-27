@@ -97,7 +97,7 @@ function render() {
     window.TerraMarketplace?.decorateCard(card,plot);
     $('cards').append(card);
     if (!drawing) {
-      const polygon = L.polygon(bounds(plot), {...TerraCatalogMap.styleFor(plot.category),bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
+      const polygon = L.polygon(bounds(plot), {...TerraCatalogMap.styleFor(plot.category),...(plot.location_precision==='approximate'?{dashArray:'6 8'}:{}),bubblingMouseEvents:false}).addTo(map).on('click', () => select(index, true)).on('mouseover', () => { if(matchMedia('(hover: hover)').matches)catalogMap.highlightListing(plot.id); }).on('mouseout', () => catalogMap.unhighlightListing(plot.id));
       plotLayers.push(polygon);
       const marker = L.marker([plot.lat, plot.lng], { icon: L.divIcon({ className: 'price-pin property-' + TerraCatalogMap.propertyGroup(plot.category) + (index === selected ? ' chosen' : ''), html: money(plot.price), iconSize: null }), keyboard: true, title: plot.title + ' — ' + money(plot.price) }).addTo(map).on('click', () => openPin(index, marker));
       markers.push(marker);
@@ -218,6 +218,11 @@ async function start(record = null) {
   if(!currentSession)return;
   if (drawing && !record) return;
   if (saving) return;
+  // Approximate listings show a circle publicly; the owner edits the exact drawing.
+  if (record?.location_precision === 'approximate') {
+    try { const exact = await DATA.exactBoundary(record.id); if (exact?.coordinates) { record = { ...record, points: exact.coordinates[0].slice(0, -1).map(point => [point[1], point[0]]) }; setTimeout(() => moveMapProgrammatically('fitBounds', record.points, { padding: [35, 35], maxZoom: 19 }), 0); } }
+    catch (error) { toast(DATA.explain(error)); return; }
+  }
   editId = record?.id || crypto.randomUUID();
   editRevision = record?.revision || null;
   points = record?.points ? record.points.map(point => L.latLng(point[0], point[1])) : [];

@@ -26,7 +26,7 @@ function showDetail(plot) {
   const facts = [[{ apartment: 'Área do prédio no mapa', office: 'Área do prédio no mapa', house: 'Área do terreno no mapa', warehouse: 'Área do terreno no mapa' }[kind] || 'Área estimada no mapa', num(plot.area) + ' m²']];
   if (Number.isFinite(Number(plot.perimeter_m))) facts.push(['Perímetro', num(Number(plot.perimeter_m)) + ' m']);
   if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Ativo',reserved:'Reservado',sold:'Vendido',paused:'Pausado'}[plot.status] || plot.status]);
-  if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);
+  if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(plot.location_precision === 'approximate' ? ['Coordenadas aproximadas', plot.lat.toFixed(3) + ', ' + plot.lng.toFixed(3)] : ['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);
   for (const [key, label] of [['created_at','Cadastrado em'],['updated_at','Atualizado em']]) {
     if (plot[key] && Number.isFinite(Date.parse(plot[key]))) facts.push([label,new Date(plot[key]).toLocaleDateString('pt-BR')]);
   }

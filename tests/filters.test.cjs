@@ -57,3 +57,10 @@ test('colored type filter narrows categories, clears incompatible category and s
  s.$('quick-type').onclick();const next=s.panel.content.children[0];assert.equal(s.walk(next).find(n=>n.name==='property-group'&&n.value==='commercial').checked,true);
  s.walk(next).find(n=>n.name==='property-group'&&n.value==='').onchange();next.onsubmit({preventDefault(){}});assert.equal(s.api.get().propertyGroup,undefined);assert.equal(s.api.get().city,'Curitiba');
 });
+test('location precision defaults to exact and round-trips approximate listings',()=>{
+ const s=setup();s.api.fillEditor({category:'casa',terrain_context:'urban',details:{built_area_m2:120}});
+ assert.equal(s.api.editorValues().location_precision,'exact');
+ s.api.fillEditor({category:'casa',terrain_context:'urban',location_precision:'approximate',details:{built_area_m2:120}});
+ assert.equal(s.api.editorValues().location_precision,'approximate');
+ s.api.fillEditor(null);assert.equal(s.api.editorValues().location_precision,'exact');
+});
