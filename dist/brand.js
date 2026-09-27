@@ -5,11 +5,11 @@
  const name='Terra à Vista',tagline='Seu próximo imóvel, à vista.';
  globalThis.APP_BRAND=Object.freeze({
   name,slug:'terramapa',domain:'terraavistaimoveis.com.br',targetOrigin:'https://terraavistaimoveis.com.br',
-  origin:'https://terramapa.rodukao.workers.dev',
-  legacyOrigin:'https://terramapa.rodukao.workers.dev',redirectLegacy:false,
+  origin:'https://terraavistaimoveis.com.br',
+  legacyOrigin:'https://terramapa.rodukao.workers.dev',redirectLegacy:true,
   shortTagline:'imóveis à vista',
   tagline,title:name+' — imóveis à vista',
   description:tagline+' Explore limites, fotos e informações de imóveis em um só lugar.',
-  version:'1.6.2',themeColor:'#164018'
+  version:'1.6.3',themeColor:'#164018'
  });
 })();

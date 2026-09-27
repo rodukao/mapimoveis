@@ -1,10 +1,10 @@
 {
-  "version": "1.6.2",
+  "version": "1.6.3",
   "scripts": [
     {
       "file": "brand.js",
-      "bytes": 859,
-      "gzip": 527
+      "bytes": 869,
+      "gzip": 531
     },
     {
       "file": "supabase.js",
@@ -19,9 +19,9 @@
     {
       "file": "assets/core.js",
       "bytes": 149476,
-      "gzip": 44561
+      "gzip": 44560
     }
   ],
-  "total_bytes": 484532,
-  "total_gzip": 136046
+  "total_bytes": 484542,
+  "total_gzip": 136049
 }

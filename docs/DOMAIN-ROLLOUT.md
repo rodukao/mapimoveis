@@ -1,6 +1,6 @@
 # Domínio próprio — implantação posterior
 
-Estado em 27/09/2026: o site publicado é o Worker Cloudflare `terramapa` em `https://terramapa.rodukao.workers.dev`, que é a origem canônica atual. O domínio pretendido é `terraavistaimoveis.com.br`, ainda não registrado. A cópia antiga em `terramapa.danielleczfranco.chatgpt.site` não é servida por este Worker e deve ser desativada na hospedagem de origem.
+Estado em 27/09/2026: domínio `terraavistaimoveis.com.br` ativo no Worker Cloudflare `terramapa` e definido como origem canônica (`APP_BRAND.origin`). `redirectLegacy:true`: o endereço `terramapa.rodukao.workers.dev` responde 308 para o domínio novo, exceto retornos de Auth com `code`/`recovery`. Passos 1–7 abaixo concluídos; falta o passo 8 (caixa de contato). A cópia antiga em `terramapa.danielleczfranco.chatgpt.site` não é servida por este Worker e deve ser desativada na hospedagem de origem.
 
 ## Preparação entregue
 
