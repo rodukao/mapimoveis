@@ -5,18 +5,34 @@
   const {el}=TerraUI;
   let miniMap=null;
   const plural=(n,one,many)=>n+' '+(Number(n)===1?one:many);
-  function highlights(plot){
+  const ICONS={
+    area:'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
+    bed:'<path d="M3 19v-9M21 19v-5a3 3 0 0 0-3-3h-7v5M3 16h18"/><circle cx="7" cy="12" r="2"/>',
+    bath:'<path d="M4 12h16v2a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM6 12V6a2 2 0 0 1 3.5-1.3M8 19l-1 2M16 19l1 2"/>',
+    car:'<path d="M5 17H3v-4l2-5h14l2 5v4h-2M9 17h6M3 13h18"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>'
+  };
+  // Rooms and parking read best as icons side by side; other facts stay as short chips.
+  function stats(plot){
+    const d=plot.details||{},kind=TerraFilters.kindOf(plot.category),out=[];
+    if(kind==='house'||kind==='warehouse')out.push(['area',plot.area>=10000?(plot.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:2})+' ha':num(plot.area)+' m²','','de terreno']);
+    if(d.bedrooms)out.push(['bed',String(d.bedrooms),d.suites?'('+plural(d.suites,'suíte','suítes')+')':'',Number(d.bedrooms)===1?'quarto':'quartos']);
+    else if(d.suites)out.push(['bed',String(d.suites),'',Number(d.suites)===1?'suíte':'suítes']);
+    if(d.bathrooms)out.push(['bath',String(d.bathrooms),'',Number(d.bathrooms)===1?'banheiro':'banheiros']);
+    if(d.parking_spaces)out.push(['car',String(d.parking_spaces),'',Number(d.parking_spaces)===1?'vaga':'vagas']);
+    return out.map(([icon,value,note,label])=>{
+      const item=document.createElement('li');item.title=[value,label,note].filter(Boolean).join(' ');
+      item.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[icon]}</svg>`;
+      item.append(el('span',{},value,note?el('small',{},' '+note):''),el('span',{class:'sr-only'},' '+label));
+      return item;
+    });
+  }
+  function chips(plot){
     const d=plot.details||{},kind=TerraFilters.kindOf(plot.category),items=[];
-    if(kind==='house'||kind==='warehouse')items.push(plot.area>=10000?(plot.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:2})+' ha de terreno':num(plot.area)+' m² de terreno');
-    if(d.bedrooms)items.push(plural(d.bedrooms,'quarto','quartos'));
-    if(d.suites)items.push(plural(d.suites,'suíte','suítes'));
-    if(d.bathrooms)items.push(plural(d.bathrooms,'banheiro','banheiros'));
-    if(d.parking_spaces)items.push(plural(d.parking_spaces,'vaga','vagas'));
     if(d.floor!==undefined)items.push(Number(d.floor)===0?'Térreo':d.floor+'º andar');
     if(d.ceiling_height_m)items.push('Pé-direito de '+Number(d.ceiling_height_m).toLocaleString('pt-BR')+' m');
     if(d.frontage)items.push('Frente de '+num(d.frontage)+' m');
     if(kind==='land'&&plot.topography)items.push('Terreno '+TerraFilters.topo[plot.topography].toLowerCase());
-    return items;
+    return items.map(text=>el('li',{},text));
   }
   function showMap(node,plot,approximate){
     miniMap?.remove();
@@ -36,7 +52,7 @@
       el('p',{class:'small'},approximate?'O anunciante optou por mostrar a localização aproximada: o imóvel fica dentro da área destacada.':'Limites desenhados pelo anunciante sobre a imagem de satélite. Medidas estimadas pelo desenho.'),
       el('div',{class:'detail-location-actions'},
         el('a',{class:'action-link',href:'https://www.google.com/maps/dir/?api=1&destination='+destination,target:'_blank',rel:'noopener'},approximate?'Como chegar à região':'Como chegar'),
-        el('button',{type:'button',onclick:()=>$('detail-map').click()},'Ver com outros imóveis no mapa')));
+        el('button',{type:'button',onclick:()=>$('detail-map').click()},'Ver no mapa')));
     return {section,mapNode,approximate};
   }
   function invitation(){
@@ -47,9 +63,10 @@
   }
   document.addEventListener('terra:detail',event=>{
     const plot=event.detail;
-    for(const id of ['detail-highlights','detail-location','seller-invite'])$(id)?.remove();
-    const facts=highlights(plot);
-    if(facts.length)$('detail-unit').after(el('ul',{id:'detail-highlights',class:'detail-highlights'},facts.map(text=>el('li',{},text))));
+    for(const id of ['detail-stats','detail-highlights','detail-location','seller-invite'])$(id)?.remove();
+    const facts=stats(plot),labels=chips(plot);let anchor=$('detail-unit');
+    if(facts.length){const list=el('ul',{id:'detail-stats',class:'detail-stats'},facts);anchor.after(list);anchor=list;}
+    if(labels.length)anchor.after(el('ul',{id:'detail-highlights',class:'detail-highlights'},labels));
     $('detail-map').hidden=true;
     if(plot.points?.length>=3){const {section,mapNode,approximate}=location(plot);$('detail-description').previousElementSibling.before(section);showMap(mapNode,plot,approximate);}
     if(currentSession?.user.id!==plot.owner_id){const info=document.querySelector('.detail-info'),footer=$('contact-footer');footer?footer.before(invitation()):info.append(invitation());}

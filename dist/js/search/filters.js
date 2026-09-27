@@ -204,7 +204,8 @@ window.TerraFilters = (() => {
   document.addEventListener('terra:detail',event=>{
     const p=event.detail,kind=kindOf(p.category),spec=kinds[kind],details=p.details||{},rows=[],list=$('detail-features');
     if(spec.terrain&&p.terrain_context==='rural')rows.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
-    for(const key of Object.keys(detailFields))if(details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind)+(key==='built_area_m2'?' declarada':''),detailText(key,details[key])]);
+    // Rooms and parking are shown as icons at the top of the listing (showcase.js).
+    for(const key of Object.keys(detailFields))if(!['bedrooms','suites','bathrooms','parking_spaces'].includes(key)&&details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind)+(key==='built_area_m2'?' declarada':''),detailText(key,details[key])]);
     for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,key==='access'?(accessLabels[details[key]]||String(details[key])):String(details[key])]);
     if(spec.terrain)rows.push(['Contexto',p.terrain_context==='rural'?'Rural':'Urbano'],['Topografia declarada',topo[p.topography] || 'Não informada']);
     if(spec.infrastructure)rows.push(['Infraestrutura',describe(p.infrastructure)]);

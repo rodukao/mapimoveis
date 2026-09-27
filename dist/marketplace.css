@@ -296,3 +296,15 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .placa-preview{display:block;width:100%;max-width:360px;margin:10px auto 14px;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px #0000001a}
 .share-url{margin:-4px 0 12px;color:#5b665b;word-break:break-all}
 @media(max-width:720px){.detail-mini-map{height:230px}}
+/* Listing page, round 2: share at the top, icon stats, carousel */
+.detail-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.detail-share{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;font-size:14px;font-weight:600;color:#164018;border:1px solid #cfdccc;background:#fff}.detail-share:hover{background:#eff5ee}
+.detail-stats{display:flex;flex-wrap:wrap;gap:10px 22px;list-style:none;margin:16px 0 4px;padding:0}.detail-stats li{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:700;color:#1f3a24}.detail-stats small{font-size:14px;font-weight:500;color:#5b665b}
+.detail-stats svg{width:24px;height:24px;flex:none;fill:none;stroke:#2c6a35;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.detail-mini-map{position:relative;z-index:0;isolation:isolate}
+.listing-carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 12px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.carousel-card{flex:0 0 72%;max-width:250px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:stretch;gap:0;text-align:left;padding:0;margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.carousel-media{aspect-ratio:4/3;background:#e6ece4;display:flex;align-items:center;justify-content:center;color:#7a877b;font-size:13px}.carousel-media img{width:100%;height:100%;object-fit:cover;display:block}
+.carousel-price{padding:10px 12px 0;font-size:17px;color:#164018}.carousel-title{padding:2px 12px;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.carousel-card small{padding:2px 12px 12px;color:#67776d;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:721px){.carousel-card{flex-basis:46%}}
+.listing-carousel{align-items:flex-start}.carousel-card{height:auto}.carousel-media{aspect-ratio:auto;height:150px;width:100%;overflow:hidden}

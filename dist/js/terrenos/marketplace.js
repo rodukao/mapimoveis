@@ -152,6 +152,17 @@ window.TerraMarketplace = (() => {
       let offset=rows.length;if(rows.length===50){const more=el('button',{},'Carregar mais');more.onclick=()=>busy(more,async()=>{const next=await api.advertiserListings(ownerId,offset);if(!panel.node.open)return;offset+=next.length;append(next);more.hidden=next.length<50;},panel.content);panel.content.append(more);}
     }catch(exception){loading.remove();if(panel.node.open)error(panel.content,exception);}
   }
+  // Horizontal, swipeable cards: cover photo first, then price, title and two facts.
+  function carousel(list) {
+    const track=el('div',{class:'listing-carousel',tabIndex:0,'aria-label':'Imóveis relacionados; role para o lado para ver mais'});
+    for(const item of list){
+      const media=el('div',{class:'carousel-media'});
+      if(item.photos?.[0]){const image=el('img',{alt:'',loading:'lazy',decoding:'async'});TerraPhotos.bind(image,item.photos[0]);media.append(image);}else media.append(el('span',{},'Sem foto'));
+      const built=TerraFilters.builtArea(item),facts=[built?num(built.area)+' '+built.label:num(item.area)+' m²',item.details?.bedrooms?item.details.bedrooms+(Number(item.details.bedrooms)===1?' quarto':' quartos'):'',item.neighborhood||item.city].filter(Boolean).join(' · ');
+      track.append(el('button',{type:'button',class:'carousel-card',onclick:()=>openById(item.id)},media,el('strong',{class:'carousel-price'},money(item.price)),el('span',{class:'carousel-title'},item.title),el('small',{},facts)));
+    }
+    return track;
+  }
   function miniCard(plot,onclick) {
     const button=el('button',{class:'mini-card',onclick});
     if(plot.photos?.[0]){const image=el('img',{alt:'',loading:'lazy',decoding:'async'});TerraPhotos.bind(image,plot.photos[0]);button.append(image);}
@@ -162,7 +173,8 @@ window.TerraMarketplace = (() => {
     if(url.href!==location.href)history.pushState(null,'',url);
     document.title=plot.title+' — '+APP_BRAND.name;track('view_terreno',plot.id);
     $('market-detail')?.remove();$('contact-footer')?.remove();
-    const section=el('section',{id:'market-detail'}),actions=el('div',{class:'detail-quick-actions'},favoriteButton(plot),el('button',{onclick:()=>share(plot)},'Compartilhar'),el('button',{onclick:()=>report(plot)},'Denunciar'));
+    const section=el('section',{id:'market-detail'}),actions=el('div',{class:'detail-quick-actions'},favoriteButton(plot),el('button',{onclick:()=>report(plot)},'Denunciar'));
+    $('detail-share').hidden=!['published','reserved','sold'].includes(plot.status);$('detail-share').onclick=()=>share(plot);
     section.append(actions);document.querySelector('.detail-info').append(section);syncHearts();
     window.TerraRayX?.attach(plot,section);
     if(currentSession?.user.id===plot.owner_id){
@@ -188,8 +200,11 @@ window.TerraMarketplace = (() => {
         advertiser.append(footer);
       }
     }catch(exception){advertiser.replaceChildren();error(advertiser,exception);}
-    const similar=el('section',{},el('h3',{},'Imóveis semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
-    try{const rows=await api.similar(plot);if(!similar.isConnected)return;similar.lastChild.remove();if(!rows.length)similar.append(el('p',{},'Ainda não há anúncios semelhantes disponíveis.'));else rows.forEach(row=>similar.append(miniCard(fromRow(row),()=>openById(row.id))));}catch(exception){similar.lastChild?.remove();error(similar,exception);}
+    const similar=el('section',{class:'similar-listings'},el('h3',{},'Imóveis semelhantes'),el('p',{},'Buscando alternativas…'));section.append(similar);
+    try{const {rows,related}=await api.similar(plot);if(!similar.isConnected)return;
+      if(!rows.length)similar.remove();
+      else{similar.firstChild.textContent=related?'Imóveis semelhantes':'Outros imóveis em '+plot.city;similar.lastChild.replaceWith(carousel(rows.map(fromRow)));}
+    }catch(exception){similar.lastChild?.remove();error(similar,exception);}
     // Sticky contact bar tracks the whole info column (not just this section) so it stays
     // visible for the entire scroll, not only once the advertiser block is reached.
     const footer=$('contact-footer');if(footer&&section.isConnected)section.parentElement?.append(footer);

@@ -31,9 +31,16 @@ window.TerraMarketData = (() => {
     const rows = unwrap(await table('terra_listings').select(R.listFields).in('id',ids.slice(0,100)));
     return R.hydratePhotos(rows);
   }
+  // Same city, ranked by likeness (type, property group, price, area, distance) instead of strict
+  // filters, so small catalogues still show something. `related` is false when nothing shares the group.
   async function similar(plot) {
-    const rows = unwrap(await table('terra_listings').select(R.listFields).in('status',['published','reserved']).eq('state',plot.state).ilike('city',plot.city.replace(/[\\%_]/g,'\\$&')).eq('category',plot.category).neq('id',plot.id).gte('price_brl',plot.price*.7).lte('price_brl',plot.price*1.3).gte('area_m2',plot.area*.6).lte('area_m2',plot.area*1.4).order('created_at',{ascending:false}).limit(6));
-    return R.hydratePhotos(rows);
+    const rows = unwrap(await table('terra_listings').select(R.listFields).in('status',['published','reserved']).eq('state',plot.state).ilike('city',plot.city.replace(/[\\%_]/g,'\\$&')).neq('id',plot.id).order('created_at',{ascending:false}).limit(40));
+    const group = TerraCatalogMap.propertyGroup, gap = (a,b) => a>0 && b>0 ? Math.abs(Math.log(a/b)) : 2;
+    const km = (lat,lng) => { const r=Math.PI/180,x=(lng-plot.lng)*r*Math.cos((lat+plot.lat)*r/2),y=(lat-plot.lat)*r; return 6371*Math.hypot(x,y); };
+    const ranked = rows.map(row => ({ row, same: group(row.category)===group(plot.category), score: (row.category===plot.category?0:group(row.category)===group(plot.category)?1:4) + 1.5*gap(Number(row.price_brl),plot.price) + gap(Number(row.area_m2),plot.area) + Math.min(km(row.latitude,row.longitude)/5,3) })).sort((a,b) => a.score-b.score).slice(0,12);
+    // Only call them similar when there are enough of the same group; otherwise show nearby listings honestly.
+    const alike = ranked.filter(entry => entry.same), chosen = (alike.length >= 3 ? alike : ranked).slice(0, 8);
+    return { rows: await R.hydratePhotos(chosen.map(entry => entry.row)), related: alike.length >= 3 };
   }
   async function advertiserListings(ownerId, offset = 0) {
     return R.hydratePhotos(unwrap(await table('terra_listings').select(R.listFields).eq('owner_id',ownerId).in('status',['published','reserved']).order('created_at',{ascending:false}).range(offset,offset+49)));
