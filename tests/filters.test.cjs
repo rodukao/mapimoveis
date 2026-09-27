@@ -28,8 +28,20 @@ test('removing a price chip preserves area and location; reset clears every filt
 test('property editor preserves zero rooms and the declared area separately from map area',()=>{
  const s=setup();s.api.fillEditor({category:'apartamento',terrain_context:'urban',details:{bedrooms:2,bathrooms:1,parking_spaces:0,built_area_m2:72}});
  const d=s.api.editorValues().details;assert.equal(d.bedrooms,2);assert.equal(d.parking_spaces,0);assert.equal(d.built_area_m2,72);
- s.$('property-bedrooms').value='1.5';assert.throws(()=>s.api.editorValues(),/características/);
- s.$('property-bedrooms').value='2';s.$('property-built_area_m2').value='-1';assert.throws(()=>s.api.editorValues(),/características/);
+ s.$('property-bedrooms').value='1.5';assert.throws(()=>s.api.editorValues(),/Quartos/);
+ s.$('property-bedrooms').value='2';s.$('property-built_area_m2').value='-1';assert.throws(()=>s.api.editorValues(),/Área privativa/);
+});
+test('each property kind saves only its own attributes and built kinds need a declared area to publish',()=>{
+ const s=setup();
+ s.api.fillEditor({category:'apartamento',terrain_context:'urban',topography:'aclive',infrastructure:['agua'],features:['piscina','nascente'],details:{built_area_m2:80,floor:7,condo_fee_brl:650,frontage:12}});
+ let v=s.api.editorValues();assert.equal(v.details.floor,7);assert.equal(v.details.condo_fee_brl,650);assert.equal(v.details.frontage,undefined);assert.equal(v.topography,'');assert.deepEqual([...v.infrastructure],[]);assert.deepEqual([...v.features],['piscina']);
+ s.api.fillEditor({category:'residencial',terrain_context:'urban',features:['esquina','piscina'],details:{bedrooms:3,frontage:12}});
+ v=s.api.editorValues();assert.equal(v.details.bedrooms,undefined);assert.equal(v.details.frontage,12);assert.deepEqual([...v.features],['esquina']);
+ s.api.fillEditor({category:'casa',terrain_context:'urban',details:{bedrooms:3}});s.$('listing-status').value='published';
+ assert.throws(()=>s.api.editorValues(),/área construída/);
+ s.$('listing-status').value='draft';assert.equal(s.api.editorValues().details.bedrooms,3);
+ assert.equal(s.api.builtArea({category:'casa',details:{built_area_m2:120}}).label,'m² construídos');
+ assert.equal(s.api.builtArea({category:'lote',details:{built_area_m2:120}}),null);
 });
 test('new property filters survive viewport updates and can be removed independently',()=>{
  const s=setup();s.api.applySaved({category:'apartamento',minBedrooms:2,minBathrooms:2,minParking:1,minBuiltArea:60});s.api.setViewport({west:-44,east:-43,south:-22,north:-21});assert.equal(s.api.get().minBedrooms,2);

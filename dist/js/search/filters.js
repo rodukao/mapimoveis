@@ -1,9 +1,9 @@
 window.TerraFilters = (() => {
   const {el,dialog,field,options,error,busy}=TerraUI;
-  const categories={'':'Todos os tipos',casa:'Casa',apartamento:'Apartamento',cobertura:'Cobertura',sobrado:'Sobrado',sala_comercial:'Sala comercial',galpao:'Galpão',residencial:'Terreno urbano',lote:'Lote',condominio:'Condomínio',chacara:'Chácara',sitio:'Sítio',fazenda:'Fazenda',rural:'Área rural',comercial:'Área comercial',industrial:'Área industrial'};
+  const categories={'':'Todos os tipos',casa:'Casa',apartamento:'Apartamento',cobertura:'Cobertura',sobrado:'Sobrado',sala_comercial:'Sala comercial',galpao:'Galpão',residencial:'Terreno urbano',lote:'Lote',condominio:'Lote em condomínio',chacara:'Chácara',sitio:'Sítio',fazenda:'Fazenda',rural:'Área rural',comercial:'Área comercial',industrial:'Área industrial'};
   const propertyGroups=TerraCatalogMap.propertyGroups;
   const topo={'':'Não informada',plano:'Plano',aclive:'Aclive',declive:'Declive',misto:'Misto'};
-  const groups={infrastructure:{agua:'Água',energia:'Energia',esgoto:'Esgoto',asfalto:'Asfalto',internet:'Internet / fibra',calcada:'Calçada'},features:{esquina:'Esquina',murado:'Murado',cercado:'Cercado',nascente:'Nascente',vista:'Vista panorâmica'},documents:{escritura:'Escritura',matricula:'Matrícula',iptu:'IPTU',car:'CAR',ccir:'CCIR',sigef:'SIGEF'}};
+  const groups={infrastructure:{agua:'Água',energia:'Energia',esgoto:'Esgoto',asfalto:'Asfalto',internet:'Internet / fibra',calcada:'Calçada'},features:{esquina:'Esquina',murado:'Murado',cercado:'Cercado',nascente:'Nascente',vista:'Vista panorâmica',piscina:'Piscina',churrasqueira:'Churrasqueira',varanda:'Varanda',elevador:'Elevador',portaria:'Portaria 24h',area_lazer:'Área de lazer',mobiliado:'Mobiliado'},documents:{escritura:'Escritura',matricula:'Matrícula',iptu:'IPTU',car:'CAR',ccir:'CCIR',sigef:'SIGEF'}};
   const labels=Object.assign({},...Object.values(groups));
   let active={};
   const filterButton=el('button',{id:'advanced-filters',onclick:()=>openFilters()},el('span',{class:'filter-desktop-label'},'Filtros'),el('span',{class:'filter-mobile-label'},'Mais filtros'));
@@ -103,37 +103,106 @@ window.TerraFilters = (() => {
     form.onsubmit=event=>{event.preventDefault();busy(submit,async()=>{try{await TerraMarketData.saveSearch(name.value.trim(),snapshot,sort,alerts.checked);}catch(exception){if(exception.code==='23505')throw new Error('Você já tem uma busca com esse nome. Escolha outro.');throw exception;}TerraMarketplace.track('save_search');panel.node.close();toast('Busca salva.');},form);};panel.content.append(form);
   }
   // Optional attributes are shared by editor, details, filters, and comparison.
+  // Each property kind only shows the attributes that make sense for it.
+  const kindOf=category=>({casa:'house',sobrado:'house',apartamento:'apartment',cobertura:'apartment',sala_comercial:'office',galpao:'warehouse'})[category]||'land';
+  const builtKinds=['house','apartment','office','warehouse'];
+  const detailFields={
+    built_area_m2:{label:kind=>['apartment','office'].includes(kind)?'Área privativa (m²)':'Área construída (m²)',min:1,max:1000000,step:'any'},
+    bedrooms:{label:'Quartos',min:0,max:100,step:1},
+    suites:{label:'Suítes',min:0,max:100,step:1},
+    bathrooms:{label:'Banheiros',min:0,max:100,step:1},
+    parking_spaces:{label:'Vagas de garagem',min:0,max:100,step:1},
+    floor:{label:'Andar',min:-5,max:300,step:1},
+    ceiling_height_m:{label:'Pé-direito (m)',min:1,max:100,step:'any'},
+    condo_fee_brl:{label:'Condomínio (R$/mês)',min:0,max:1000000,step:'any'},
+    iptu_brl:{label:'IPTU (R$/ano)',min:0,max:100000000,step:'any'}
+  };
+  const kinds={
+    land:{details:[],terrain:true,infrastructure:true,features:['esquina','murado','cercado','nascente','vista'],note:'No mapa, desenhe os limites do terreno. A área é calculada pelo desenho.'},
+    house:{details:['built_area_m2','bedrooms','suites','bathrooms','parking_spaces','condo_fee_brl','iptu_brl'],infrastructure:true,features:['piscina','churrasqueira','varanda','area_lazer','mobiliado','vista','esquina','murado'],note:'No mapa, desenhe os limites do terreno da casa. Informe o condomínio apenas se a casa estiver em condomínio.'},
+    apartment:{details:['built_area_m2','bedrooms','suites','bathrooms','parking_spaces','floor','condo_fee_brl','iptu_brl'],features:['piscina','churrasqueira','varanda','elevador','portaria','area_lazer','mobiliado','vista'],note:'No mapa, desenhe o contorno do prédio ou condomínio. A área da unidade é a área privativa informada acima.'},
+    office:{details:['built_area_m2','bathrooms','parking_spaces','floor','condo_fee_brl','iptu_brl'],features:['elevador','portaria','mobiliado','vista'],note:'No mapa, desenhe o contorno do prédio. A área da sala é a área privativa informada acima.'},
+    warehouse:{details:['built_area_m2','ceiling_height_m','bathrooms','parking_spaces','iptu_brl'],urban:true,infrastructure:true,features:['esquina','murado','cercado'],note:'No mapa, desenhe os limites do terreno do galpão. A área construída é informada acima.'}
+  };
+  const detailLabel=(key,kind)=>{const label=detailFields[key].label;return typeof label==='function'?label(kind):label;};
+  const shortLabel=(key,kind)=>detailLabel(key,kind).replace(/ \((m²|m|R\$\/mês|R\$\/ano)\)$/,'');
+  function detailText(key,value){
+    const n=Number(value);
+    if(key==='built_area_m2')return num(n)+' m²';
+    if(key==='condo_fee_brl')return money(n)+'/mês';
+    if(key==='iptu_brl')return money(n)+'/ano';
+    if(key==='floor')return n===0?'Térreo':n<0?'Subsolo '+(-n):n+'º andar';
+    if(key==='ceiling_height_m')return n.toLocaleString('pt-BR',{maximumFractionDigits:2})+' m';
+    return String(n);
+  }
+  // Declared built/private area replaces the drawn area only for built property kinds.
+  function builtArea(plot){const kind=kindOf(plot?.category),area=Number(plot?.details?.built_area_m2);return builtKinds.includes(kind)&&area>0?{area,label:['apartment','office'].includes(kind)?'m² privativos':'m² construídos'}:null;}
+
   const context=el('select',{id:'terrain-context'},options({urban:'🏙 Urbano',rural:'🌾 Rural'}));
-  $('listing-fields').prepend(field('Localização do imóvel',context));
+  const contextField=field('Localização do imóvel',context);
+  $('listing-fields').prepend(contextField);
   const extra=el('div',{id:'terrain-attributes'}),topography=el('select',{id:'terrain-topography'},options(topo));
+  const topographyField=field('Topografia declarada',topography);
   const urban=el('div',{id:'urban-attributes'},field('Zoneamento (opcional)',el('input',{id:'zoning',maxLength:100})),field('Testada em metros (opcional)',el('input',{id:'frontage',type:'number',min:0,step:'any'})));
   const rural=el('div',{id:'rural-attributes',hidden:true},el('p',{id:'rural-area'}),field('Tipo de acesso',el('select',{id:'rural-access'},options({'':'Não informado',asfalto:'Asfalto',terra:'Estrada de terra',cascalho:'Cascalho',trilha:'Trilha'}))),field('Reserva legal (informação declarada)',el('input',{id:'legal-reserve',maxLength:200,placeholder:'Opcional'})));
-  const propertyFields=el('div',{id:'property-rooms'});
-  for(const [key,label,max,step] of [['bedrooms','Quartos',100,1],['bathrooms','Banheiros',100,1],['parking_spaces','Vagas de garagem',100,1],['built_area_m2','Área construída/privativa (m²)',1000000,'any']])propertyFields.append(field(label+' (opcional)',el('input',{id:'property-'+key,type:'number',min:key==='built_area_m2'?1:0,max,step})));
-  extra.append(propertyFields,el('p',{class:'small'},'No mapa, desenhe os limites de referência do lote ou empreendimento. Para casas e apartamentos, informe a área construída/privativa separadamente; o polígono não representa a área interna da unidade.'),field('Topografia declarada',topography),urban,rural);
-  for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])extra.append(el('details',{},el('summary',{},title),checks(group,[],'editor')));
+  const propertyFields=el('div',{id:'property-rooms'}),detailInputs={};
+  for(const [key,spec] of Object.entries(detailFields)){
+    const input=el('input',{id:'property-'+key,type:'number',min:spec.min,max:spec.max,step:spec.step,inputMode:spec.step===1?'numeric':'decimal'}),caption=el('span',{});
+    detailInputs[key]={input,caption,wrapper:el('label',{},caption,input)};propertyFields.append(detailInputs[key].wrapper);
+  }
+  const kindNote=el('p',{class:'small',id:'property-note'}),groupBlocks={},groupTitles={};
+  extra.append(propertyFields,kindNote,topographyField,urban,rural);
+  for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])extra.append(groupBlocks[group]=el('details',{},groupTitles[group]=el('summary',{},title),checks(group,[],'editor')));
   extra.append(el('p',{class:'small'},`Informe apenas características que você conhece. A declaração não representa validação documental pelo ${APP_BRAND.name}.`));
   $('category').closest('label').after(extra);
   $('category').replaceChildren(...options(Object.fromEntries(Object.entries(categories).filter(([k])=>k))));
-  context.onchange=()=>{urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';if(context.value==='rural'&&!['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='rural';if(context.value==='urban'&&['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='residencial';updateArea();if(drawing)updateDraw();};
-  $('category').onchange=()=>{context.value=['rural','chacara','sitio','fazenda'].includes($('category').value)?'rural':'urban';urban.hidden=context.value!=='urban';rural.hidden=context.value!=='rural';updateArea();if(drawing)updateDraw();};
+  function applyKind(){
+    const kind=kindOf($('category').value),spec=kinds[kind];
+    contextField.hidden=!spec.terrain;topographyField.hidden=!spec.terrain;
+    if(!spec.terrain)context.value='urban';
+    urban.hidden=!(spec.terrain?context.value==='urban':spec.urban);
+    rural.hidden=!(spec.terrain&&context.value==='rural');
+    for(const [key,{caption,wrapper}] of Object.entries(detailInputs)){
+      wrapper.hidden=!spec.details.includes(key);
+      caption.textContent=detailLabel(key,kind)+(key==='built_area_m2'?' — obrigatória para publicar':' (opcional)');
+    }
+    groupBlocks.infrastructure.hidden=!spec.infrastructure;
+    groupTitles.features.textContent=builtKinds.includes(kind)?'Diferenciais':'Características';
+    for(const input of groupBlocks.features.querySelectorAll('input[name="editor-features"]'))input.closest('label').hidden=!spec.features.includes(input.value);
+    kindNote.textContent=spec.note;
+  }
+  context.onchange=()=>{if(context.value==='rural'&&!['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='rural';if(context.value==='urban'&&['rural','chacara','sitio','fazenda'].includes($('category').value))$('category').value='residencial';applyKind();updateArea();if(drawing)updateDraw();};
+  $('category').onchange=()=>{if(kinds[kindOf($('category').value)].terrain)context.value=['rural','chacara','sitio','fazenda'].includes($('category').value)?'rural':'urban';applyKind();updateArea();if(drawing)updateDraw();};
   function updateArea(){ $('rural-area').textContent='Área desenhada: '+(currentArea/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha'; }
   function fillEditor(plot){
+    if(plot?.category)$('category').value=plot.category;
     context.value=plot?.terrain_context || (['rural','chacara','sitio','fazenda'].includes(plot?.category)?'rural':'urban');topography.value=plot?.topography || '';
-    const d=plot?.details || {};for(const key of ['bedrooms','bathrooms','parking_spaces','built_area_m2'])$('property-'+key).value=d[key]??'';$('zoning').value=d.zoning || '';$('frontage').value=d.frontage ?? '';$('rural-access').value=d.access || '';$('legal-reserve').value=d.legal_reserve || '';
-    for(const group of Object.keys(groups))extra.querySelectorAll(`input[name="editor-${group}"]`).forEach(input=>input.checked=(plot?.[group] || []).includes(input.value));context.onchange();
+    const d=plot?.details || {};for(const key of Object.keys(detailFields))detailInputs[key].input.value=d[key]??'';$('zoning').value=d.zoning || '';$('frontage').value=d.frontage ?? '';$('rural-access').value=d.access || '';$('legal-reserve').value=d.legal_reserve || '';
+    for(const group of Object.keys(groups))extra.querySelectorAll(`input[name="editor-${group}"]`).forEach(input=>input.checked=(plot?.[group] || []).includes(input.value));applyKind();updateArea();
   }
   function editorValues(){
-    const details=context.value==='urban'?{zoning:$('zoning').value.trim(),...($('frontage').value!==''?{frontage:Number($('frontage').value)}:{})}:{access:$('rural-access').value,legal_reserve:$('legal-reserve').value.trim()};
-    for(const key of ['bedrooms','bathrooms','parking_spaces','built_area_m2']){const input=$('property-'+key);if(input.value!==''){const n=Number(input.value);if(!Number.isFinite(n)||n<(key==='built_area_m2'?1:0)||n>(key==='built_area_m2'?1000000:100)||(key!=='built_area_m2'&&!Number.isInteger(n)))throw Error('Revise as características do imóvel.');details[key]=n;}}
-    return {terrain_context:context.value,topography:topography.value,details,...Object.fromEntries(Object.keys(groups).map(group=>[group,readChecks(extra,group,'editor')]))};
+    const kind=kindOf($('category').value),spec=kinds[kind],terrainContext=spec.terrain?context.value:'urban',details={};
+    if(spec.terrain?terrainContext==='urban':spec.urban){details.zoning=$('zoning').value.trim();if($('frontage').value!=='')details.frontage=Number($('frontage').value);}
+    if(spec.terrain&&terrainContext==='rural'){details.access=$('rural-access').value;details.legal_reserve=$('legal-reserve').value.trim();}
+    for(const key of spec.details){
+      const input=detailInputs[key].input,range=detailFields[key];if(input.value==='')continue;const n=Number(input.value);
+      if(!Number.isFinite(n)||n<range.min||n>range.max||(range.step===1&&!Number.isInteger(n)))throw Error('Revise o campo “'+shortLabel(key,kind)+'”.');
+      details[key]=n;
+    }
+    if(builtKinds.includes(kind)&&details.built_area_m2===undefined&&['published','reserved'].includes($('listing-status').value))throw Error('Informe a '+shortLabel('built_area_m2',kind).toLowerCase()+' para publicar. Você pode salvar como rascunho.');
+    return {terrain_context:terrainContext,topography:spec.terrain?topography.value:'',details,infrastructure:spec.infrastructure?readChecks(extra,'infrastructure','editor'):[],features:readChecks(extra,'features','editor').filter(value=>spec.features.includes(value)),documents:readChecks(extra,'documents','editor')};
   }
   const describe=values=>(values || []).map(key=>labels[key] || key).join(', ') || 'Não informado';
-  document.addEventListener('terra:detail',event=>{const p=event.detail;const list=$('detail-features');list.replaceChildren();
-    const details=p.details||{};const extra=[];
-    if(p.terrain_context==='rural')extra.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
-    for(const [key,label] of [['bedrooms','Quartos'],['bathrooms','Banheiros'],['parking_spaces','Vagas de garagem'],['built_area_m2','Área construída/privativa declarada (m²)'],['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')extra.push([label,String(details[key])]);
-    for(const [label,value] of extra)list.append(el('div',{},el('dt',{},label),el('dd',{},value)));
-    for(const [label,value] of [['Contexto',p.terrain_context==='rural'?'Rural':'Urbano'],['Topografia declarada',topo[p.topography] || 'Não informada'],['Infraestrutura',describe(p.infrastructure)],['Características',describe(p.features)],['Documentação declarada',describe(p.documents)]])list.append(el('div',{},el('dt',{},label),el('dd',{},value)));});
-  return {get,clearInterest,setViewport,setLocation,applySaved,setArea,clearSpatial,reset,saveCurrent,fillEditor,editorValues,updateArea,describe,categories,topo};
+  document.addEventListener('terra:detail',event=>{
+    const p=event.detail,kind=kindOf(p.category),spec=kinds[kind],details=p.details||{},rows=[],list=$('detail-features');
+    if(spec.terrain&&p.terrain_context==='rural')rows.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
+    if(kind==='house'||kind==='warehouse')rows.push(['Área do terreno (no mapa)',num(p.area)+' m²']);
+    for(const key of Object.keys(detailFields))if(details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind)+(key==='built_area_m2'?' declarada':''),detailText(key,details[key])]);
+    for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,String(details[key])]);
+    if(spec.terrain)rows.push(['Contexto',p.terrain_context==='rural'?'Rural':'Urbano'],['Topografia declarada',topo[p.topography] || 'Não informada']);
+    if(spec.infrastructure)rows.push(['Infraestrutura',describe(p.infrastructure)]);
+    rows.push([builtKinds.includes(kind)?'Diferenciais':'Características',describe(p.features)],['Documentação declarada',describe(p.documents)]);
+    list.replaceChildren(...rows.map(([label,value])=>el('div',{},el('dt',{},label),el('dd',{},value))));
+  });
+  return {get,clearInterest,setViewport,setLocation,applySaved,setArea,clearSpatial,reset,saveCurrent,fillEditor,editorValues,updateArea,describe,categories,topo,kindOf,builtArea};
 })();

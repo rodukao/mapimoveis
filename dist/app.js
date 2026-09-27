@@ -88,7 +88,8 @@ function render() {
     card.querySelector('.amount').textContent = money(plot.price);
     card.querySelector('.sqm').textContent = plot.price == null ? 'Informe o preço para publicar' : num(plot.area) + ' m² no mapa · ' + (plot.area > 0 ? unitMoney(plot.price / plot.area) + '/m²' : 'Área pendente');
     card.querySelector('.plot-area strong').textContent = num(plot.area) + ' m²';
-    if(plot.details?.built_area_m2){const a=Number(plot.details.built_area_m2);card.querySelector('.sqm').textContent=num(a)+' m² construídos/privativos'+(plot.price?' · '+unitMoney(plot.price/a)+'/m²':'');}
+    const built=window.TerraFilters?.builtArea(plot);
+    if(built)card.querySelector('.sqm').textContent=num(built.area)+' '+built.label+(plot.price?' · '+unitMoney(plot.price/built.area)+'/m²':'');
     const rooms=[['bedrooms','quartos'],['bathrooms','banheiros'],['parking_spaces','vagas']].filter(([k])=>plot.details?.[k]!==undefined).map(([k,label])=>plot.details[k]+' '+label);
     if(rooms.length){const info=document.createElement('div');info.className='small';info.textContent=rooms.join(' · ');card.querySelector('.card-open').append(info);}
     card.querySelector('.card-open').onclick = () => select(index);

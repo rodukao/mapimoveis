@@ -17,8 +17,8 @@ function showDetail(plot) {
   if ($('detail-eyebrow')) $('detail-eyebrow').textContent = (window.TerraCatalogMap?.propertyGroup(plot.category) || 'land') === 'land' ? 'DETALHES DO TERRENO' : 'DETALHES DO IMÓVEL';
   $('detail-address').textContent = plot.address;
   $('detail-price').textContent = money(plot.price);
-  const displayArea=Number(plot.details?.built_area_m2)||plot.area;
-  $('detail-area').textContent = num(displayArea) + (plot.details?.built_area_m2?' m² construídos/privativos (declarados)':' m² de área no mapa');
+  const built=window.TerraFilters?.builtArea(plot),displayArea=built?.area||plot.area;
+  $('detail-area').textContent = num(displayArea) + (built?' '+built.label+' (declarados)':' m² de área no mapa');
   $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / displayArea) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
