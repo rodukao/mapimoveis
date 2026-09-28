@@ -2,8 +2,7 @@
 // never sends an Origin header). Trust comes from verifying Stripe-Signature, not from
 // an allowlisted origin, matching terra-storage-cleanup's "external trusted system"
 // shape rather than terra-operations'/terra-billing's browser-facing shape.
-function key(jsonName,legacy){const value=Deno.env.get(jsonName);return (value?JSON.parse(value).default:null)||Deno.env.get(legacy);}
-async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(15000)});}
+import {envKey as key,fetchTimeout as request,adminHeaders as buildAdminHeaders} from '../_shared/http.ts';
 
 // Hand-rolled HMAC-SHA256 verification instead of the Stripe SDK: this project has zero
 // external dependencies in any Edge Function, and Stripe's webhook signature algorithm
@@ -30,7 +29,7 @@ Deno.serve(async req=>{
  const webhookSecret=Deno.env.get('STRIPE_WEBHOOK_SECRET');
  const pricePlus=Deno.env.get('STRIPE_PRICE_PLUS'),pricePro=Deno.env.get('STRIPE_PRICE_PRO');
  if(!project||!secret||!webhookSecret)return reply(503,{error:'Webhook temporariamente indisponível.'});
- const adminHeaders={apikey:secret,'Content-Type':'application/json',...(secret.startsWith('eyJ')?{Authorization:'Bearer '+secret}:{})};
+ const adminHeaders=buildAdminHeaders(secret);
  const rpc=async(name,args)=>{const r=await request(project+'/rest/v1/rpc/'+name,{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'RPC failed');}return r.status===204?null:r.json();};
  try{
   const rawBody=await req.text();

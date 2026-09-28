@@ -1,13 +1,11 @@
 // Privileged credentials are read only from the Edge runtime, never returned.
+import {envKey as key,fetchTimeout as request,adminHeaders as buildAdminHeaders,corsHeaders} from '../_shared/http.ts';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.rodukao.workers.dev').split(',').map(x=>x.trim());
-const headers={'Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
-function key(jsonName,legacy){const value=Deno.env.get(jsonName);return (value?JSON.parse(value).default:null)||Deno.env.get(legacy);}
 async function payload(req,max=4096){if(!req.body)throw new Error('Requisição inválida.');const reader=req.body.getReader();let size=0;const chunks=[];while(true){const x=await reader.read();if(x.done)break;size+=x.value.length;if(size>max){await reader.cancel();throw new Error('Requisição muito grande.');}chunks.push(x.value);}const bytes=new Uint8Array(size);let i=0;for(const c of chunks){bytes.set(c,i);i+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));}
 function sessionId(jwt){try{const part=jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(part.padEnd(Math.ceil(part.length/4)*4,'='))).session_id;}catch{return null;}}
-async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(15000)});}
 Deno.serve(async req=>{
- const origin=req.headers.get('origin'),cors={...headers,...(origin&&allowedOrigins.includes(origin)?{'Access-Control-Allow-Origin':origin}:{})};
+ const origin=req.headers.get('origin'),cors=corsHeaders(allowedOrigins,origin);
  const reply=(status,data)=>new Response(JSON.stringify(data),{status,headers:cors});
  if(origin&&!allowedOrigins.includes(origin))return reply(403,{error:'Origem não autorizada.'});
  if(req.method==='OPTIONS')return new Response(null,{headers:cors});
@@ -20,7 +18,7 @@ Deno.serve(async req=>{
   const user=await checked.json(),sid=sessionId(bearer.slice(7));if(!UUID.test(user.id)||!UUID.test(sid||''))return reply(401,{error:'Sessão inválida.'});
   const body=await payload(req);
   // Service calls never forward a caller-selected user/owner ID.
-  const adminHeaders={apikey:secret,'Content-Type':'application/json',...(secret.startsWith('eyJ')?{Authorization:'Bearer '+secret}:{})};
+  const adminHeaders=buildAdminHeaders(secret);
   const rpc=async(name,args)=>{const r=await request(project+'/rest/v1/rpc/'+name,{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Não foi possível concluir a operação.');}return r.status===204?null:r.json();};
   if(body.operation==='challenge'){
    if(!['contact','report','listing','sensitive'].includes(body.action))return reply(400,{error:'Operação inválida.'});

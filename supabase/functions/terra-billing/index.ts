@@ -1,13 +1,11 @@
 // Creates Stripe Checkout/Billing Portal sessions. The Stripe secret key never leaves
 // this Edge runtime — the browser only ever receives a redirect URL.
+import {envKey as key,fetchTimeout as request,adminHeaders as buildAdminHeaders,corsHeaders} from '../_shared/http.ts';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const allowedOrigins=(Deno.env.get('TERRA_ALLOWED_ORIGINS')||'https://terramapa.rodukao.workers.dev').split(',').map(x=>x.trim());
-const headers={'Access-Control-Allow-Headers':'authorization,x-client-info,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS','Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
-function key(jsonName,legacy){const value=Deno.env.get(jsonName);return (value?JSON.parse(value).default:null)||Deno.env.get(legacy);}
-async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(15000)});}
 function form(fields){const params=new URLSearchParams();const add=(key,value)=>{if(value===undefined||value===null)return;if(typeof value==='object')for(const [k,v] of Object.entries(value))add(key+'['+k+']',v);else params.append(key,String(value));};for(const [k,v] of Object.entries(fields))add(k,v);return params;}
 Deno.serve(async req=>{
- const origin=req.headers.get('origin'),cors={...headers,...(origin&&allowedOrigins.includes(origin)?{'Access-Control-Allow-Origin':origin}:{})};
+ const origin=req.headers.get('origin'),cors=corsHeaders(allowedOrigins,origin);
  const reply=(status,data)=>new Response(JSON.stringify(data),{status,headers:cors});
  if(origin&&!allowedOrigins.includes(origin))return reply(403,{error:'Origem não autorizada.'});
  if(req.method==='OPTIONS')return new Response(null,{headers:cors});
@@ -22,7 +20,7 @@ Deno.serve(async req=>{
   const checked=await request(project+'/auth/v1/user',{headers:{apikey:pub,Authorization:bearer}});if(!checked.ok)return reply(401,{error:'Entre novamente na sua conta.'});
   const user=await checked.json();if(!UUID.test(user.id||''))return reply(401,{error:'Sessão inválida.'});
   const body=await req.json().catch(()=>({}));
-  const adminHeaders={apikey:secret,'Content-Type':'application/json',...(secret.startsWith('eyJ')?{Authorization:'Bearer '+secret}:{})};
+  const adminHeaders=buildAdminHeaders(secret);
   const rpc=async(name,args)=>{const r=await request(project+'/rest/v1/rpc/'+name,{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||'Não foi possível concluir a operação.');}return r.status===204?null:r.json();};
   const stripeHeaders={Authorization:'Basic '+btoa(stripeKey+':'),'Content-Type':'application/x-www-form-urlencoded'};
   const stripe=async(path,fields)=>{const r=await request('https://api.stripe.com/v1/'+path,{method:'POST',headers:stripeHeaders,body:form(fields)});const data=await r.json();if(!r.ok)throw new Error(data.error?.message||'Não foi possível falar com o provedor de pagamento.');return data;};
