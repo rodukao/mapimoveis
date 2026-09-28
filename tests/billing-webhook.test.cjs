@@ -1,4 +1,4 @@
-const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto'),{webcrypto}=require('node:crypto');
+const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),crypto=require('node:crypto'),{webcrypto}=require('node:crypto'),{loadEdgeSource}=require('./_edge-source.cjs');
 const secret='whsec_test_secret';
 function sign(payload,timestamp=Math.floor(Date.now()/1000)){
  const mac=crypto.createHmac('sha256',secret).update(timestamp+'.'+payload).digest('hex');
@@ -16,7 +16,7 @@ function setup({webhookSecret=true,seen=false,prices=true,failRpc=null}={}){
    throw new Error('Unexpected path '+u.pathname);
   },
   Deno:{env:{get:k=>env[k]},serve:f=>{handler=f;}}
- };vm.createContext(context);vm.runInContext(fs.readFileSync('supabase/functions/terra-billing-webhook/index.ts','utf8'),context);
+ };vm.createContext(context);vm.runInContext(loadEdgeSource('terra-billing-webhook'),context);
  return {calls,call:(payload,header)=>handler(new Request('https://project.example.invalid/functions/v1/terra-billing-webhook',{method:'POST',headers:{'stripe-signature':header},body:payload}))};
 }
 function event(type,object,id='evt_1'){return JSON.stringify({id,type,data:{object}});}

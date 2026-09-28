@@ -1,4 +1,4 @@
-const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),{loadEdgeSource}=require('./_edge-source.cjs');
 const uid='11111111-1111-4111-8111-111111111111';
 const jwt='e30.'+Buffer.from(JSON.stringify({sub:uid})).toString('base64url')+'.signature';
 function setup({auth=true,stripeKey=true,prices=true,listingOwner=uid,listingStatus='published',customer='cus_123'}={}){
@@ -15,7 +15,7 @@ function setup({auth=true,stripeKey=true,prices=true,listingOwner=uid,listingSta
    throw new Error('Unexpected path '+u.pathname);
   },
   Deno:{env:{get:k=>env[k]},serve:f=>{handler=f;}}
- };vm.createContext(context);vm.runInContext(fs.readFileSync('supabase/functions/terra-billing/index.ts','utf8'),context);
+ };vm.createContext(context);vm.runInContext(loadEdgeSource('terra-billing'),context);
  return {calls,call:(body,authorization='Bearer '+jwt,origin='https://terra.example.invalid')=>handler(new Request('https://project.example.invalid/functions/v1/terra-billing',{method:'POST',headers:{authorization,origin,'content-type':'application/json'},body:JSON.stringify(body)}))};
 }
 test('fails closed without Stripe secret configured',async()=>{const s=setup({stripeKey:false});assert.equal((await s.call({operation:'checkout_subscription',plan:'plus'})).status,503);assert.equal(s.calls.length,0);});

@@ -1,4 +1,4 @@
-const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),{loadEdgeSource}=require('./_edge-source.cjs');
 const uid='11111111-1111-4111-8111-111111111111',sid='22222222-2222-4222-8222-222222222222';
 const jwt='e30.'+Buffer.from(JSON.stringify({sub:uid,session_id:sid})).toString('base64url')+'.signature';
 function setup({auth=true,secret=true,verdict=true,storageError=false,prepareError=false}={}){
@@ -15,7 +15,7 @@ function setup({auth=true,secret=true,verdict=true,storageError=false,prepareErr
   if(path.endsWith('/terra_finish_deletion'))return new Response(null,{status:204});
   if(path==='/auth/v1/admin/users/'+uid)return Response.json({});
   throw new Error('Unexpected path '+path);
- },Deno:{env:{get:k=>env[k]},serve:f=>{handler=f;}}};vm.createContext(context);vm.runInContext(fs.readFileSync('supabase/functions/terra-operations/index.ts','utf8'),context);
+ },Deno:{env:{get:k=>env[k]},serve:f=>{handler=f;}}};vm.createContext(context);vm.runInContext(loadEdgeSource('terra-operations'),context);
  return {calls,call:(body,authorization='Bearer '+jwt,origin='https://terra.example.invalid')=>handler(new Request('https://project.example.invalid/functions/v1/terra-operations',{method:'POST',headers:{authorization,origin},body:JSON.stringify(body)}))};
 }
 test('operations reject unauthenticated requests before privileged calls',async()=>{const s=setup({auth:false});assert.equal((await s.call({operation:'delete_account'})).status,401);assert.equal(s.calls.length,1);});
