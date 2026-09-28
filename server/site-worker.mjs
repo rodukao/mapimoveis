@@ -26,8 +26,10 @@ export function metadata(url,indexable=true,listing=null){
 // Same policy for every response: HTML is the only place CSP/frame-ancestors truly
 // matter, but assets cost nothing extra carrying them, and HSTS must be on every
 // response for browsers to pin it. Origins here mirror what dist/*.js actually calls
-// (Leaflet/Esri tiles, Supabase, Photon, ViaCEP, Turnstile, YouTube) — keep this in
-// sync with dist/config.js and dist/captcha.js when a provider changes (e.g. enabling
+// (Leaflet/Esri tiles, Supabase, Photon, ViaCEP, Turnstile, YouTube), plus the
+// cloudflareinsights.com beacon Cloudflare injects on its own because
+// [observability] is enabled in wrangler.toml. Keep this in sync with
+// dist/config.js and dist/captcha.js when a provider changes (e.g. enabling
 // hcaptcha needs https://js.hcaptcha.com and https://*.hcaptcha.com added below).
 const SECURITY_HEADERS={
  'Strict-Transport-Security':'max-age=31536000; includeSubDomains; preload',
@@ -36,11 +38,11 @@ const SECURITY_HEADERS={
  'Permissions-Policy':'geolocation=(), camera=(), microphone=(), payment=()',
  'Content-Security-Policy':[
   "default-src 'self'",
-  "script-src 'self' https://challenges.cloudflare.com",
+  "script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://services.arcgisonline.com https://pkofzhlcbqupanzydyyf.supabase.co https://i.ytimg.com",
   "font-src 'self'",
-  "connect-src 'self' https://pkofzhlcbqupanzydyyf.supabase.co https://photon.komoot.io https://viacep.com.br https://challenges.cloudflare.com",
+  "connect-src 'self' https://pkofzhlcbqupanzydyyf.supabase.co https://photon.komoot.io https://viacep.com.br https://challenges.cloudflare.com https://cloudflareinsights.com",
   "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com",
   "object-src 'none'",
   "base-uri 'self'",
