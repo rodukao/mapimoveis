@@ -1,6 +1,6 @@
 # Terra à Vista — identidade 2.1
 
-Rebrand de TerraMapa para Terra à Vista (logo fornecida pelo usuário em 25/09/2026, revisada em 26/09/2026 removendo a palavra "Imóveis" do lockup). Wordmark "TERRAÀVISTA!" em verde institucional #164018, com um símbolo em formato de crachá/pin no lugar do acento do "À", em âmbar #F59E0B com contorno branco. Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
+Rebrand de TerraMapa para Terra à Vista (logo fornecida pelo usuário em 25/09/2026, revisada em 26/09/2026 removendo a palavra "Imóveis" do lockup; contorno branco do símbolo removido em 28/09/2026). Wordmark "TERRAÀVISTA!" em verde institucional #164018, com um símbolo em formato de crachá/pin no lugar do acento do "À", em âmbar sólido #F59E0B, sem contorno. Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
 
 ## Arquivos
 
