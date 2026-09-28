@@ -19,9 +19,9 @@
     {
       "file": "assets/core.js",
       "bytes": 169301,
-      "gzip": 50879
+      "gzip": 50878
     }
   ],
   "total_bytes": 504352,
-  "total_gzip": 142361
+  "total_gzip": 142360
 }

@@ -41,6 +41,7 @@ server/site-worker.mjs (Cloudflare Worker `terramapa`)
 | Cobrança, planos, boost | `dist/js/account/billing.js` + `supabase/functions/terra-billing*` |
 | Exclusão de conta, verificação adicional | `supabase/functions/terra-operations` |
 | Preview social, links curtos, cabeçalhos HTTP, proxy de contato | `server/site-worker.mjs` |
+| Página "Como Publicar" (guia com screenshots) | `dist/como-publicar/index.html`, `dist/guia.css`, imagens em `dist/guia/` — nova pasta soma-se à lista servida por `server/site-worker.mjs` (`/como-publicar`) e ao `sitemap.xml` |
 | Esquema do banco, RLS, funções SQL | `supabase/migrations/*.sql` (nova migração, nunca editar uma aplicada) |
 | Raio-X (altitude, referências geográficas) | `supabase/functions/terra-rayx`, `dist/js/analysis/rayx.js` |
 | Empacotar e publicar | `scripts/build-site.cjs` (build), `npm run deploy` (build + `wrangler deploy`) |

@@ -1,0 +1,12 @@
+.guide-steps{counter-reset:step;padding:0;margin:32px 0 0;list-style:none}
+.guide-steps>li{position:relative;padding:0 0 40px 0;margin:0 0 40px;border-bottom:1px solid #e2e9e3}
+.guide-steps>li:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0}
+.guide-steps h2{counter-increment:step;display:flex;align-items:center;gap:14px;margin-top:0}
+.guide-steps h2::before{content:counter(step);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#164018;color:#fff;font:700 16px/1 var(--font-ui);}
+.guide-steps figure{margin:20px 0 0}
+.guide-steps img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid #e2e9e3;box-shadow:0 6px 20px #202a2612}
+.guide-steps figcaption{margin-top:10px;font-size:14px;color:#52635B}
+.guide-tip{padding:14px 16px;border-left:4px solid #164018;background:#f1f5f2;font-size:15px;margin:16px 0 0}
+.guide-intro{font-size:18px;color:#3a453f;max-width:640px}
+.guide-cta{display:inline-block;background:#164018;color:#fff;padding:13px 22px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px}
+.guide-cta:hover{background:#0F2D11}
