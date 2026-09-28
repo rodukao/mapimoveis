@@ -21,10 +21,20 @@ export async function fetchTimeout(url, options = {}, ms = 15000) {
 // New publishable/secret keys (sb_publishable_/sb_secret_) are sent as `apikey` alone;
 // legacy JWT-shaped keys (eyJ...) also need the Authorization bearer header.
 export function adminHeaders(secret) {
-  return { apikey: secret, 'Content-Type': 'application/json', ...(secret.startsWith('eyJ') ? { Authorization: 'Bearer ' + secret } : {}) };
+  return {
+    apikey: secret,
+    'Content-Type': 'application/json',
+    ...(secret.startsWith('eyJ') ? { Authorization: 'Bearer ' + secret } : {}),
+  };
 }
 
 export function corsHeaders(allowedOrigins, origin) {
-  const base = { 'Access-Control-Allow-Headers': 'authorization,x-client-info,apikey,content-type', 'Access-Control-Allow-Methods': 'POST,OPTIONS', 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin' };
+  const base = {
+    'Access-Control-Allow-Headers': 'authorization,x-client-info,apikey,content-type',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    Vary: 'Origin',
+  };
   return { ...base, ...(origin && allowedOrigins.includes(origin) ? { 'Access-Control-Allow-Origin': origin } : {}) };
 }
