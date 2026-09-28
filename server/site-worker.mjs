@@ -23,12 +23,38 @@ export function metadata(url,indexable=true,listing=null){
  const t=listing?escape(listing.title):title,d=listing?escape(listing.description):description,image=escape(listing?.image||`${ORIGIN}/og.png?v=${APP_BRAND.version}`);
  return `<link rel="canonical" href="${escape(url)}"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:image" content="${image}"><meta property="og:type" content="${listing?'article':'website'}"><meta property="og:site_name" content="${escape(APP_BRAND.name)}"><meta property="og:locale" content="pt_BR"><meta property="og:url" content="${escape(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"><meta name="twitter:image" content="${image}"><meta name="robots" content="index,follow">`;
 }
+// Same policy for every response: HTML is the only place CSP/frame-ancestors truly
+// matter, but assets cost nothing extra carrying them, and HSTS must be on every
+// response for browsers to pin it. Origins here mirror what dist/*.js actually calls
+// (Leaflet/Esri tiles, Supabase, Photon, ViaCEP, Turnstile, YouTube) — keep this in
+// sync with dist/config.js and dist/captcha.js when a provider changes (e.g. enabling
+// hcaptcha needs https://js.hcaptcha.com and https://*.hcaptcha.com added below).
+const SECURITY_HEADERS={
+ 'Strict-Transport-Security':'max-age=31536000; includeSubDomains; preload',
+ 'X-Frame-Options':'DENY',
+ 'Referrer-Policy':'strict-origin-when-cross-origin',
+ 'Permissions-Policy':'geolocation=(), camera=(), microphone=(), payment=()',
+ 'Content-Security-Policy':[
+  "default-src 'self'",
+  "script-src 'self' https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://server.arcgisonline.com https://services.arcgisonline.com https://pkofzhlcbqupanzydyyf.supabase.co https://i.ytimg.com",
+  "font-src 'self'",
+  "connect-src 'self' https://pkofzhlcbqupanzydyyf.supabase.co https://photon.komoot.io https://viacep.com.br https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  'upgrade-insecure-requests'
+ ].join('; ')
+};
 export function createWorker(assets,version){
  const decoded=new Map();
  const bytes=key=>{if(!decoded.has(key))decoded.set(key,Uint8Array.from(atob(assets[key].data),c=>c.charCodeAt(0)));return decoded.get(key);};
  return {async fetch(request,env={}){
   const url=new URL(request.url),path=url.pathname.replace(/\/$/,'')||'/';
-  const reply=(body,status=200,type='text/html; charset=utf-8',extra={})=>new Response(request.method==='HEAD'?null:body,{status,headers:{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store',...extra}});
+  const reply=(body,status=200,type='text/html; charset=utf-8',extra={})=>new Response(request.method==='HEAD'?null:body,{status,headers:{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store',...SECURITY_HEADERS,...extra}});
   if(path==='/api/contact'){
    if(request.method!=='POST')return reply('Use POST.',405,'text/plain');
    if(request.headers.get('Origin')!==url.origin)return reply(JSON.stringify({error:'Origem não autorizada.'}),403,'application/json');
@@ -43,14 +69,14 @@ export function createWorker(assets,version){
    }catch(_){return reply(JSON.stringify({error:'Não foi possível abrir o contato agora.'}),503,'application/json');}
   }
   if(!['GET','HEAD'].includes(request.method))return reply('Method not allowed',405,'text/plain');
-  if(APP_BRAND.redirectLegacy&&ORIGIN===APP_BRAND.targetOrigin&&url.origin===APP_BRAND.legacyOrigin&&!url.searchParams.has('code')&&!url.searchParams.has('recovery'))return new Response(null,{status:308,headers:{Location:ORIGIN+url.pathname+url.search,'Cache-Control':'public, max-age=300'}});
+  if(APP_BRAND.redirectLegacy&&ORIGIN===APP_BRAND.targetOrigin&&url.origin===APP_BRAND.legacyOrigin&&!url.searchParams.has('code')&&!url.searchParams.has('recovery'))return new Response(null,{status:308,headers:{Location:ORIGIN+url.pathname+url.search,'Cache-Control':'public, max-age=300','Strict-Transport-Security':SECURITY_HEADERS['Strict-Transport-Security']}});
   const short=path.match(/^\/i\/([2-9a-hjkmnp-z]{6})$/);
   if(short){
    try{const q=new URL(PROJECT+'/rest/v1/terra_listings');q.searchParams.set('short_code','eq.'+short[1]);q.searchParams.set('status','in.(published,reserved,sold)');q.searchParams.set('select','id');
     const r=await fetch(q,{headers:{apikey:KEY},signal:AbortSignal.timeout(5000)});const rows=r.ok?await r.json():[];
-    if(UUID.test(rows?.[0]?.id||''))return new Response(null,{status:302,headers:{Location:ORIGIN+'/?terreno='+rows[0].id,'Cache-Control':'public, max-age=300'}});
+    if(UUID.test(rows?.[0]?.id||''))return new Response(null,{status:302,headers:{Location:ORIGIN+'/?terreno='+rows[0].id,'Cache-Control':'public, max-age=300','Strict-Transport-Security':SECURITY_HEADERS['Strict-Transport-Security']}});
    }catch(_){}
-   return new Response(null,{status:302,headers:{Location:ORIGIN+'/','Cache-Control':'no-store'}});
+   return new Response(null,{status:302,headers:{Location:ORIGIN+'/','Cache-Control':'no-store','Strict-Transport-Security':SECURITY_HEADERS['Strict-Transport-Security']}});
   }
   const cover=path.match(/^\/og\/listing\/([0-9a-f-]{36})\.jpg$/i);
   if(cover&&UUID.test(cover[1])){
@@ -60,8 +86,8 @@ export function createWorker(assets,version){
     const signed=await fetch(PROJECT+'/storage/v1/object/sign/terra-listing-photos/'+stored,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:120}),signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null);
     if(!signed?.signedURL)throw Error();
     const image=await fetch(PROJECT+'/storage/v1'+signed.signedURL,{signal:AbortSignal.timeout(10000)});if(!image.ok)throw Error();
-    return new Response(request.method==='HEAD'?null:image.body,{status:200,headers:{'Content-Type':image.headers.get('Content-Type')||'image/jpeg','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'}});
-   }catch(_){return new Response(null,{status:302,headers:{Location:ORIGIN+'/og.png?v='+APP_BRAND.version,'Cache-Control':'public, max-age=300'}});}
+    return new Response(request.method==='HEAD'?null:image.body,{status:200,headers:{'Content-Type':image.headers.get('Content-Type')||'image/jpeg','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff','Strict-Transport-Security':SECURITY_HEADERS['Strict-Transport-Security']}});
+   }catch(_){return new Response(null,{status:302,headers:{Location:ORIGIN+'/og.png?v='+APP_BRAND.version,'Cache-Control':'public, max-age=300','Strict-Transport-Security':SECURITY_HEADERS['Strict-Transport-Security']}});}
   }
   if(path==='/version.json')return reply(JSON.stringify(version),200,'application/json');
   if(path==='/robots.txt')return reply(`User-agent: *\nAllow: /\nDisallow: /*?recovery=\nDisallow: /*?code=\nDisallow: /*?checkout=\nDisallow: /*?boost=\nSitemap: ${ORIGIN}/sitemap.xml\n`,200,'text/plain');

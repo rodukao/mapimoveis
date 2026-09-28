@@ -2,7 +2,7 @@
 
 Site de anúncios de terrenos com mapa, cadastro de contas, desenho dos limites, cálculo de área no PostGIS, fotos no Supabase Storage, galeria e visualização ampliada.
 
-Site atual: https://terraavistaimoveis.com.br (Worker Cloudflare `terramapa`, `npm run deploy`). O endereço https://terramapa.rodukao.workers.dev redireciona para ele — ver [docs/DOMAIN-ROLLOUT.md](docs/DOMAIN-ROLLOUT.md).
+Site atual: https://terraavistaimoveis.com.br (Worker Cloudflare `terramapa`, `npm run deploy`). O endereço https://terramapa.rodukao.workers.dev redireciona para ele — ver [docs/DOMAIN-ROLLOUT.md](docs/DOMAIN-ROLLOUT.md). Para saber rápido onde mexer, veja [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Esta versão inclui favoritos, painel da conta, filtros avançados, comparação e ferramentas geográficas. As migrações foram autorizadas, aplicadas e verificadas no projeto existente. Consulte [o estado da entrega e as pendências](docs/ROADMAP_STATUS.md).
 

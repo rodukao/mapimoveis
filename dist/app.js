@@ -411,7 +411,7 @@ function updateCatalogStatus(viewport=false) {
   if (!$('catalog-update')) return;
   $('catalog-update').hidden = !loading && !loadFailed;
   $('catalog-update').textContent = loading ? 'Atualizando imóveis…' : loadFailed ? (viewport ? 'Não foi possível atualizar os imóveis desta área. Tente novamente.' : 'Não foi possível atualizar os imóveis. Tente novamente.') : '';
-  $('count').textContent = loading&&!plots.length?'Carregando imóveis…':totalListings + ' imóveis encontrados';
+  $('count').textContent = loading&&!plots.length?'Carregando imóveis…':totalListings + (totalListings === 1 ? ' imóvel encontrado' : ' imóveis encontrados');
   $('more-listings').hidden = plots.length >= totalListings;
   $('more-listings').disabled = loading;
   $('retry-listings').hidden = !loadFailed;
