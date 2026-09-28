@@ -50,7 +50,15 @@ map.on('mousedown dragstart', () => { visitorMovedMap = true; });
 function fitInitialCatalog() {
   const params = new URL(location.href).searchParams;
   if (visitorMovedMap || mine || searchLocation || params.has('terreno') || params.has('imobiliaria') || !plots.length) return;
-  moveMapProgrammatically('fitBounds', plots.flatMap(bounds), { paddingTopLeft: [30, 70], paddingBottomRight: [150, 90], maxZoom: 15 });
+  const all = L.latLngBounds(plots.flatMap(bounds));
+  // When framing every listing would zoom out past city level (spread-out listings, narrow phones), open on the newest one instead.
+  // Picked by created_at, not plots[0] — boosted listings sort first.
+  if (map.getBoundsZoom(all, false, L.point(180, 160)) < 11) {
+    const newest = plots.reduce((a, b) => (b.created_at > a.created_at ? b : a));
+    moveMapProgrammatically('setView', [newest.lat, newest.lng], 13);
+    return;
+  }
+  moveMapProgrammatically('fitBounds', all, { paddingTopLeft: [30, 70], paddingBottomRight: [150, 90], maxZoom: 15 });
 }
 
 function render() {
