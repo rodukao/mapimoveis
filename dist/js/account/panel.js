@@ -66,7 +66,17 @@ window.TerraAccount = (() => {
           renew.onclick=()=>busy(renew,async()=>{const r=await api.renew(plot.id);plot.renewed_at=r.renewed_at;toast('Anúncio renovado por 30 dias.');},item);
           actions.append(renew);
         }
-        for(const [status,label] of [['reserved','Reservar'],['paused','Pausar'],['sold','Marcar vendido'],['published','Publicar']]){if(status===plot.status)continue;const button=el('button',{},label);button.onclick=()=>busy(button,async()=>{const changed=await api.status(plot,status);plot.revision=changed.revision;plot.status=changed.status;panel.invalidate('overview');await load(true);await loadListings();toast('Situação atualizada.');},item);actions.append(button);}item.append(actions);list.append(item);
+        for(const [status,label] of [['paused','Pausar'],['published','Publicar']]){if(status===plot.status)continue;const button=el('button',{},label);button.onclick=()=>busy(button,async()=>{const changed=await api.status(plot,status);plot.revision=changed.revision;plot.status=changed.status;panel.invalidate('overview');await load(true);await loadListings();toast('Situação atualizada.');},item);actions.append(button);}
+        const remove=el('button',{class:'danger'},'Excluir');
+        remove.onclick=()=>{
+          const panel2=dialog('Excluir anúncio');
+          panel2.content.append(el('p',{},`Excluir "${plot.title||'este anúncio'}" permanentemente? Fotos, favoritos e histórico deste anúncio também serão apagados. Essa ação não pode ser desfeita.`));
+          const confirmRemove=el('button',{class:'danger full'},'Excluir permanentemente');
+          confirmRemove.onclick=()=>busy(confirmRemove,async()=>{await api.deleteListing(plot.id);panel2.node.close();panel.invalidate('overview');item.remove();await loadListings();toast('Anúncio excluído.');},panel2.content);
+          panel2.content.append(confirmRemove);
+        };
+        actions.append(remove);
+        item.append(actions);list.append(item);
       }
       if(!offset)list.append(el('p',{class:'empty-message'},'Nenhum anúncio encontrado com esses filtros.'));more.hidden=offset>=result.total;
     }

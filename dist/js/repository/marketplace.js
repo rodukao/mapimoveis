@@ -123,6 +123,7 @@ window.TerraMarketData = (() => {
     saveSearch: async (name,filters,sort,alerts) => TerraOperations.withChallenge('sensitive',async()=>unwrap(await table('terra_saved_searches').insert({name,filters,sort_order:sort,alerts_enabled:alerts}))),
     editSearch: async (id,patch) => unwrap(await table('terra_saved_searches').update(patch).eq('id',id).eq('user_id',(await R.user()).id)),
     deleteSearch: async id => unwrap(await table('terra_saved_searches').delete().eq('id',id).eq('user_id',(await R.user()).id)),
+    deleteListing: async id => unwrap(await table('terra_listings').delete().eq('id',id).eq('owner_id',(await R.user()).id)),
     unreadCount: async () => {const result=await table('terra_notifications').select('id',{head:true,count:'exact'}).eq('user_id',(await R.user()).id).eq('is_read',false);unwrap(result);return result.count;},
     notifications: async (offset=0) => unwrap(await table('terra_notifications').select('id,listing_id,search_id,kind,is_read,created_at,terra_saved_searches(name),terra_listings(title)').eq('user_id',(await R.user()).id).order('created_at',{ascending:false}).range(offset,offset+49)),
     readNotification: async id => unwrap(await table('terra_notifications').update({is_read:true}).eq('id',id).eq('user_id',(await R.user()).id))
