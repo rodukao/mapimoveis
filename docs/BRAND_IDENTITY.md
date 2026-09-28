@@ -1,11 +1,11 @@
 # Terra à Vista — identidade 2.1
 
-Rebrand de TerraMapa para Terra à Vista (logo fornecida pelo usuário em 25/09/2026, revisada em 26/09/2026 removendo a palavra "Imóveis" do lockup; contorno branco do símbolo removido em 28/09/2026). Wordmark "TERRAÀVISTA!" em verde institucional #164018, com um símbolo em formato de crachá/pin no lugar do acento do "À", em âmbar sólido #F59E0B, sem contorno. Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
+Rebrand de TerraMapa para Terra à Vista (logo fornecida pelo usuário em 25/09/2026, revisada em 26/09/2026 removendo a palavra "Imóveis" do lockup; em 28/09/2026 o contorno branco do símbolo foi removido só do favicon/símbolo isolado — no wordmark ele continua, pois separa visualmente o âmbar do verde vizinho). Wordmark "TERRAÀVISTA!" em verde institucional #164018, com um símbolo em formato de crachá/pin no lugar do acento do "À", em âmbar #F59E0B com contorno branco (o contorno existe apenas onde o símbolo fica encostado no verde do wordmark). Assinatura: "Seu próximo imóvel, à vista." O cabeçalho exibe apenas a marca, sem subtítulo.
 
 ## Arquivos
 
 - `dist/logo.svg`: wordmark "TERRAÀVISTA!" com o símbolo substituindo o acento do À, extraído da arte vetorial enviada pelo usuário (viewBox recortado no bbox real do conteúdo); independente de fontes instaladas.
-- `dist/brand/symbol.svg` e `dist/favicon.svg`: símbolo isolado (o crachá/pin âmbar), para uso em tamanhos pequenos ou quando o nome não couber.
+- `dist/brand/symbol.svg` e `dist/favicon.svg`: símbolo isolado (o crachá/pin âmbar), para uso em tamanhos pequenos ou quando o nome não couber. Sem contorno branco — sozinho, sem letras verdes ao lado, não precisa da separação.
 - `dist/brand/logo-reversed.svg`: versão com o wordmark trocado por branco, mantendo o âmbar do símbolo, para fundo verde-escuro ou escuro.
 - PNGs de 64, 180, 192 e 512 px derivados do SVG; PWA e Apple.
 - `dist/brand/social.svg` e `dist/og.png`: aplicação institucional para compartilhamento (1200×630).
