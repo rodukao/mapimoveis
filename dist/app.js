@@ -270,6 +270,9 @@ function stop() {
 }
 
 $('announce').onclick = () => start();
+$('draw-help-open').onclick = () => { if (!$('draw-help-dialog').open) $('draw-help-dialog').showModal(); };
+$('close-draw-help').onclick = () => $('draw-help-dialog').close();
+$('close-draw-help-ok').onclick = () => $('draw-help-dialog').close();
 $('cancel').onclick = stop;
 $('undo').onclick = () => { if (!saving) { points.pop(); boundaryClosed = false; updateDraw(); } };
 $('clear').onclick = () => { if (!saving) { points = []; boundaryClosed = false; updateDraw(); } };

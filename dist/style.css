@@ -57,3 +57,4 @@ header{height:72px;background:var(--surface);padding:0 28px}.brand{color:var(--b
 .account-brand{width:155px;height:auto;display:block;margin:0 0 18px}
 
 @media(min-width:721px){.header-actions #account,.header-actions #announce{font-size:14px}}
+#draw-help-dialog{width:min(460px,calc(100vw - 32px))}#draw-help-dialog picture{display:block}#draw-help-dialog img{width:100%;height:auto;border-radius:10px;margin:6px 0;border:1px solid var(--line)}
