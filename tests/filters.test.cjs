@@ -75,3 +75,17 @@ test('the filters button counts chosen filters, ignoring the automatic visible-m
  assert.equal(badge().hidden,false);assert.equal(badge().textContent,2);assert.equal(button.activeClass,'has-filters');assert.equal(button['aria-label'],'Filtros, 2 ativos');
  s.api.reset();assert.equal(badge().hidden,true);assert.equal(button['aria-label'],'Filtros');
 });
+test('a Limpar tudo chip appears only when the user chose filters and uses the shared reset',()=>{
+ const s=setup(),host=s.$('filter-chips');let resets=0;s.$('reset').click=()=>resets++;
+ const clear=()=>host.children.find(n=>n.class==='chip-clear');
+ s.api.reset();assert.equal(clear(),undefined);
+ s.api.setViewport({north:1,south:0,east:1,west:0});assert.equal(clear(),undefined);
+ s.api.setArea({propertyGroup:'land'});assert.ok(clear());assert.equal(host.children.at(-1),clear());
+ clear().onclick();assert.equal(resets,1);
+});
+test('the filters modal offers Limpar tudo up front only while filters are active',()=>{
+ const s=setup();s.api.reset();s.$('quick-type').onclick();
+ const header=el2=>el2;const open=()=>s.panel.content;
+ assert.equal(s.walk(open()).some(n=>n.class==='panel-clear'),false);
+ assert.equal(s.walk(open()).some(n=>n.tag==='button'&&n.children.includes('Limpar filtros')),false);
+});

@@ -8,7 +8,10 @@ window.TerraFilters = (() => {
   let active={};
   const filterButton=el('button',{id:'advanced-filters',onclick:()=>openFilters()},el('span',{class:'filter-desktop-label'},'Filtros'),el('span',{class:'filter-mobile-label'},'Mais filtros'),el('span',{class:'filter-count',hidden:true}));
   const toolbar=document.querySelector('.toolbar'),desktop=matchMedia('(min-width:721px)'),catalogTitle=document.querySelector('#browse .list-heading h1');
-  const placeFilterButton=()=>desktop.matches?catalogTitle.after(filterButton):toolbar.append(filterButton);
+  // Active-filter chips sit right under the filters button so they stay visible on desktop and, on mobile, in the map view.
+  const chipHost=$('filter-chips');
+  let activeCount=0;
+  const placeFilterButton=()=>{if(desktop.matches){catalogTitle.after(filterButton);filterButton.after(chipHost);}else toolbar.append(filterButton,chipHost);};
   desktop.addEventListener('change',placeFilterButton);placeFilterButton();
   function checks(group, selected=[], prefix='filter') {
     return el('div',{class:'check-grid'},Object.entries(groups[group]).map(([value,label])=>field(label,el('input',{type:'checkbox',name:prefix+'-'+group,value,checked:selected.includes(value)}))));
@@ -37,6 +40,8 @@ window.TerraFilters = (() => {
     else if(active.bounds)add('Área visível do mapa',['bounds']);
     // The visible-map window is set by panning, not chosen by the user, so it stays out of the count.
     const count=host.children.length-(!active.polygon&&active.bounds?1:0),badge=filterButton.querySelector('.filter-count');
+    activeCount=count;
+    if(count)host.append(el('button',{type:'button',class:'chip-clear','aria-label':'Limpar todos os filtros',onclick:()=>$('reset').click()},'Limpar tudo'));
     badge.textContent=count;badge.hidden=!count;filterButton.classList.toggle('has-filters',count>0);
     filterButton.setAttribute('aria-label',count?'Filtros, '+count+(count===1?' ativo':' ativos'):'Filtros');
     $('catalog-location').hidden=true;
@@ -46,6 +51,8 @@ window.TerraFilters = (() => {
   $('quick-type').onclick=()=>openFilters('type');
   function openFilters(scope) {
     const panel=dialog({price:'Filtrar por preço',area:'Filtrar por área',type:'Filtrar por tipo'}[scope] || 'Mais filtros'),f=get(),form=el('form');
+    panel.node.classList?.add('filters-panel');
+    if(activeCount)panel.node.querySelector?.('.panel-header')?.querySelector('button')?.before(el('button',{type:'button',class:'panel-clear',onclick:()=>{panel.node.close();$('reset').click();}},'Limpar tudo'));
     const priceMin=el('input',{type:'number',min:0,step:'any',value:f.minPrice ?? ''}),priceMax=el('input',{type:'number',min:0,step:'any',value:f.maxPrice ?? ''});
     const areaMin=el('input',{type:'number',min:0,step:'any',value:f.minArea ?? ''}),areaMax=el('input',{type:'number',min:0,step:'any',value:f.maxArea ?? ''}),unit=el('select',{},options({'1':'m²','10000':'ha'}));
     let previousUnit=1;unit.onchange=()=>{for(const input of [areaMin,areaMax])if(input.value!=='')input.value=Number(input.value)*previousUnit/Number(unit.value);previousUnit=Number(unit.value);};
@@ -71,7 +78,7 @@ window.TerraFilters = (() => {
       for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])form.append(el('h3',{},title),checks(group,f[group]));
       form.append(el('p',{class:'small'},'Infraestrutura e documentação são declaradas pelo anunciante.'));
     }
-    form.append(el('button',{class:'primary full',type:'submit'},'Aplicar filtros'),el('button',{class:'full',type:'button',onclick:()=>{panel.node.close();$('reset').click();}},'Limpar filtros'));
+    form.append(el('button',{class:'primary full',type:'submit'},'Aplicar filtros'));
     form.onsubmit=event=>{event.preventDefault();try{
       const next={...f};
       if(!scope||scope==='type'){if(selectedGroup)next.propertyGroup=selectedGroup;else delete next.propertyGroup;}
