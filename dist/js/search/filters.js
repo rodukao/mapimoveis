@@ -6,7 +6,7 @@ window.TerraFilters = (() => {
   const groups={infrastructure:{agua:'Água',energia:'Energia',esgoto:'Esgoto',asfalto:'Asfalto',internet:'Internet / fibra',calcada:'Calçada'},features:{esquina:'Esquina',murado:'Murado',cercado:'Cercado',nascente:'Nascente',vista:'Vista panorâmica',piscina:'Piscina',churrasqueira:'Churrasqueira',varanda:'Varanda',elevador:'Elevador',portaria:'Portaria 24h',area_lazer:'Área de lazer',mobiliado:'Mobiliado'},documents:{escritura:'Escritura',matricula:'Matrícula',iptu:'IPTU',car:'CAR',ccir:'CCIR',sigef:'SIGEF'}};
   const labels=Object.assign({},...Object.values(groups));
   let active={};
-  const filterButton=el('button',{id:'advanced-filters',onclick:()=>openFilters()},el('span',{class:'filter-desktop-label'},'Filtros'),el('span',{class:'filter-mobile-label'},'Mais filtros'));
+  const filterButton=el('button',{id:'advanced-filters',onclick:()=>openFilters()},el('span',{class:'filter-desktop-label'},'Filtros'),el('span',{class:'filter-mobile-label'},'Mais filtros'),el('span',{class:'filter-count',hidden:true}));
   const toolbar=document.querySelector('.toolbar'),desktop=matchMedia('(min-width:721px)'),catalogTitle=document.querySelector('#browse .list-heading h1');
   const placeFilterButton=()=>desktop.matches?catalogTitle.after(filterButton):toolbar.append(filterButton);
   desktop.addEventListener('change',placeFilterButton);placeFilterButton();
@@ -35,6 +35,10 @@ window.TerraFilters = (() => {
     if(active.minBuiltArea!==undefined)add('Área construída/privativa: a partir de '+num(active.minBuiltArea)+' m²',['minBuiltArea']);
     if(active.polygon)add('Área de interesse ativa',['polygon']);
     else if(active.bounds)add('Área visível do mapa',['bounds']);
+    // The visible-map window is set by panning, not chosen by the user, so it stays out of the count.
+    const count=host.children.length-(!active.polygon&&active.bounds?1:0),badge=filterButton.querySelector('.filter-count');
+    badge.textContent=count;badge.hidden=!count;filterButton.classList.toggle('has-filters',count>0);
+    filterButton.setAttribute('aria-label',count?'Filtros, '+count+(count===1?' ativo':' ativos'):'Filtros');
     $('catalog-location').hidden=true;
   }
   $('quick-price').onclick=()=>openFilters('price');

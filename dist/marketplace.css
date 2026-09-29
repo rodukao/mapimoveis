@@ -317,3 +317,7 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .detail-stats{margin:12px 0 16px}
 .card-top .owner-badge{font-size:11px;font-weight:600;padding:5px 8px;border-radius:4px;background:#fff;border:1px solid var(--line);color:#4c5751;margin-right:auto;margin-left:6px}
 .card-top .owner-badge[data-owner-type=corretor],.card-top .owner-badge[data-owner-type=imobiliaria],.card-top .owner-badge[data-owner-type=loteadora]{background:#f0f6ee;border-color:#d3e3d6;color:#175e43}
+#advanced-filters .filter-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:8px;border-radius:10px;background:#fff;color:var(--green);font-size:12px;font-weight:700;line-height:1}
+#advanced-filters .filter-count[hidden]{display:none}
+#advanced-filters.has-filters{background:var(--green);border-color:var(--green);color:#fff}
+#advanced-filters.has-filters:hover{background:#0d4b35}
