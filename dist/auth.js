@@ -46,6 +46,7 @@ function authModeUI(mode) {
   const signup = mode === 'signup', reset = mode === 'reset', change = mode === 'change';
   $('auth-heading').textContent = ({ login: 'Entre para anunciar', signup: 'Crie sua conta', reset: 'Recupere sua senha', change: 'Escolha uma nova senha' })[mode];
   $('name-label').hidden = !signup;
+  $('account-type-group').hidden = !signup;
   $('auth-name').required = signup;
   $('email-label').hidden = change;
   $('auth-email').required = !change;
@@ -73,6 +74,8 @@ $('account').onclick = () => currentSession ? TerraAccount.open() : openAuth();
 $('close-auth').onclick = () => { if (!authBusy) { $('auth-dialog').close(); window.TerraCaptcha.close(); pendingAnnounce = false; $('auth-password').value = ''; } };
 $('auth-dialog').addEventListener('cancel', event => { if (authBusy) event.preventDefault(); else { window.TerraCaptcha.close(); pendingAnnounce = false; $('auth-password').value = ''; } });
 $('switch-auth').onclick = () => authModeUI(authMode === 'login' ? 'signup' : 'login');
+const accountType = () => document.querySelector('input[name="auth-account-type"]:checked').value;
+document.querySelectorAll('input[name="auth-account-type"]').forEach(input => input.onchange = () => { $('creci-label').hidden = accountType() === 'particular'; });
 $('forgot-password').onclick = () => authModeUI('reset');
 $('auth-form').onsubmit = async event => {
   event.preventDefault();
@@ -91,7 +94,7 @@ $('auth-form').onsubmit = async event => {
   $('forgot-password').disabled = true;
   try {
     if (mode === 'login') { const result = await DATA.login(email, password, captchaToken); currentSession = result.session; mine = false; $('auth-dialog').close(); updateAccount(); if (pendingAnnounce) { pendingAnnounce = false; start(); } await loadListings(); }
-    if (mode === 'signup') { const result = await DATA.signUp(name, email, password, captchaToken); $('auth-password').value = ''; if (result.session) { currentSession = result.session; mine = false; $('auth-dialog').close(); updateAccount(); if (pendingAnnounce) { pendingAnnounce = false; start(); } await loadListings(); toast('Conta criada. Você já pode cadastrar seu terreno.'); } else { $('auth-message').textContent = 'Confira seu e-mail para confirmar o cadastro. Se já tiver uma conta, você pode entrar ou recuperar sua senha.'; $('auth-message').hidden = false; } }
+    if (mode === 'signup') { const result = await DATA.signUp(name, email, password, captchaToken, { accountType: accountType(), creci: $('auth-creci').value }); $('auth-password').value = ''; if (result.session) { currentSession = result.session; mine = false; $('auth-dialog').close(); updateAccount(); if (pendingAnnounce) { pendingAnnounce = false; start(); } await loadListings(); toast('Conta criada. Você já pode cadastrar seu terreno.'); } else { $('auth-message').textContent = 'Confira seu e-mail para confirmar o cadastro. Se já tiver uma conta, você pode entrar ou recuperar sua senha.'; $('auth-message').hidden = false; } }
     if (mode === 'reset') { await DATA.reset(email, captchaToken); $('auth-message').textContent = 'Se houver uma conta para esse e-mail, você receberá um link de recuperação.'; $('auth-message').hidden = false; }
     if (mode === 'change') { await DATA.changePassword(password); recoverySession = false; history.replaceState(null, '', location.pathname); $('auth-dialog').close(); toast('Senha atualizada.'); }
   } catch (error) { $('auth-message').textContent = DATA.explain(error); $('auth-message').hidden = false; }

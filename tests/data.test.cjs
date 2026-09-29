@@ -102,3 +102,15 @@ test('publication checks private contact before writing; drafts do not require c
  const draft=setup();await draft.api.save(valid,{id:'draft'});assert.equal(draft.calls.some(x=>x[0]==='publication-contact'),false);
  const published=setup();await published.api.save({...valid,status:'published'},{id:'public'});const contactIndex=published.calls.findIndex(x=>x[0]==='publication-contact');const writeIndex=published.calls.findIndex(x=>x[0]==='from');assert.ok(contactIndex>=0&&contactIndex<writeIndex);
 });
+
+test('signUp sends only a valid declared account type and CRECI, never a CPF',async()=>{
+ const s=setup();
+ await s.api.signUp('A','a@example.invalid','test-password-1','t',{accountType:'corretor',creci:' 12345-F '});
+ await s.api.signUp('B','b@example.invalid','test-password-2','t',{accountType:'admin',creci:'x'.repeat(80)});
+ await s.api.signUp('C','c@example.invalid','test-password-3','t');
+ const [a,b,c]=s.authCalls.map(x=>x.options.data);
+ assert.deepEqual([a.account_type,a.creci],['corretor','12345-F']);
+ assert.equal(b.account_type,'particular');assert.equal(b.creci.length,40);
+ assert.deepEqual([c.account_type,c.creci],['particular','']);
+ assert.equal(Object.keys(a).some(k=>/cpf|document/i.test(k)),false);
+});
