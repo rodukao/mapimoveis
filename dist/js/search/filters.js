@@ -78,7 +78,7 @@ window.TerraFilters = (() => {
       for(const [group,title] of [['infrastructure','Infraestrutura'],['features','Características'],['documents','Documentação declarada']])form.append(el('h3',{},title),checks(group,f[group]));
       form.append(el('p',{class:'small'},'Infraestrutura e documentação são declaradas pelo anunciante.'));
     }
-    form.append(el('button',{class:'primary full',type:'submit'},'Aplicar filtros'));
+    form.append(el('div',{class:'filter-actions'},el('button',{class:'primary full',type:'submit'},'Aplicar filtros')));
     form.onsubmit=event=>{event.preventDefault();try{
       const next={...f};
       if(!scope||scope==='type'){if(selectedGroup)next.propertyGroup=selectedGroup;else delete next.propertyGroup;}
