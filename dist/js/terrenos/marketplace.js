@@ -59,6 +59,11 @@ window.TerraMarketplace = (() => {
     checkbox.onchange=()=>{if(checkbox.checked){if(compared.size>=4){checkbox.checked=false;return toast('Compare até 4 imóveis por vez.');}compared.set(plot.id,plot);}else compared.delete(plot.id);syncCompare();};
     const heart=favoriteButton(plot);heart.classList.add('card-heart');const active=favorites.has(plot.id);paintHeart(heart,active);card.append(heart);actions.append(field('+ Comparar',checkbox));
     if(plot.status==='reserved'||plot.status==='sold')card.querySelector('.tag').textContent+=' · '+statuses[plot.status];
+    api.accountType(plot.owner_id).then(type=>{
+      const label={particular:'Proprietário',corretor:'Corretor',imobiliaria:'Imobiliária',loteadora:'Loteadora'}[type];
+      if(!label||!card.isConnected)return;
+      card.querySelector('.tag').after(el('span',{class:'owner-badge','data-owner-type':type,title:'Tipo de anunciante declarado pelo próprio anunciante'},label));
+    });
   }
   function openPlot(plot) {
     routeSequence++;
