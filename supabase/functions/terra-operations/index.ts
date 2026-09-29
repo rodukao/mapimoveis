@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         const failed = () =>
           reply(503, {
             pending: true,
-            error: 'Não foi possível cancelar sua assinatura agora. Nada foi excluído; tente novamente em instantes.',
+            error: 'Não foi possível cancelar sua assinatura agora. A exclusão foi interrompida; tente novamente em instantes.',
           });
         if (!stripeKey) return failed();
         const list = await request(
