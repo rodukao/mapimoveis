@@ -361,7 +361,7 @@ $('form').onsubmit = async event => {
     saving = false;
     stop();
     await loadListings();
-    toast(form.status === 'published' ? 'Imóvel salvo e disponível no catálogo.' : 'Imóvel salvo. Você pode encontrá-lo em Meus imóveis.');
+    toast(form.status === 'published' ? 'Imóvel publicado! Ele já aparece no mapa.' : 'Imóvel salvo. Você pode encontrá-lo em Meus imóveis.');
   } catch (error) {
     if (error.savedListing) {
       saving = false;
@@ -375,7 +375,7 @@ $('form').onsubmit = async event => {
   } finally {
     saving = false;
     $('listing-fields').disabled = false;
-    $('save-listing').textContent = 'Salvar imóvel';
+    $('save-listing').textContent = saveLabel();
     $('cancel').disabled = false;
     $('undo').disabled = false;
     $('clear').disabled = false;
@@ -390,10 +390,15 @@ function fromRow(row) {
   return { ...row, photos, price: row.price_brl == null ? null : Number(row.price_brl), area: Number(row.area_m2), lat: row.latitude, lng: row.longitude, points: row.boundary_geojson.coordinates[0].slice(0, -1).map(point => [point[1], point[0]]), address: [row.neighborhood, [row.city,row.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Localização pendente', tag: window.TerraFilters?.categories[row.category] || categoryNames[row.category] || row.category };
 }
 
+function saveLabel() {
+  if (editRevision) return 'Salvar alterações';
+  return { published: 'Publicar imóvel', draft: 'Salvar rascunho' }[$('listing-status').value] || 'Salvar imóvel';
+}
 function updateRequiredFields() {
   const required=$('listing-status').value!=='draft';
   for(const id of ['title','value','city','state'])$(id).required=required;
-  $('save-note').textContent=required?'Confira título, preço, cidade e UF antes de salvar.':'Você pode completar título, preço, cidade e UF depois. O perímetro é necessário para guardar a localização do imóvel no mapa.';
+  $('save-note').textContent=required?'Confira título, preço, cidade e UF. Quer terminar depois? Mude a Situação para Rascunho.':'Você pode completar título, preço, cidade e UF depois. O perímetro é necessário para guardar a localização do imóvel no mapa.';
+  if (!saving) $('save-listing').textContent = saveLabel();
 }
 $('listing-status').onchange=updateRequiredFields;
 function fillEditor(plot) {
@@ -410,8 +415,7 @@ function fillEditor(plot) {
   $('state').value = plot ? plot.state : searchLocation?.state || '';
   $('neighborhood').value = plot ? plot.neighborhood : searchLocation?.neighborhood || '';
   $('category').value = plot?.category || 'residencial';
-  $('listing-status').value = plot?.status || 'draft';
-  $('save-listing').textContent = plot ? 'Salvar alterações' : 'Salvar imóvel';
+  $('listing-status').value = plot?.status || 'published';
   updateRequiredFields();
   renderPhotoPreview();
   window.TerraFilters?.fillEditor(plot);
