@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 // DOM doubles test the actual form handlers without claiming visual browser QA.
 function setup(){
  const ids=new Map();let lastPanel,loads=0,moves=0;
- function el(tag,attrs={},...children){const n={tag,value:'',children:[],hidden:false,...attrs,append(...items){this.children.push(...items.flat());},prepend(...items){this.children.unshift(...items);},get options(){return this.children;},replaceChildren(...items){this.children=[];this.append(...items);},closest(){return {after(){}};},after(){},querySelectorAll(selector){return walk(this).filter(n=>n.tag==='input'&&selector.includes('"'+n.name+'"')&&(!selector.includes(':checked')||n.checked));}};n.append(...children);if(tag==='select')n.value=n.children.find(c=>c.selected)?.value??n.children[0]?.value??'';if(n.id)ids.set(n.id,n);return n;}
+ function el(tag,attrs={},...children){const n={tag,value:'',children:[],hidden:false,...attrs,append(...items){this.children.push(...items.flat());},prepend(...items){this.children.unshift(...items);},get options(){return this.children;},replaceChildren(...items){this.children=[];this.append(...items);},closest(){return {after(){}};},after(){},setAttribute(k,v){this[k]=v;},classList:{toggle(name,on){n.activeClass=on?name:null;}},querySelector(selector){return walk(this).find(c=>c!==this&&typeof c==='object'&&c.class&&selector==='.'+c.class)||null;},querySelectorAll(selector){return walk(this).filter(n=>n.tag==='input'&&selector.includes('"'+n.name+'"')&&(!selector.includes(':checked')||n.checked));}};n.append(...children);if(tag==='select')n.value=n.children.find(c=>c.selected)?.value??n.children[0]?.value??'';if(n.id)ids.set(n.id,n);return n;}
  function walk(n){return [n,...(n.children||[]).flatMap(c=>typeof c==='object'?walk(c):[])];}
  const $=id=>{if(!ids.has(id))ids.set(id,el('div'));return ids.get(id);};
  const media={matches:true,addEventListener(){}},toolbar=el('div'),title=el('h1');
@@ -63,4 +63,29 @@ test('location precision defaults to exact and round-trips approximate listings'
  s.api.fillEditor({category:'casa',terrain_context:'urban',location_precision:'approximate',details:{built_area_m2:120}});
  assert.equal(s.api.editorValues().location_precision,'approximate');
  s.api.fillEditor(null);assert.equal(s.api.editorValues().location_precision,'exact');
+});
+test('the filters button counts chosen filters, ignoring the automatic visible-map window',()=>{
+ const s=setup(),button=s.$('advanced-filters');
+ const badge=()=>s.walk(button).find(n=>n.class==='filter-count');
+ s.api.reset();
+ assert.equal(badge().hidden,true);assert.equal(button.activeClass,null);
+ s.api.setViewport({north:1,south:0,east:1,west:0});
+ assert.equal(badge().hidden,true);assert.equal(button.activeClass,null);
+ s.api.setArea({minPrice:1000,maxPrice:5000,propertyGroup:'land'});
+ assert.equal(badge().hidden,false);assert.equal(badge().textContent,2);assert.equal(button.activeClass,'has-filters');assert.equal(button['aria-label'],'Filtros, 2 ativos');
+ s.api.reset();assert.equal(badge().hidden,true);assert.equal(button['aria-label'],'Filtros');
+});
+test('a Limpar tudo chip appears only when the user chose filters and uses the shared reset',()=>{
+ const s=setup(),host=s.$('filter-chips');let resets=0;s.$('reset').click=()=>resets++;
+ const clear=()=>host.children.find(n=>n.class==='chip-clear');
+ s.api.reset();assert.equal(clear(),undefined);
+ s.api.setViewport({north:1,south:0,east:1,west:0});assert.equal(clear(),undefined);
+ s.api.setArea({propertyGroup:'land'});assert.ok(clear());assert.equal(host.children.at(-1),clear());
+ clear().onclick();assert.equal(resets,1);
+});
+test('the filters modal offers Limpar tudo up front only while filters are active',()=>{
+ const s=setup();s.api.reset();s.$('quick-type').onclick();
+ const header=el2=>el2;const open=()=>s.panel.content;
+ assert.equal(s.walk(open()).some(n=>n.class==='panel-clear'),false);
+ assert.equal(s.walk(open()).some(n=>n.tag==='button'&&n.children.includes('Limpar filtros')),false);
 });

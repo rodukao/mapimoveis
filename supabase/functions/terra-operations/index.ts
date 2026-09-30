@@ -98,6 +98,32 @@ Deno.serve(async (req) => {
       if (body.confirmation !== 'EXCLUIR MINHA CONTA')
         return reply(400, { error: 'Digite EXCLUIR MINHA CONTA para confirmar.' });
       await rpc('terra_prepare_deletion', { p_user: user.id, p_session: sid, p_confirmation: body.confirmation });
+      // Cancel any Stripe subscription first, so deleting the account can never leave a card being charged.
+      // Fails closed and is safe to retry: canceled subscriptions are skipped on the next attempt.
+      const customer = await rpc('terra_billing_customer', { p_user: user.id });
+      if (customer) {
+        const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+        const stripeHeaders = { Authorization: 'Basic ' + btoa(stripeKey + ':') };
+        const failed = () =>
+          reply(503, {
+            pending: true,
+            error: 'Não foi possível cancelar sua assinatura agora. A exclusão foi interrompida; tente novamente em instantes.',
+          });
+        if (!stripeKey) return failed();
+        const list = await request(
+          'https://api.stripe.com/v1/subscriptions?status=all&limit=100&customer=' + encodeURIComponent(customer),
+          { headers: stripeHeaders },
+        ).catch(() => null);
+        if (!list?.ok) return failed();
+        for (const subscription of (await list.json()).data || []) {
+          if (['canceled', 'incomplete_expired'].includes(subscription.status)) continue;
+          const canceled = await request('https://api.stripe.com/v1/subscriptions/' + encodeURIComponent(subscription.id), {
+            method: 'DELETE',
+            headers: stripeHeaders,
+          }).catch(() => null);
+          if (!canceled?.ok) return failed();
+        }
+      }
       // Resumable deletion: a retry lists remaining objects; metadata is never deleted directly.
       for (let batch = 0; batch < 10; batch++) {
         const objects = await rpc('terra_deletion_objects', { p_user: user.id });

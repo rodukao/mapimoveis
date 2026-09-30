@@ -315,3 +315,31 @@ label:has(>input[type=checkbox]) { display:flex; flex-direction:row-reverse; jus
 .listing-carousel{align-items:flex-start}.carousel-card{height:auto}.carousel-media{aspect-ratio:auto;height:150px;width:100%;overflow:hidden}
 .detail-location-actions>a,.detail-location-actions>button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:1 1 150px;min-height:46px;margin:0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--green);font:600 15px/1.2 var(--font-ui);text-decoration:none;text-align:center}
 .detail-stats{margin:12px 0 16px}
+.card-top .owner-badge{font-size:11px;font-weight:600;padding:5px 8px;border-radius:4px;background:#fff;border:1px solid var(--line);color:#4c5751;margin-right:auto;margin-left:6px}
+.card-top .owner-badge[data-owner-type=corretor],.card-top .owner-badge[data-owner-type=imobiliaria],.card-top .owner-badge[data-owner-type=loteadora]{background:#f0f6ee;border-color:#d3e3d6;color:#175e43}
+#advanced-filters .filter-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:8px;border-radius:10px;background:#fff;color:var(--green);font-size:12px;font-weight:700;line-height:1}
+#advanced-filters .filter-count[hidden]{display:none}
+#advanced-filters.has-filters{background:var(--green);border-color:var(--green);color:#fff}
+#advanced-filters.has-filters:hover{background:#0d4b35}
+#filter-chips button.chip-clear{background:#fff;border:1px solid #e0b9b7;color:#a93432;font-weight:600}
+.panel-header .panel-clear{margin-left:auto;min-width:0;min-height:40px;padding:8px 12px;font-size:14px;color:#a93432;border-color:#e8cccb;background:#fff8f7}
+.filters-panel .panel-header h2{margin-right:auto}
+.filters-panel .panel-header .panel-clear+button{margin-left:0}
+@media(min-width:721px){#browse .list-heading #filter-chips{margin:-8px 0 16px}}
+@media(max-width:720px){
+ .toolbar #filter-chips{margin:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .toolbar #filter-chips::-webkit-scrollbar{display:none}
+ .toolbar #filter-chips button{flex:none;white-space:nowrap;padding:8px 10px}
+ .toolbar #filter-chips:empty{display:none}
+ .terra-panel.filters-panel[open]{width:100vw;max-width:100vw;height:calc(100dvh - 66px - env(safe-area-inset-bottom));max-height:none;margin:0;border:0;border-radius:0}
+}
+/* Filters panel: fixed-height column; the Aplicar bar stays at the bottom of the panel and never overlaps content. */
+.terra-panel.filters-panel[open]{display:flex;flex-direction:column;overflow:hidden}
+.filters-panel .panel-header{flex:none;position:static}
+.filters-panel .panel-content{flex:1;min-height:0;overflow-y:auto;padding-bottom:0}
+.filters-panel .panel-content>form{display:flex;flex-direction:column;min-height:100%}
+.filters-panel .filter-actions{position:sticky;bottom:0;z-index:3;margin-top:auto;padding:12px 0 calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.filters-panel .filter-actions button{margin:0}
+@media(min-width:721px){
+ .terra-panel.filters-panel[open]{width:min(460px,calc(100vw - 32px));height:calc(100dvh - 32px);max-height:none;margin:16px 16px 16px auto}
+}

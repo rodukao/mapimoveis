@@ -194,7 +194,7 @@
     exactBoundary: async id => unwrap(await db().rpc('terra_exact_boundary', { p_listing: id })),
     session: async () => configured ? unwrap(await db().auth.getSession()).session : null,
     subscribe: fn => configured ? db().auth.onAuthStateChange(fn).data.subscription : { unsubscribe() {} },
-    signUp: async (name, email, password, captchaToken) => unwrap(await db().auth.signUp({ email, password, options: { data: { display_name: name.trim() }, emailRedirectTo: new URL('./', window.location.href).href, captchaToken } })),
+    signUp: async (name, email, password, captchaToken, profile = {}) => unwrap(await db().auth.signUp({ email, password, options: { data: { display_name: name.trim(), account_type: ['corretor', 'imobiliaria'].includes(profile.accountType) ? profile.accountType : 'particular', creci: String(profile.creci || '').trim().slice(0, 40) }, emailRedirectTo: new URL('./', window.location.href).href, captchaToken } })),
     login: async (email, password, captchaToken) => unwrap(await db().auth.signInWithPassword({ email, password, options: { captchaToken } })),
     availableProviders: async () => {
       db();

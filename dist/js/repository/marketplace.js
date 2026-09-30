@@ -8,6 +8,24 @@ window.TerraMarketData = (() => {
     const row = unwrap(await table('terra_listings').select(R.listFields).eq('id',id).maybeSingle());
     return row ? (await R.hydratePhotos([row]))[0] : null;
   }
+  // Declared account type of a listing owner, for the card badge. Requests within the same tick share one query.
+  const typeCache = new Map();
+  let typeQueue = new Map();
+  async function flushTypes() {
+    const batch = typeQueue; typeQueue = new Map();
+    try {
+      const rows = unwrap(await table('terra_profiles').select('id,account_type').in('id',[...batch.keys()]));
+      const found = new Map(rows.map(row => [row.id,row.account_type]));
+      batch.forEach((done,id) => done(found.get(id) || null));
+    } catch (_) { batch.forEach((done,id) => { typeCache.delete(id); done(null); }); }
+  }
+  function accountType(ownerId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ownerId || '')) return Promise.resolve(null);
+    if (!typeCache.has(ownerId)) {
+      typeCache.set(ownerId,new Promise(done => { if (!typeQueue.size) setTimeout(flushTypes,30); typeQueue.set(ownerId,done); }));
+    }
+    return typeCache.get(ownerId);
+  }
   async function search(filters, sort, offset = 0, mine = false) {
     const result = await rpc('terra_search_listings',{p_filters:filters,p_sort:sort,p_offset:offset,p_limit:50,p_mine:mine});
     return {rows:await R.hydratePhotos(result.rows),total:result.total};
@@ -113,7 +131,7 @@ window.TerraMarketData = (() => {
     mySubscription:()=>rpc('terra_my_subscription',{}),
     renew:id=>rpc('terra_renew_listing',{p_listing:id}),
     ownListings:async(query,status,offset=0)=>{let q=table('terra_listings').select(R.listFields,{count:'exact'}).eq('owner_id',(await R.user()).id).order('created_at',{ascending:false}).order('id',{ascending:false});if(status)q=q.eq('status',status);if(query)q=q.ilike('title','%'+query.replace(/[\\%_]/g,'\\$&')+'%');const result=await q.range(offset,offset+49);return {rows:await R.hydratePhotos(unwrap(result)),total:result.count};},
-    requirePublishContact,get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
+    requirePublishContact,accountType,get,search,status,favorites,favorite,byIds,similar,profile,saveProfile,advertiserListings,
     avatar: path => path ? R.db().storage.from('terra-profile-photos').getPublicUrl(path).data.publicUrl : '',
     advertiser: id => rpc('terra_advertiser',{p_owner:id}),
     stats: ids => rpc('terra_listing_stats',{p_ids:ids}),
