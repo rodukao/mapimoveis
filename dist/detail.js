@@ -22,8 +22,7 @@ function showDetail(plot) {
   $('detail-unit').textContent = plot.price == null ? 'Preço pendente' : unitMoney(plot.price / displayArea) + ' / m²';
   $('detail-description').textContent = plot.description || 'O anunciante ainda não incluiu uma descrição.';
   $('owner-actions').hidden = !currentSession || currentSession.user.id !== plot.owner_id;
-  const kind = window.TerraFilters?.kindOf(plot.category);
-  const facts = [[{ apartment: 'Área do prédio no mapa', office: 'Área do prédio no mapa', house: 'Área do terreno no mapa', warehouse: 'Área do terreno no mapa' }[kind] || 'Área estimada no mapa', num(plot.area) + ' m²']];
+  const facts = [];
   if (Number.isFinite(Number(plot.perimeter_m))) facts.push(['Perímetro', num(Number(plot.perimeter_m)) + ' m']);
   if (plot.status) facts.push(['Situação', {draft:'Rascunho',published:'Ativo',reserved:'Reservado',sold:'Vendido',paused:'Pausado'}[plot.status] || plot.status]);
   if (Number.isFinite(plot.lat) && Number.isFinite(plot.lng)) facts.push(plot.location_precision === 'approximate' ? ['Coordenadas aproximadas', plot.lat.toFixed(3) + ', ' + plot.lng.toFixed(3)] : ['Coordenadas', plot.lat.toFixed(6) + ', ' + plot.lng.toFixed(6)]);
@@ -55,10 +54,31 @@ function showDetail(plot) {
     }
     button.onclick = () => displayPhoto(index); $('photo-thumbnails').append(button);
   });
+  renderSideTiles();
   if (detailMedia.length) displayPhoto(0);
   if (!$('listing-detail').open) $('listing-detail').showModal();
   $('listing-detail').scrollTop = 0;
   document.dispatchEvent(new CustomEvent('terra:detail',{detail:plot}));
+}
+// Desktop mosaic: the next two photos sit beside the main one (hidden on mobile via CSS).
+function renderSideTiles() {
+  const side = $('photo-side'), picks = [];
+  detailMedia.forEach((item, index) => { if (index > 0 && item.type === 'photo' && picks.length < 2) picks.push(index); });
+  side.replaceChildren();
+  side.hidden = !picks.length;
+  $('gallery-mosaic').classList.toggle('solo', !picks.length);
+  $('photo-thumbnails').classList.toggle('mosaic-covered', detailMedia.length <= picks.length + 1);
+  picks.forEach((index, n) => {
+    const button = document.createElement('button'), img = document.createElement('img');
+    button.type = 'button'; button.className = 'photo-tile';
+    button.setAttribute('aria-label', 'Ampliar foto ' + (index + 1));
+    TerraPhotos.bind(img, detailMedia[index].photo); img.alt = ''; img.loading = 'lazy'; button.append(img);
+    if (n === picks.length - 1 && detailMedia.length > picks.length + 1) {
+      const more = document.createElement('span'); more.className = 'photo-more'; more.textContent = 'Ver todas (' + detailMedia.length + ')'; button.append(more);
+    }
+    button.onclick = () => { displayPhoto(index); $('expand-photo').onclick(); };
+    side.append(button);
+  });
 }
 function resetPhotoZoom() {
   $('lightbox-viewport').classList.remove('zoomed');

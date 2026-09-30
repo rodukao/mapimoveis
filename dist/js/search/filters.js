@@ -215,13 +215,16 @@ window.TerraFilters = (() => {
   document.addEventListener('terra:detail',event=>{
     const p=event.detail,kind=kindOf(p.category),spec=kinds[kind],details=p.details||{},rows=[],list=$('detail-features');
     if(spec.terrain&&p.terrain_context==='rural')rows.push(['Área em hectares',(p.area/10000).toLocaleString('pt-BR',{maximumFractionDigits:4})+' ha']);
-    // Rooms and parking are shown as icons at the top of the listing (showcase.js).
-    for(const key of Object.keys(detailFields))if(!['bedrooms','suites','bathrooms','parking_spaces'].includes(key)&&details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind)+(key==='built_area_m2'?' declarada':''),detailText(key,details[key])]);
-    for(const [key,label] of [['zoning','Zoneamento declarado'],['frontage','Testada (m)'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,key==='access'?(accessLabels[details[key]]||String(details[key])):String(details[key])]);
+    // Areas, frontage, rooms and parking are shown in the numbers row under the price (showcase.js).
+    for(const key of Object.keys(detailFields))if(!['bedrooms','suites','bathrooms','parking_spaces','built_area_m2'].includes(key)&&details[key]!==undefined&&details[key]!=='')rows.push([shortLabel(key,kind),detailText(key,details[key])]);
+    for(const [key,label] of [['zoning','Zoneamento declarado'],['access','Acesso declarado'],['legal_reserve','Reserva legal declarada']])if(details[key]!==undefined&&details[key]!=='')rows.push([label,key==='access'?(accessLabels[details[key]]||String(details[key])):String(details[key])]);
     if(spec.terrain)rows.push(['Contexto',p.terrain_context==='rural'?'Rural':'Urbano'],['Topografia declarada',topo[p.topography] || 'Não informada']);
-    if(spec.infrastructure)rows.push(['Infraestrutura',describe(p.infrastructure)]);
-    rows.push([builtKinds.includes(kind)?'Diferenciais':'Características',describe(p.features)],['Documentação declarada',describe(p.documents)]);
-    list.replaceChildren(...rows.map(([label,value])=>el('div',{},el('dt',{},label),el('dd',{},value))));
+    const lists=[];
+    if(spec.infrastructure)lists.push(['Infraestrutura',p.infrastructure]);
+    lists.push([builtKinds.includes(kind)?'Diferenciais':'Características',p.features],['Documentação declarada',p.documents]);
+    const checklist=values=>values?.length?el('ul',{class:'check-list'},values.map(key=>el('li',{},labels[key] || key))):el('span',{class:'not-informed'},'Não informado');
+    list.replaceChildren(...rows.map(([label,value])=>el('div',{},el('dt',{},label),el('dd',{},value))),
+      ...lists.map(([label,values])=>el('div',{class:'feature-group'},el('dt',{},label),el('dd',{},checklist(values)))));
   });
   return {get,clearInterest,setViewport,setLocation,applySaved,setArea,clearSpatial,reset,saveCurrent,fillEditor,editorValues,updateArea,describe,categories,topo,kindOf,builtArea};
 })();
